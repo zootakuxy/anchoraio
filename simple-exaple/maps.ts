@@ -7,14 +7,12 @@ export const serverAnchorPort = 48001
 export const hosts = {
     //zootakuxy.aio
     "127.100.1.1": { server: identifier, application: 5432 },
-    "127.100.1.2": { server: identifier, application: 49278 },
-    "127.100.1.3": { server: identifier, application: "maguita" },
+    "127.100.1.2": { server: identifier, application: 80 },
     "127.100.1.4": { server: identifier, application: "postgres" },
-    "127.100.2.1": { server: identifier, application: "" },
+    "127.100.2.1": { server: identifier, application: "web" },
 }
 
 export const apps = {
-    maguita: { address:"127.0.0.1", port: 49278 },
+    web: { address:"127.0.0.1", port: 80 },
     postgres: { address:"127.0.0.1", port: 5432 },
-    webMaguita: { address:"maguita.brainsoftstp.com", port: 49278 },
 }
