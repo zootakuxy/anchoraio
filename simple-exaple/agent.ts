@@ -143,30 +143,15 @@ function onAgentNextLine( agentNextLine ){
                 anchor_to: value.id,
                 application: application,
                 origin: origin
-            })
+            });
+            let appResponse:net.Socket = createApp( application );
+            if( appResponse ){
+                appResponse.pipe( remoteReq );
+                remoteReq.pipe( appResponse );
+            } else {
+                remoteReq.end();
+            }
         });
-
-    }
-
-    if( type.includes( ConnectionType.ANCHOR ) ){
-        const application = header[ "application" ];
-        const anchor_to = header[ "anchor_to" ];
-
-        const remoteReq = agent.connections[ anchor_to ];
-
-        let appResponse:net.Socket = createApp( application );
-        if( appResponse ){
-            appResponse.pipe( remoteReq.socket );
-            remoteReq.socket.pipe( appResponse );
-        } else {
-            remoteReq.socket.end();
-        }
-    }
-
-    if ( type.includes( ConnectionType.ANCHOR_READY ) ){
-        const anchor_form = header[ "anchor_form" ];
-        const remoteReq = agent.connections[ anchor_form ];
-        remoteReq.anchor();
     }
 }
 
@@ -197,6 +182,7 @@ const next = function( req:net.Socket ) {
             application: host.application,
             id: value.id
         });
+        value.anchor();
     })
 };
 

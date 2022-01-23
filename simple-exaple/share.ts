@@ -3,7 +3,7 @@ import {agentPort, serverAnchorPort, serverHost, serverPort} from "./maps";
 
 export enum ConnectionType {
     ANCHOR="ConnectionType.ANCHOR",
-    ANCHOR_READY="ConnectionType.ANCHOR_READY",
+    // ANCHOR_READY="ConnectionType.ANCHOR_READY",
     SERVER="ConnectionType.SERVER",
     CONNECTION="ConnectionType.CONNECTION",
 }
