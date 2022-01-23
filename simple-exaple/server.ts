@@ -86,24 +86,6 @@ function onServerNextLine( serveNextLine, socket ){
     }if ( type.includes( ConnectionType.ANCHOR ) ){
         let anchor_to = header[ "anchor_to" ];
         let anchor_form = header[ "anchor_form" ];
-        // let application = header[ "application" ];
-        // let origin = header[ "origin" ];
-
-        // let originAgent = root.connections[ root.servers[ origin] ];
-
-
-        // writeInSocket( socket, {
-        //     type: [ConnectionType.ANCHOR],
-        //     anchor_to: anchor_to,
-        //     application: application
-        // })
-        //
-        // writeInSocket( originAgent.socket, {
-        //     type: [ConnectionType.ANCHOR_READY],
-        //     anchor_to: anchor_to,
-        //     anchor_form: anchor_form
-        // });
-
         root.connections[ anchor_form ].anchor( anchor_to );
     }
 }
