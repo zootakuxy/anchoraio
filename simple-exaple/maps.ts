@@ -1,4 +1,4 @@
-export const identifier = "zootakuxy.aio";
+export const identifier = process.argv[2];
 export const serverHost = "aio.brainsoftstp.com";
 export const agentPort = 8080;
 export const serverPort = 48000;
@@ -6,17 +6,11 @@ export const serverAnchorPort = 48001
 
 export const hosts = {
     //zootakuxy.aio
-    "127.100.1.1": { server: "zootakuxy.aio", application: 5432 },
-    "127.100.1.2": { server: "zootakuxy.aio", application: 49278 },
-    "127.100.1.3": { server: "zootakuxy.aio", application: "maguita" },
-    "127.100.1.4": { server: "zootakuxy.aio", application: "postgres" },
-
-    //kadafi.aio
-    "127.100.1.5": { server: "kadafi.aio", application: 5432 },
-    "127.100.1.6": { server: "kadafi.aio", application: 49278 },
-    "127.100.1.7": { server: "kadafi.aio", application: "maguita" },
-    "127.100.1.8": { server: "kadafi.aio", application: "postgres" },
-    "127.100.2.1": { server: "zootakuxy.aio", application: "webMaguita" },
+    "127.100.1.1": { server: identifier, application: 5432 },
+    "127.100.1.2": { server: identifier, application: 49278 },
+    "127.100.1.3": { server: identifier, application: "maguita" },
+    "127.100.1.4": { server: identifier, application: "postgres" },
+    "127.100.2.1": { server: identifier, application: "webMaguita" },
 }
 
 export const apps = {
