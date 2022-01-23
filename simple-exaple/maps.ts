@@ -21,8 +21,9 @@ export const hosts = {
     //postgres
     "127.200.1.3": { server: identifier, application: 5432 },
     "127.200.1.4": { server: identifier, application: "postgres" },
-
 }
+
+console.table( hosts );
 
 export const apps = {
     web: { address:"127.0.0.1", port: 80 },
