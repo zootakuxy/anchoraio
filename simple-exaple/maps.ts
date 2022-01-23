@@ -1,6 +1,6 @@
 export const identifier = "zootakuxy.aio";
 export const serverHost = "aio.brainsoftstp.com";
-export const agentPort = 88;
+export const agentPort = 8080;
 export const serverPort = 48000;
 export const serverAnchorPort = 48001
 
