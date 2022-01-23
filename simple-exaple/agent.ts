@@ -5,10 +5,6 @@ import {Server} from "net";
 import { ConnectionType, DEFAULT_SHARE, showHeader, SocketConnection } from "./share";
 import {writeInSocket} from "./share";
 
-
-
-
-
 const configs = {
     identifier: identifier,
     serverHost: DEFAULT_SHARE.SERVER_HOST,
