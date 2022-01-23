@@ -5,3 +5,5 @@ package-lock.json
 *.js
 *.js.map
 etc/*
+!etc/keep
+!etc/simple/*
