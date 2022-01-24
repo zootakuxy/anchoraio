@@ -11,6 +11,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "nanoid": "^3.2.0",
     "source-map-support": "^0.5.21"
+  },
+  "devDependencies": {
+    "@types/nanoid": "^3.0.0"
   }
 }
