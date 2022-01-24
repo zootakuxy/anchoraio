@@ -23,7 +23,7 @@ const configs = {
     timeout: 1000*5,
     hosts: hosts,
     apps: apps,
-    maximumSlots:15
+    maximumSlots:20
 }
 
 

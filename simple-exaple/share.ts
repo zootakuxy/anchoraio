@@ -34,8 +34,6 @@ export const showHeader = (any) =>{
     console.log( "".padEnd( 84, "=") );
 }
 
-let s: ReturnType<typeof headerMap.SERVER>
-;
 
 export type ChunkLine = { raw:string, chunk:string, header:any, show(), type:(Event|string)[], id?:string,
     as:{
@@ -50,8 +48,19 @@ export function asLine( buffer:Buffer ):ChunkLine[]{
         .filter( (next)=> next && next.length )
         .join("\n");
 
-    return raw.split( "\n" ).filter( (next)=> next && next.length ) .map( (chunk)=>{
-        let header = JSON.parse( chunk );
+    return raw.split( "\n" ).filter( next => !!next && !!next?.length).map( (chunk)=>{
+        let header
+        try{ header = JSON.parse( chunk );}
+        catch (e){
+            console.log( "--------------------------------------------")
+            console.log( raw );
+            console.log( "--------------------------------------------")
+            console.log( chunk );
+            console.error( e );
+            console.log( "--------------------------------------------")
+            return null;
+        }
+
         return {
             chunk,
             raw,
@@ -59,18 +68,18 @@ export function asLine( buffer:Buffer ):ChunkLine[]{
             show(){ showHeader( this.header )},
             get type(){
                 if( !this.header["type"] ) return []
-                else if( typeof this.header["type"] === "string" ) return [ this.header["type"] ];
+                else if( typeof this.header["type"] === "string" ) return [ header["type"] ];
                 else if( !Array.isArray(this.header["type"]) ) return [ ];
-                else return this.header["type"];
+                else return header["type"];
             }, get id(){
-                return this.header["id"];
+                return header[ "id" ];
             }, as:{
                 get ANCHOR(){ return headerMap.ANCHOR( header )},
                 get SERVER(){ return headerMap.SERVER( header )},
                 get AIO(){ return headerMap.AIO( header )}
             }
         }
-    });
+    }).filter( next=> !!next );
 }
 
 export enum SlotName {

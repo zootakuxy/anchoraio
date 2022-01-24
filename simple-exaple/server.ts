@@ -2,6 +2,9 @@ import "./init"
 import {asLine, ChunkLine, Event, eventCode, headerMap, SlotName, SocketConnection, writeInSocket} from "./share";
 import net from "net";
 import {nanoid} from "nanoid";
+import * as cluster from "cluster";
+import * as os from "os";
+import * as child_process from "child_process";
 
 
 type Connection = {
@@ -29,6 +32,8 @@ export const root: {
 
 
 type EventName = string|Event;
+
+
 
 function createConnectionId ( socket:net.Socket, namespace, metadata?:{[p:string|number]:any} ){
     socket.on( "error", err => { } );
@@ -189,3 +194,15 @@ export function start(){
 }
 
 start();
+
+// const numCPUs = require('os').cpus().length;
+//
+// if (cluster.isMaster) {
+//     console.log('Master process is running');
+//     // Fork workers
+//     for (let i = 0; i < numCPUs; i++) {
+//         cluster.fork();
+//     }
+// } else {
+//     start();
+// }
