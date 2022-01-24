@@ -2,9 +2,6 @@ import "./init"
 import {asLine, ChunkLine, Event, eventCode, headerMap, SlotName, SocketConnection, writeInSocket} from "./share";
 import net from "net";
 import {nanoid} from "nanoid";
-import * as cluster from "cluster";
-import * as os from "os";
-import * as child_process from "child_process";
 
 
 type Connection = {
