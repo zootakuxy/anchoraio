@@ -8,10 +8,10 @@ import {
     Event,
     DEFAULT_SHARE,
     eventCode, headerMap,
-    SlotName,
     SocketConnection,
     writeInSocket
 } from "./share";
+import {SlotManager, SlotName} from "./slot";
 
 const configs = {
     identifier: identifier,
@@ -148,7 +148,7 @@ function onAgentNextLine( chunkLine:ChunkLine ){
         const application = chunkLine.header["application"];
         const anchor_to = chunkLine.header["anchor_to"];
 
-        nextSlot( SlotName.IN, anchor_to ).then( anchor => {
+        slotManager.nextSlot( SlotName.IN, anchor_to ).then( anchor => {
             let appResponse:net.Socket = createApp( application );
             if( appResponse ){
                 appResponse.pipe( anchor.socket );
@@ -240,45 +240,12 @@ export type AgentConnection = {
     anchor( socket:net.Socket ),
 }
 
-export function nextSlot( slotName:SlotName, anchorId?:string ):Promise<AgentConnection>{
-
-    if( anchorId ){
-        let index = agent.slots[slotName].findIndex( value => value.id === anchorId );
-        let next = agent.slots[ slotName ][ index ];
-        agent.slots[ slotName ].splice( index, 1 );
-        return Promise.resolve( next );
+let slotManager = new SlotManager<AgentConnection>({
+    slots(){ return agent.slots },
+    handlerCreator( name, anchorID, opts, ...extras){
+        return createSlots( name, opts );
     }
-
-    return new Promise( (resolve) => {
-        let next:AgentConnection;
-        let _resolve = () =>{
-            if( !next ) return false;
-            if( next.busy ) return false;
-            if( !next.socket.connected ) return false;
-            next.busy = true;
-            resolve( next );
-            return  true;
-        }
-
-
-        while ( !next && agent.slots[slotName].length ){
-            next = agent.slots[slotName].shift();
-            if( next.busy ) next = null;
-        }
-
-        if( _resolve() ) return;
-        return createSlots( slotName ).then( created => {
-            if( created ) next = agent.slots[ slotName ].shift();
-            if( _resolve() ) return;
-            else nextSlot( slotName, anchorId ).then( value => {
-                next = value;
-                _resolve()
-            });
-        })
-    });
-}
-
-
+})
 
 function start(){
     agent.local = net.createServer(req => {
@@ -299,7 +266,7 @@ function start(){
 
         console.log( "out slots: ", agent.slots[SlotName.OUT].length );
         console.log( "in  slots: ", agent.slots[SlotName.IN].length );
-        nextSlot( SlotName.OUT ).then(value => {
+        slotManager.nextSlot( SlotName.OUT ).then(value => {
             if( !value ) {
                 console.trace();
                 throw new Error( "NoSlot");

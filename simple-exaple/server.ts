@@ -4,12 +4,12 @@ import {
     ChunkLine,
     Event,
     eventCode,
-    SlotName,
     SocketConnection,
     writeInSocket
 } from "./share";
 import net from "net";
 import {nanoid} from "nanoid";
+import {SlotManager, SlotName} from "./slot";
 
 
 type ServerConnection={
@@ -94,7 +94,7 @@ function createConnectionId ( socket:net.Socket, namespace, metadata?:{[p:string
     return connection;
 }
 
-function requireSlot(connection:ServerConnection, slotName:SlotName ):Promise<boolean>{
+function requireSlot( slotName:SlotName, connection:ServerConnection ):Promise<boolean>{
     return new Promise<boolean>( (resolve ) => {
         let slotCode = nanoid(16 );
          writeInSocket( connection.socket, {
@@ -108,40 +108,12 @@ function requireSlot(connection:ServerConnection, slotName:SlotName ):Promise<bo
     })
 }
 
-function nextSlotServer( agent:ServerConnection, slotName:SlotName, anchorID?:string ):Promise<ServerConnection>{
-    if( anchorID ){
-        let index = agent.slots[slotName].findIndex( value => value.id === anchorID );
-        let next = agent.slots[ slotName ][ index ];
-        agent.slots[ slotName ].splice( index, 1 );
-        return Promise.resolve( next );
+const serverSlotManager = new SlotManager<ServerConnection>({
+    slots( server:ServerConnection){ return server.slots },
+    handlerCreator( slotName:SlotName, anchorID:string, server:ServerConnection, ...opts ){
+        return requireSlot(  slotName, server )
     }
-
-    return new Promise( (resolve) => {
-        let next:ServerConnection;
-        let _resolve = () =>{
-            if( !next ) return false;
-            if( next.busy ) return false;
-            if( !next.socket.connected ) return false;
-            next.busy = true;
-            resolve( next );
-            return  true;
-        }
-
-        while ( !next && agent.slots[ slotName].length ){
-            next = agent.slots[ slotName ].shift();
-            if( next.busy ) next = null;
-        }
-        if( _resolve() ) return;
-        requireSlot( agent, slotName ).then( created => {
-            if( created ) next = agent.slots[ slotName ].shift();
-            if( _resolve() ) return;
-            else nextSlotServer( agent, slotName, anchorID ).then( value => {
-                next = value;
-                _resolve()
-            });
-        });
-    });
-}
+})
 
 export function start(){
     net.createServer( socket => {
@@ -166,8 +138,8 @@ export function start(){
                     let serverResolve = root.connections[ root.servers[ opts.server ] ];
 
                     Promise.all([
-                        nextSlotServer( connection, SlotName.OUT, opts.anchor_form ),
-                        nextSlotServer( serverResolve, SlotName.IN )
+                        serverSlotManager.nextSlot( SlotName.OUT, opts.anchor_form, connection ),
+                        serverSlotManager.nextSlot( SlotName.IN, null, serverResolve )
                     ]).then( value => {
                         const [ anchorOUT, anchorIN ] = value;
                         anchorOUT.anchor( anchorIN );
@@ -203,15 +175,3 @@ export function start(){
 }
 
 start();
-
-// const numCPUs = require('os').cpus().length;
-//
-// if (cluster.isMaster) {
-//     console.log('Master process is running');
-//     // Fork workers
-//     for (let i = 0; i < numCPUs; i++) {
-//         cluster.fork();
-//     }
-// } else {
-//     start();
-// }

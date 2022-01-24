@@ -75,10 +75,7 @@ export function asLine( buffer:Buffer ):ChunkLine[]{
     }).filter( next=> !!next );
 }
 
-export enum SlotName {
-    IN="in",
-    OUT="out"
-}
+
 
 
 export function writeInSocket( socket:net.Socket, data, cb?:( data?:any, socket?:net.Socket )=>void ){
@@ -111,3 +108,4 @@ export const headerMap = {
         return _header( Event.AIO, opts, ...types );
     }
 }
+
