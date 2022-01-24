@@ -1,16 +1,19 @@
 import "./init"
-import {writeInSocket} from "./share";
+import {asLine, ChunkLine, Event, eventCode, headerMap, SlotName, SocketConnection, writeInSocket} from "./share";
 import net from "net";
-import {ConnectionType, showHeader} from "./share";
-
+import {nanoid} from "nanoid";
 
 
 type Connection = {
-    socket: net.Socket,
+    socket: SocketConnection,
     id:string,
-    keys:string[]
-    // data?:Buffer
-    anchor:(id:string)=>void
+    keys:string[],
+    anchor:(anchor:string|Connection)=>void,
+    slots:{ [p in SlotName]:Connection[]}
+    busy?:boolean
+    once( string:EventName, cb:( event:EventName, chunkLine?:ChunkLine)=>void )
+    on( string:EventName, cb:( event:EventName, chunkLine?:ChunkLine )=>void )
+    notify( string:EventName, chunkLine?:ChunkLine )
 }
 
 const configs = {
@@ -25,86 +28,160 @@ export const root: {
 } = { connections: {}, req: {}, servers:{}}
 
 
-function createConnectionId ( connection:net.Socket, group ){
-    connection.on( "error", err => { } );
-    let id = `${group}://${Math.trunc( Math.random()*9999999)}/${new Date().getTime()}`;
-    connection[ "id" ] = id;
-    root.connections[ id ] = {
-        id: id,
-        socket: connection,
-        keys: [],
-        anchor( id ){
-            let otherSide = root.connections[ id ];
-            otherSide.socket.pipe( this.socket );
-            this.socket.pipe( otherSide.socket );
+type EventName = string|Event;
+
+function createConnectionId ( socket:net.Socket, namespace, metadata?:{[p:string|number]:any} ){
+    socket.on( "error", err => { } );
+    let id = `${namespace}://${nanoid( 32 )}`;
+    socket[ "id" ] = id;
+    let _once:{ [p:string]:(( event:string, ...data)=>void)[ ]} = new Proxy( {}, {
+        get(target: {}, p: string | symbol, receiver: any): any {
+            if( !target[p] ) target[p] = [];
+            return target[ p ];
         }
+    })
+    let _on:{ [p:EventName]:(( event:EventName, ...data)=>void)[ ]} = new Proxy( {}, {
+        get(target: {}, p: string | symbol, receiver: any): any {
+            if( !target[p] ) target[p] = [];
+            return target[ p ];
+        }
+    })
+    let _status = {
+        connected:true
     };
-    writeInSocket(connection, { id } );
+
+    socket.on( "close", hadError => _status.connected = false );
+    socket.on( "connect", () => _status.connected = true );
+
+    let connection:Connection = {
+        id: id,
+        socket: Object.assign(  socket, metadata||{}, {
+            id: id,
+            get connected(){ return _status.connected }
+        }),
+        keys: [],
+        slots:{ [SlotName.OUT]:[], [SlotName.IN]:[] },
+        anchor( anchor ){
+            if( typeof anchor === "string" ) anchor = root.connections[ id ];
+            anchor.socket.pipe( this.socket );
+            this.socket.pipe( anchor.socket );
+
+        }, once(event: EventName, cb:(event:EventName, ...data )=>void) { _once[ event ].push( cb );
+        }, on(event: EventName, cb:(event:EventName, ...data )=>void) { _on[ event ].push( cb );
+        }, notify( event, ...data ){
+            _once[ event ].splice(0, _once[ event ].length) .forEach( value => value( event, ...data ) );
+            _once[ "*" ].splice(0, _once[ event ].length) .forEach( value => value( event, ...data ) );
+            _on[ event ].forEach( (value, index) => value( event, ...data ) );
+            _on[ "*" ].forEach( (value, index) => value( event, ...data ) );
+        }
+    }
+    root.connections[ id ] = connection;
+    writeInSocket(socket, { id } );
+    return connection;
 }
 
-
-function onServerNextLine( serveNextLine, socket ){
-    console.log( serveNextLine );
-    let header = JSON.parse( serveNextLine );
-    showHeader( header );
-
-    let type:ConnectionType[] = header[ "type" ];
-
-    if( type.includes( ConnectionType.SERVER ) ){
-        /*
-            origin: configs.identifier,
-            server: configs.identifier,
-            id: id
-         */
-        let origin = header[ "origin" ];
-        let server = header[ "server" ];
-        let id = header[ "id" ];
-        const  connection = root.connections[id];
-        connection.keys.push( id, server );
-        root.servers[ server ] = id;
-    }
-    if(  type.includes( ConnectionType.CONNECTION ) ){
-        /*
-            origin: configs.identifier,
-            server: host.server,
-            application: host.application
-            id: id
-         */
-        let origin = header[ "origin" ];
-        let server = header[ "server" ];
-        let application = header[ "application" ];
-        let id = header[ "id" ];
-        let serverResolve = root.connections[ root.servers[ server ] ];
-
-        writeInSocket( serverResolve.socket, {
-            origin: origin,
-            type: [ConnectionType.CONNECTION ],
-            application: application,
-            anchor_form: id
+function waitSlot( connection:Connection, slotName:SlotName ):Promise<boolean>{
+    return new Promise<boolean>( (resolve, reject) => {
+        let slotCode = nanoid(16 );
+         writeInSocket( connection.socket, {
+             type: Event.AIO,
+             slot:slotName,
+             slotCode
         });
+        connection.once( eventCode( Event.AIO, slotCode ), (event, ...data )=>{
+            return resolve( !!connection.slots[slotName].length );
+        })
+    })
+}
 
-    }if ( type.includes( ConnectionType.ANCHOR ) ){
-        let anchor_to = header[ "anchor_to" ];
-        let anchor_form = header[ "anchor_form" ];
-        root.connections[ anchor_form ].anchor( anchor_to );
+function nextSlotServer( agent:Connection, slotName:SlotName, anchorID?:string ):Promise<Connection>{
+    if( anchorID ){
+        let index = agent.slots[slotName].findIndex( value => value.id === anchorID );
+        let next = agent.slots[ slotName ][ index ];
+        agent.slots[ slotName ].splice( index, 1 );
+        return Promise.resolve( next );
     }
+
+    return new Promise( (resolve, reject) => {
+        let next:Connection;
+        let _resolve = () =>{
+            if( !next ) return false;
+            if( next.busy ) return false;
+            if( !next.socket.connected ) return false;
+            next.busy = true;
+            resolve( next );
+            return  true;
+        }
+
+        while ( !next && agent.slots[ slotName].length ){
+            next = agent.slots[ slotName ].shift();
+            if( next.busy ) next = null;
+        }
+        if( _resolve() ) return;
+        waitSlot( agent, slotName ).then( created => {
+            if( created ) next = agent.slots[ slotName ].shift();
+            if( _resolve() ) return;
+            else nextSlotServer( agent, slotName, anchorID ).then( value => {
+                next = value;
+                _resolve()
+            });
+        });
+    });
 }
 
 export function start(){
     net.createServer( socket => {
-        createConnectionId( socket, "connection" );
+        createConnectionId( socket, "anchor" );
     }).listen( configs.anchorPort );
 
     net.createServer(function( socket) {
-        createConnectionId( socket, "server" );
-
+        const connection =  createConnectionId( socket, "server" );
         socket.on( "data", data => {
-            let raw = data.toString();
-            console.log( raw );
-            let lines = raw.split( "\n" );
-            lines.filter( value => value && value.length ).forEach( (next)=>{
-                onServerNextLine( next, socket );
-            });
+            asLine( data ).forEach( async chunkLine => {
+                chunkLine.show();
+
+                if( chunkLine.type.includes( Event.SERVER ) ){
+                    let opts = chunkLine.as.SERVER;
+                    const  connection = root.connections[opts.id];
+                    connection.keys.push( opts.id, opts.server );
+                    root.servers[ opts.server ] = opts.id;
+                }
+
+                if(  chunkLine.type.includes( Event.ANCHOR ) ){
+                    let opts = chunkLine.as.ANCHOR;
+                    let serverResolve = root.connections[ root.servers[ opts.server ] ];
+
+                    Promise.all([
+                        nextSlotServer( connection, SlotName.OUT, opts.anchor_form ),
+                        nextSlotServer( serverResolve, SlotName.IN )
+                    ]).then( value => {
+                        const [ anchorOUT, anchorIN ] = value;
+                        anchorOUT.anchor( anchorIN );
+                        writeInSocket( serverResolve.socket, {
+                            origin: opts.origin,
+                            type: [ Event.ANCHOR ],
+                            application: opts.application,
+                            anchor_form: opts.anchor_form,
+                            anchor_to: anchorIN.id
+                        });
+                    });
+                }
+
+                if( chunkLine.type.includes( Event.AIO ) ){
+                    let opts = chunkLine.as.AIO;
+                    let anchorConnection = root.connections[ opts.anchor ];
+                    connection.slots[ opts.slot ].push( anchorConnection );
+                    connection.notify( Event.AIO );
+                    anchorConnection.socket.on( "close", ()=>{
+                        let index = connection.slots[ opts.slot ].findIndex( value1 => value1.id === opts.anchor );
+                        if( index !== -1 ) connection.slots[ opts.slot ].splice( index, 1 );
+                    });
+                }
+
+                chunkLine.type.forEach( value => {
+                    connection.notify( value, chunkLine );
+                });
+            })
         });
 
 

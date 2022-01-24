@@ -2,8 +2,17 @@ import "./init"
 import {apps, hosts, identifier} from "./maps";
 import * as net from "net";
 import {Server} from "net";
-import { ConnectionType, DEFAULT_SHARE, showHeader, SocketConnection } from "./share";
-import {writeInSocket} from "./share";
+import {
+    asLine,
+    ChunkLine,
+    Connection,
+    Event,
+    DEFAULT_SHARE,
+    eventCode, headerMap,
+    SlotName,
+    SocketConnection,
+    writeInSocket
+} from "./share";
 
 const configs = {
     identifier: identifier,
@@ -13,26 +22,31 @@ const configs = {
     clientPort: DEFAULT_SHARE.AGENT_PORT,
     timeout: 1000*5,
     hosts: hosts,
-    apps: apps
+    apps: apps,
+    maximumSlots:15
 }
 
-export type RegisterResult = {
-    id: string,
-    socket: net.Socket,
-    anchor()
-}
-export function socketRegister<T>( socket:net.Socket, collector?:{ [p:string]:RegisterResult }, req?:net.Socket, metadata?:T, ):Promise<RegisterResult>{
+
+export function registerConnection<T>(socket:net.Socket, collector?:{ [p:string]:Connection }, metadata?:T, ):Promise<Connection>{
     if( !metadata ) metadata = {} as any;
     return new Promise( (resolve, reject) => {
         socket.once( "data", data => {
             const _data = JSON.parse( data.toString("utf-8"));
             let id = _data.id;
-            let socek:SocketConnection&T = Object.assign(socket, { id }, metadata );
+            let _status = {
+                connected: true
+            };
+            socket.on( "close", hadError => _status.connected = false );
+            socket.on( "connect", () => _status.connected = true );
+            let socek:SocketConnection&T = Object.assign(socket, metadata, {
+                id,
+                get connected(){ return _status.connected;}
+            });
 
-            let result:RegisterResult = {
+            let result:Connection = {
                 id: id,
                 socket: socek,
-                anchor(){
+                anchor( req){
                     if( req ){
                         req.pipe( socket );
                         socket.pipe( req );
@@ -51,7 +65,15 @@ export function socketRegister<T>( socket:net.Socket, collector?:{ [p:string]:Re
     })
 }
 
-export const agent:{ local?:Server, server?: net.Socket, connections:{[p:string]: RegisterResult  }} = { connections:{} }
+export const agent:{
+    local?:Server,
+    server?: net.Socket,
+    anchors:{[p:string]: Connection },
+    id?: string,
+    identifier:string,
+    slots:{ [p in SlotName ]:Connection[]}
+    inCreate:SlotName[]
+} = { anchors:{}, identifier: configs.identifier, slots:{ [SlotName.IN]:[], [SlotName.OUT]:[]}, inCreate:[] }
 
 
 function createApp( application ){
@@ -83,18 +105,18 @@ function connect(){
             port: configs.serverPort
         });
 
-        console.log("connect to remote server center..." );
         agent.server.on("connect", () => {
-            socketRegister( agent.server ).then(value => {
-                console.log("connect to remote server center... [ok]" );
-                writeInSocket( agent.server, {
-                    type: [ConnectionType.SERVER],
+            registerConnection( agent.server ).then(value => {
+                agent.id = value.id;
+                writeInSocket( agent.server, headerMap.SERVER({
                     origin: configs.identifier,
                     server: configs.identifier,
                     id: value.id
-                });
+                }));
+                createSlots( SlotName.IN ).then();
+                createSlots( SlotName.OUT ).then();
+                resolve( true );
             });
-            resolve( true );
         });
 
         agent.server.on( "error", err => {
@@ -105,89 +127,173 @@ function connect(){
 
 
         agent.server.on( "data", data => {
-            let raw = data.toString();
-            console.log( raw );
-            let lines = raw.split("\n" );
-            lines.filter( value => value && value.length ).forEach( (line)=>{
-                onAgentNextLine( line );
+            asLine( data ).forEach( (chunkLine, index) => {
+                onAgentNextLine( chunkLine );
             });
-
         })
     })
 }
 
-function onAgentNextLine( agentNextLine ){
-    console.log( agentNextLine );
-    let header = JSON.parse( agentNextLine );
-    showHeader( header );
-    let type:ConnectionType[] = header.type;
-    if( !type ) return;
+function onAgentNextLine( chunkLine:ChunkLine ){
+    chunkLine.show();
 
-    if( type.includes( ConnectionType.CONNECTION ) ) {
-        const origin = header["origin"];
-        const application = header["application"];
-        const anchor_form = header["anchor_form"];
-        const remoteReq = net.createConnection({
-            host: configs.serverHost,
-            port: configs.anchorPort
-        });
+    if( chunkLine.type.includes( Event.ANCHOR ) ) {
+        const application = chunkLine.header["application"];
+        const anchor_to = chunkLine.header["anchor_to"];
 
-        socketRegister(remoteReq, agent.connections, null, {}).then(value => {
-            writeInSocket( agent.server, {
-                type: [ConnectionType.ANCHOR],
-                anchor_form: anchor_form,
-                anchor_to: value.id,
-                application: application,
-                origin: origin
-            });
+        nextSlot( SlotName.IN, anchor_to ).then( anchor => {
             let appResponse:net.Socket = createApp( application );
             if( appResponse ){
-                appResponse.pipe( remoteReq );
-                remoteReq.pipe( appResponse );
+                appResponse.pipe( anchor.socket );
+                anchor.socket.pipe( appResponse );
             } else {
-                remoteReq.end();
+                anchor.socket.end();
             }
+            if( agent.slots[SlotName.IN].length < configs.maximumSlots/3 ) createSlots( SlotName.IN ).then();
+        })
+    }
+    if( chunkLine.type.includes( Event.AIO ) ){
+        let slot = chunkLine.header[ "slot" ];
+        let slotCode = chunkLine.header[ "slotCode" ];
+        createSlots( slot, {
+            slotCode
         });
     }
 }
 
-const next = function( req:net.Socket ) {
+export type CreatSlotOpts = { query?:number, slotCode?:string };
 
-    req.on( "error", err => console.log( "req:error"))
-    req.on( "close", err => console.log( "req:close"))
-    console.log( "new connection on ", req.address() );
+function createSlots( slotName:SlotName, opts?:CreatSlotOpts ):Promise<boolean>{
+    if ( !opts ) opts = {};
 
-    const remoteAddressParts = req.address()["address"].split( ":" );
-    const address =  remoteAddressParts[ remoteAddressParts.length-1 ];
-    const host = configs.hosts[ address ];
+    if( agent.inCreate.includes( slotName ) ) return Promise.resolve( false );
+    agent.inCreate.push( slotName );
 
-    if( !host ) return req.end( () => { console.log( "Cansel connection with", remoteAddressParts )});
-    console.log( "new connection domain", host.server );
+    return new Promise((resolve, reject) => {
+        let counts = (configs.maximumSlots||1) - agent.slots[slotName].length;
+        if( !opts.query ) opts.query = counts;
+        let created = 0;
+        if( !counts ) return resolve( false );
+        let resolved:boolean = false;
 
-    const next = net.createConnection({
-        host: configs.serverHost,
-        port: configs.anchorPort
-    });
-    next.on( "error", err => console.log( "Error:TO"))
+        for ( let i = 0; i< counts; i++ ) {
+            const next = net.createConnection({
+                host: configs.serverHost,
+                port: configs.anchorPort
+            });
+            registerConnection( next, agent.anchors, ).then(value => {
+                agent.slots[ slotName ].push( value );
+                value.socket.on( "close", ( args) => {
+                    let index = agent.slots[ slotName ].findIndex( value1 => value.id === value1.id );
+                    if( index !== -1 ) agent.slots[ slotName ].splice( index, 1 );
+                });
+                created++;
+                if( created === opts.query ){
+                    resolved = true;
+                    resolve( true );
+                } else if( created === counts && !resolved ) {
+                    resolved = true;
+                    resolve( true );
+                }
+                let events:(Event|string)[] = [ Event.AIO ];
+                if( opts.slotCode ){
+                    events.push( eventCode(Event.AIO, opts.slotCode ));
+                }
 
-    socketRegister( next, agent.connections, req ).then(value => {
-        writeInSocket( agent.server, {
-            type: [ConnectionType.CONNECTION],
-            origin: configs.identifier,
-            server: host.server,
-            application: host.application,
-            id: value.id
-        });
-        value.anchor();
+                if( created === counts ) events.push( eventCode( Event.AIO, "END") );
+                if( created === counts && opts.slotCode ) events.push( eventCode( Event.AIO, "END", opts.slotCode ) );
+                writeInSocket( agent.server, headerMap.AIO({
+                    slot:slotName,
+                    origin:agent.identifier,
+                    server:agent.identifier,
+                    agent: agent.identifier,
+                    anchor: value.id,
+                    slotCode: opts.slotCode,
+                    id: value.id,
+                }, ...events ));
+                if( created == counts ){
+                    let index = agent.inCreate.findIndex( value1 => value1 === slotName );
+                    while ( index != -1 ){
+                        agent.inCreate.splice( index, 1 );
+                        index = agent.inCreate.findIndex( value1 => value1 === slotName );
+                    }
+                }
+            });
+        }
     })
-};
+}
+
+export function nextSlot( slotName:SlotName, anchorId?:string ):Promise<Connection>{
+
+    if( anchorId ){
+        let index = agent.slots[slotName].findIndex( value => value.id === anchorId );
+        let next = agent.slots[ slotName ][ index ];
+        agent.slots[ slotName ].splice( index, 1 );
+        return Promise.resolve( next );
+    }
+
+    return new Promise( (resolve, reject) => {
+        let next:Connection;
+        let _resolve = () =>{
+            if( !next ) return false;
+            if( next.busy ) return false;
+            if( !next.socket.connected ) return false;
+            next.busy = true;
+            resolve( next );
+            return  true;
+        }
+
+
+        while ( !next && agent.slots[slotName].length ){
+            next = agent.slots[slotName].shift();
+            if( next.busy ) next = null;
+        }
+
+        if( _resolve() ) return;
+        return createSlots( slotName ).then( created => {
+            if( created ) next = agent.slots[ slotName ].shift();
+            if( _resolve() ) return;
+            else nextSlot( slotName, anchorId ).then( value => {
+                next = value;
+                _resolve()
+            });
+        })
+    });
+}
+
+
 
 function start(){
-    console.log( "start local server..." );
-    agent.local = net.createServer(req => { next( req  );})
-        .listen( configs.clientPort, ()=>{
-            console.log( "start local server...[ok]", configs.clientPort )
-        });
+    agent.local = net.createServer(req => {
+        console.log( "new anchor request" );
+        req.on( "error", err => console.log( "req:error"))
+        req.on( "close", err => console.log( "req:close"))
+
+        const remoteAddressParts = req.address()["address"].split( ":" );
+        const address =  remoteAddressParts[ remoteAddressParts.length-1 ];
+        const host = configs.hosts[ address ];
+
+        if( !host ) return req.end( () => { console.log( "Cansel connection with", remoteAddressParts )});
+
+        console.log( "out slots: ", agent.slots[SlotName.OUT].length );
+        console.log( "in  slots: ", agent.slots[SlotName.IN].length );
+        nextSlot( SlotName.OUT ).then(value => {
+            if( !value ) {
+                console.trace();
+                throw new Error( "NoSlot");
+            }
+            if( !value ) return req.end();
+            writeInSocket( agent.server, headerMap.ANCHOR({
+                origin: configs.identifier,
+                server: host.server,
+                application: host.application,
+                anchor_form: value.id
+            }));
+            value.anchor( req );
+
+            if( agent.slots[SlotName.OUT].length < configs.maximumSlots/3 ) createSlots( SlotName.OUT ).then();
+        }).catch( reason => console.error( reason))
+    }).listen( configs.clientPort, ()=>{});
 }
 
 connect().then(start);
