@@ -5,7 +5,6 @@ import {Server} from "net";
 import {
     asLine,
     ChunkLine,
-    Connection,
     Event,
     DEFAULT_SHARE,
     eventCode, headerMap,
@@ -27,7 +26,7 @@ const configs = {
 }
 
 
-export function registerConnection<T>(socket:net.Socket, collector?:{ [p:string]:Connection }, metadata?:T, ):Promise<Connection>{
+export function registerConnection<T>(socket:net.Socket, collector?:{ [p:string]:AgentConnection }, metadata?:T, ):Promise<AgentConnection>{
     if( !metadata ) metadata = {} as any;
     return new Promise( (resolve, reject) => {
         socket.once( "data", data => {
@@ -43,7 +42,7 @@ export function registerConnection<T>(socket:net.Socket, collector?:{ [p:string]
                 get connected(){ return _status.connected;}
             });
 
-            let result:Connection = {
+            let result:AgentConnection = {
                 id: id,
                 socket: socek,
                 anchor( req){
@@ -68,10 +67,10 @@ export function registerConnection<T>(socket:net.Socket, collector?:{ [p:string]
 export const agent:{
     local?:Server,
     server?: net.Socket,
-    anchors:{[p:string]: Connection },
+    anchors:{[p:string]: AgentConnection },
     id?: string,
     identifier:string,
-    slots:{ [p in SlotName ]:Connection[]}
+    slots:{ [p in SlotName ]:AgentConnection[]}
     inCreate:SlotName[]
 } = { anchors:{}, identifier: configs.identifier, slots:{ [SlotName.IN]:[], [SlotName.OUT]:[]}, inCreate:[] }
 
@@ -223,7 +222,14 @@ function createSlots( slotName:SlotName, opts?:CreatSlotOpts ):Promise<boolean>{
     })
 }
 
-export function nextSlot( slotName:SlotName, anchorId?:string ):Promise<Connection>{
+export type AgentConnection = {
+    id: string,
+    socket:SocketConnection,
+    busy?:boolean
+    anchor( socket:net.Socket ),
+}
+
+export function nextSlot( slotName:SlotName, anchorId?:string ):Promise<AgentConnection>{
 
     if( anchorId ){
         let index = agent.slots[slotName].findIndex( value => value.id === anchorId );
@@ -233,7 +239,7 @@ export function nextSlot( slotName:SlotName, anchorId?:string ):Promise<Connecti
     }
 
     return new Promise( (resolve, reject) => {
-        let next:Connection;
+        let next:AgentConnection;
         let _resolve = () =>{
             if( !next ) return false;
             if( next.busy ) return false;

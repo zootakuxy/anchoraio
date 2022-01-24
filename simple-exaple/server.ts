@@ -4,12 +4,12 @@ import net from "net";
 import {nanoid} from "nanoid";
 
 
-type Connection = {
+type ServerConnection = {
     socket: SocketConnection,
     id:string,
     keys:string[],
-    anchor:(anchor:string|Connection)=>void,
-    slots:{ [p in SlotName]:Connection[]}
+    anchor:(anchor:string|ServerConnection)=>void,
+    slots:{ [p in SlotName]:ServerConnection[]}
     busy?:boolean
     once( string:EventName, cb:( event:EventName, chunkLine?:ChunkLine)=>void )
     on( string:EventName, cb:( event:EventName, chunkLine?:ChunkLine )=>void )
@@ -22,7 +22,7 @@ const configs = {
 }
 
 export const root: {
-    connections:{[p:string]:Connection},
+    connections:{[p:string]:ServerConnection},
     servers:{[p:string]:string},
     req:{[p:string]:string},
 } = { connections: {}, req: {}, servers:{}}
@@ -55,7 +55,7 @@ function createConnectionId ( socket:net.Socket, namespace, metadata?:{[p:string
     socket.on( "close", hadError => _status.connected = false );
     socket.on( "connect", () => _status.connected = true );
 
-    let connection:Connection = {
+    let connection:ServerConnection = {
         id: id,
         socket: Object.assign(  socket, metadata||{}, {
             id: id,
@@ -82,7 +82,7 @@ function createConnectionId ( socket:net.Socket, namespace, metadata?:{[p:string
     return connection;
 }
 
-function waitSlot( connection:Connection, slotName:SlotName ):Promise<boolean>{
+function waitSlot(connection:ServerConnection, slotName:SlotName ):Promise<boolean>{
     return new Promise<boolean>( (resolve, reject) => {
         let slotCode = nanoid(16 );
          writeInSocket( connection.socket, {
@@ -96,7 +96,7 @@ function waitSlot( connection:Connection, slotName:SlotName ):Promise<boolean>{
     })
 }
 
-function nextSlotServer( agent:Connection, slotName:SlotName, anchorID?:string ):Promise<Connection>{
+function nextSlotServer(agent:ServerConnection, slotName:SlotName, anchorID?:string ):Promise<ServerConnection>{
     if( anchorID ){
         let index = agent.slots[slotName].findIndex( value => value.id === anchorID );
         let next = agent.slots[ slotName ][ index ];
@@ -105,7 +105,7 @@ function nextSlotServer( agent:Connection, slotName:SlotName, anchorID?:string )
     }
 
     return new Promise( (resolve, reject) => {
-        let next:Connection;
+        let next:ServerConnection;
         let _resolve = () =>{
             if( !next ) return false;
             if( next.busy ) return false;

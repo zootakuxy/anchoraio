@@ -12,12 +12,7 @@ export function eventCode(type:Event, ...code:string[] ):string {
     return `${type}://${code.join("/")}`;
 }
 
-export type Connection = {
-    id: string,
-    socket:SocketConnection,
-    anchor( socket:net.Socket ),
-    busy?:boolean
-}
+
 
 export const DEFAULT_SHARE = {
     SERVER_HOST: serverHost,
