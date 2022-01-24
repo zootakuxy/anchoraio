@@ -26,25 +26,29 @@ const configs = {
 }
 
 
-export function registerConnection<T>(socket:net.Socket, collector?:{ [p:string]:AgentConnection }, metadata?:T, ):Promise<AgentConnection>{
+export function registerConnection<T>(socket:net.Socket, namespace:"agent"|"anchor"|"req", collector?:{ [p:string]:AgentConnection }, metadata?:T, ):Promise<AgentConnection>{
     if( !metadata ) metadata = {} as any;
-    return new Promise( (resolve, reject) => {
+    return new Promise( (resolve) => {
         socket.once( "data", data => {
-            const _data = JSON.parse( data.toString("utf-8"));
+            const _data = JSON.parse( data.toString());
             let id = _data.id;
             let _status = {
                 connected: true
             };
-            socket.on( "close", hadError => _status.connected = false );
+            socket.on( "close", hadError =>{
+                console.log( "error in namespace:", namespace );
+                console.error( hadError );
+                _status.connected = false
+            } );
             socket.on( "connect", () => _status.connected = true );
-            let socek:SocketConnection&T = Object.assign(socket, metadata, {
+            let connection:SocketConnection&T = Object.assign(socket, metadata, {
                 id,
                 get connected(){ return _status.connected;}
             });
 
             let result:AgentConnection = {
                 id: id,
-                socket: socek,
+                socket: connection,
                 anchor( req){
                     if( req ){
                         req.pipe( socket );
@@ -56,6 +60,8 @@ export function registerConnection<T>(socket:net.Socket, collector?:{ [p:string]
             if( collector ){
                 collector[ id ] = result;
                 socket.on( "close", hadError => {
+                    console.log( "error in namespace:", namespace );
+                    console.error( hadError );
                     delete collector[ id ];
                 });
             }
@@ -84,20 +90,20 @@ function createApp( application ){
             host: app.address,
             port: app.port
         });
-        connection.on( "error", err => console.log( "lserver:error", err.message ));
+        connection.on( "error", err => console.log( "server:error", err.message ));
     } else if(Number.isSafeInteger( Number( application )) ) {
         console.log("create local connection")
         connection = net.createConnection({
             host: "127.0.0.1",
             port: Number( application )
         });
-        connection.on( "error", err => console.log( "lserver:error", err.message ));
+        connection.on( "error", err => console.log( "server:error", err.message ));
     }
     return connection;
 }
 
 function connect(){
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
 
         agent.server = net.createConnection({
             host: configs.serverHost,
@@ -105,7 +111,7 @@ function connect(){
         });
 
         agent.server.on("connect", () => {
-            registerConnection( agent.server ).then(value => {
+            registerConnection( agent.server, "agent" ).then(value => {
                 agent.id = value.id;
                 writeInSocket( agent.server, headerMap.SERVER({
                     origin: configs.identifier,
@@ -119,6 +125,8 @@ function connect(){
         });
 
         agent.server.on( "error", err => {
+            console.log( "error in default connection" );
+            console.error( err );
             setTimeout( ()=>{
                 agent.server.connect( configs.serverPort );
             }, configs.timeout )
@@ -126,7 +134,7 @@ function connect(){
 
 
         agent.server.on( "data", data => {
-            asLine( data ).forEach( (chunkLine, index) => {
+            asLine( data ).forEach( (chunkLine) => {
                 onAgentNextLine( chunkLine );
             });
         })
@@ -156,7 +164,10 @@ function onAgentNextLine( chunkLine:ChunkLine ){
         let slotCode = chunkLine.header[ "slotCode" ];
         createSlots( slot, {
             slotCode
-        });
+        }).catch( reason => {
+            console.log( "rejected on create slot", slot );
+            console.error( reason )
+        })
     }
 }
 
@@ -168,7 +179,7 @@ function createSlots( slotName:SlotName, opts?:CreatSlotOpts ):Promise<boolean>{
     if( agent.inCreate.includes( slotName ) ) return Promise.resolve( false );
     agent.inCreate.push( slotName );
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve ) => {
         let counts = (configs.maximumSlots||1) - agent.slots[slotName].length;
         if( !opts.query ) opts.query = counts;
         let created = 0;
@@ -180,9 +191,9 @@ function createSlots( slotName:SlotName, opts?:CreatSlotOpts ):Promise<boolean>{
                 host: configs.serverHost,
                 port: configs.anchorPort
             });
-            registerConnection( next, agent.anchors, ).then(value => {
+            registerConnection( next, "anchor", agent.anchors, ).then(value => {
                 agent.slots[ slotName ].push( value );
-                value.socket.on( "close", ( args) => {
+                value.socket.on( "close", ( ) => {
                     let index = agent.slots[ slotName ].findIndex( value1 => value.id === value1.id );
                     if( index !== -1 ) agent.slots[ slotName ].splice( index, 1 );
                 });
@@ -238,7 +249,7 @@ export function nextSlot( slotName:SlotName, anchorId?:string ):Promise<AgentCon
         return Promise.resolve( next );
     }
 
-    return new Promise( (resolve, reject) => {
+    return new Promise( (resolve) => {
         let next:AgentConnection;
         let _resolve = () =>{
             if( !next ) return false;
@@ -272,8 +283,13 @@ export function nextSlot( slotName:SlotName, anchorId?:string ):Promise<AgentCon
 function start(){
     agent.local = net.createServer(req => {
         console.log( "new anchor request" );
-        req.on( "error", err => console.log( "req:error"))
-        req.on( "close", err => console.log( "req:close"))
+        req.on( "error", err =>{
+            console.log( "req:error" )
+            console.error( err );
+        })
+        req.on( "close", () => {
+            console.log( "req:close");
+        })
 
         const remoteAddressParts = req.address()["address"].split( ":" );
         const address =  remoteAddressParts[ remoteAddressParts.length-1 ];

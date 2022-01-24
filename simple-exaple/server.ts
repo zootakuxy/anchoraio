@@ -1,10 +1,18 @@
 import "./init"
-import {asLine, ChunkLine, Event, eventCode, headerMap, SlotName, SocketConnection, writeInSocket} from "./share";
+import {
+    asLine,
+    ChunkLine,
+    Event,
+    eventCode,
+    SlotName,
+    SocketConnection,
+    writeInSocket
+} from "./share";
 import net from "net";
 import {nanoid} from "nanoid";
 
 
-type ServerConnection = {
+type ServerConnection={
     socket: SocketConnection,
     id:string,
     keys:string[],
@@ -33,17 +41,17 @@ type EventName = string|Event;
 
 
 function createConnectionId ( socket:net.Socket, namespace, metadata?:{[p:string|number]:any} ){
-    socket.on( "error", err => { } );
+    socket.on( "error", err => { console.error( err ) } );
     let id = `${namespace}://${nanoid( 32 )}`;
     socket[ "id" ] = id;
     let _once:{ [p:string]:(( event:string, ...data)=>void)[ ]} = new Proxy( {}, {
-        get(target: {}, p: string | symbol, receiver: any): any {
+        get(target, p): any {
             if( !target[p] ) target[p] = [];
             return target[ p ];
         }
     })
     let _on:{ [p:EventName]:(( event:EventName, ...data)=>void)[ ]} = new Proxy( {}, {
-        get(target: {}, p: string | symbol, receiver: any): any {
+        get(target, p ): any {
             if( !target[p] ) target[p] = [];
             return target[ p ];
         }
@@ -52,7 +60,11 @@ function createConnectionId ( socket:net.Socket, namespace, metadata?:{[p:string
         connected:true
     };
 
-    socket.on( "close", hadError => _status.connected = false );
+    socket.on( "close", hadError =>{
+        console.log( "error in namespace:", namespace );
+        console.error( hadError );
+        _status.connected = false
+    });
     socket.on( "connect", () => _status.connected = true );
 
     let connection:ServerConnection = {
@@ -73,8 +85,8 @@ function createConnectionId ( socket:net.Socket, namespace, metadata?:{[p:string
         }, notify( event, ...data ){
             _once[ event ].splice(0, _once[ event ].length) .forEach( value => value( event, ...data ) );
             _once[ "*" ].splice(0, _once[ event ].length) .forEach( value => value( event, ...data ) );
-            _on[ event ].forEach( (value, index) => value( event, ...data ) );
-            _on[ "*" ].forEach( (value, index) => value( event, ...data ) );
+            _on[ event ].forEach( (value) => value( event, ...data ) );
+            _on[ "*" ].forEach( (value) => value( event, ...data ) );
         }
     }
     root.connections[ id ] = connection;
@@ -82,21 +94,21 @@ function createConnectionId ( socket:net.Socket, namespace, metadata?:{[p:string
     return connection;
 }
 
-function waitSlot(connection:ServerConnection, slotName:SlotName ):Promise<boolean>{
-    return new Promise<boolean>( (resolve, reject) => {
+function requireSlot(connection:ServerConnection, slotName:SlotName ):Promise<boolean>{
+    return new Promise<boolean>( (resolve ) => {
         let slotCode = nanoid(16 );
          writeInSocket( connection.socket, {
              type: Event.AIO,
              slot:slotName,
              slotCode
         });
-        connection.once( eventCode( Event.AIO, slotCode ), (event, ...data )=>{
+        connection.once( eventCode( Event.AIO, slotCode ),()=>{
             return resolve( !!connection.slots[slotName].length );
         })
     })
 }
 
-function nextSlotServer(agent:ServerConnection, slotName:SlotName, anchorID?:string ):Promise<ServerConnection>{
+function nextSlotServer( agent:ServerConnection, slotName:SlotName, anchorID?:string ):Promise<ServerConnection>{
     if( anchorID ){
         let index = agent.slots[slotName].findIndex( value => value.id === anchorID );
         let next = agent.slots[ slotName ][ index ];
@@ -104,7 +116,7 @@ function nextSlotServer(agent:ServerConnection, slotName:SlotName, anchorID?:str
         return Promise.resolve( next );
     }
 
-    return new Promise( (resolve, reject) => {
+    return new Promise( (resolve) => {
         let next:ServerConnection;
         let _resolve = () =>{
             if( !next ) return false;
@@ -120,7 +132,7 @@ function nextSlotServer(agent:ServerConnection, slotName:SlotName, anchorID?:str
             if( next.busy ) next = null;
         }
         if( _resolve() ) return;
-        waitSlot( agent, slotName ).then( created => {
+        requireSlot( agent, slotName ).then( created => {
             if( created ) next = agent.slots[ slotName ].shift();
             if( _resolve() ) return;
             else nextSlotServer( agent, slotName, anchorID ).then( value => {

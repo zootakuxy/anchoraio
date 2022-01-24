@@ -12,8 +12,6 @@ export function eventCode(type:Event, ...code:string[] ):string {
     return `${type}://${code.join("/")}`;
 }
 
-
-
 export const DEFAULT_SHARE = {
     SERVER_HOST: serverHost,
     SERVER_PORT: serverPort,
