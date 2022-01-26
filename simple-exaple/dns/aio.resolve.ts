@@ -84,7 +84,13 @@ export const aioResolve = new class AioReso {
         let resolve = this.resolves.resolve.aio[ key ];
 
         if( !resolve ){
-            let address = localhost.next();
+
+            let address;
+            while ( !address ){
+                address = localhost.next();
+                if( Object.keys( this.resolves.resolve.aio ).includes( address ) ) address = null;
+            }
+
             let application;
             let _domainParts = domainName.split( "." );
             let _serverParts = server.identifier.split( "." );
