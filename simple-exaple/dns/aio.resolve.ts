@@ -73,7 +73,6 @@ export const aioResolve = new class AioReso {
             delete this.agents.agents[ key ];
             this.agents.agents[ agent.identifier ] = agent;
         });
-        console.log( this.agents.agents );
     }
 
     aioResolve( domainName:string ):DnsAnswer[]{
@@ -83,10 +82,6 @@ export const aioResolve = new class AioReso {
 
         key = Object.keys( this.resolves.resolve.aio ).find( value => this.resolves.resolve.aio[ value ].domainName === domainName );
         let resolve = this.resolves.resolve.aio[ key ];
-
-        console.log( "resolveAgentAs", resolve );
-
-
 
         if( !resolve ){
             let address = localhost.next();

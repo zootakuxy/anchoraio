@@ -1,5 +1,6 @@
 import {aioResolve} from "./aio.resolve";
 import {netResolve} from "./net.resolve";
+import chalk from "chalk";
 
 const dns2 = require('dns2');
 const { Packet } = dns2;
@@ -8,12 +9,10 @@ export function startDNSServer (){
     const server = dns2.createServer({
         udp: true,
         tcp: true,
-        doh: true,
         handle: (request, send, rinfo) => {
             const response = Packet.createResponseFromRequest(request);
             const [ question ] = request.questions;
             const { name } = question;
-            console.log( "resolve...", name );
             let aioResponse = aioResolve.aioResolve( name );
             if( aioResponse && aioResponse.length > 0 ){
                 response.answers.push( ...aioResponse )
@@ -29,12 +28,13 @@ export function startDNSServer (){
     });
 
     server.on('close', () => {
-        console.log('server closed');
+        console.log('DNS SERVER [OFF]');
     });
 
     server.listen({
         udp: 53,
-        tcp: 53,
-        doh: 5353
-    });
+        tcp: 53
+    }).then( value => {
+        console.log( chalk.greenBright`DNS SERVER [ON]` );
+    })
 }

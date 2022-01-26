@@ -61,7 +61,6 @@ function createConnectionId ( socket:net.Socket, namespace, metadata?:{[p:string
     };
 
     socket.on( "close", hadError =>{
-        console.log( "error in namespace:", namespace );
         console.error( hadError );
         _status.connected = false
     });

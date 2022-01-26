@@ -14,6 +14,7 @@ import {SlotManager, SlotName} from "./slot";
 import {startDNSServer} from "./dns/server";
 import {aioResolve, asAio} from "./dns/aio.resolve";
 import {apps} from "./apps";
+import chalk from "chalk";
 
 export const serverHost = process.argv[2];
 export const identifier = asAio( process.argv[3] ).identifier;
@@ -40,7 +41,6 @@ export function registerConnection<T>(socket:net.Socket, namespace:"agent"|"anch
                 connected: true
             };
             socket.on( "close", hadError =>{
-                console.log( "error in namespace:", namespace );
                 console.error( hadError );
                 _status.connected = false
             } );
@@ -64,7 +64,6 @@ export function registerConnection<T>(socket:net.Socket, namespace:"agent"|"anch
             if( collector ){
                 collector[ id ] = result;
                 socket.on( "close", hadError => {
-                    console.log( "error in namespace:", namespace );
                     console.error( hadError );
                     delete collector[ id ];
                 });
@@ -96,19 +95,19 @@ function createApp( application:string|number ){
     let connection :net.Socket;
     console.log({ app, application } );
     if( app ){
-        console.log("create app connection")
         connection = net.createConnection({
             host: app.address,
             port: app.port
         });
-        connection.on( "error", err => console.log( "server:error", err.message ));
+        connection.on( "error", err => {
+            console.error( "server:error", err.message )
+        });
     } else if(Number.isSafeInteger( Number( application )) ) {
-        console.log("create local connection")
         connection = net.createConnection({
             host: "127.0.0.1",
             port: Number( application )
         });
-        connection.on( "error", err => console.log( "server:error", err.message ));
+        connection.on( "error", err => console.error( "server:error", err ));
     }
     return connection;
 }
@@ -136,7 +135,6 @@ function connect(){
         });
 
         agent.server.on( "error", err => {
-            console.log( "error in default connection" );
             console.error( err );
             setTimeout( ()=>{
                 agent.server.connect( agentConfigs.serverPort );
@@ -178,7 +176,6 @@ function onAgentNextLine( chunkLine:ChunkLine ){
         createSlots( slot, {
             slotCode
         }).catch( reason => {
-            console.log( "rejected on create slot", slot );
             console.error( reason )
         })
     }
@@ -264,11 +261,9 @@ function startAgentServer(){
     agent.local = net.createServer(req => {
 
         req.on( "error", err =>{
-            console.log( "req:error" )
             console.error( err );
         })
         req.on( "close", () => {
-            console.log( "req:close");
         })
 
         const remoteAddressParts = req.address()["address"].split( ":" );
@@ -276,11 +271,8 @@ function startAgentServer(){
 
 
         let server = aioResolve.serverName( address );
-        console.log( "new anchor request", address, !!server, server?.agent);
-        if( !server ) return req.end( () => { console.log( "Cansel no server detect" )});
+        if( !server ) return req.end( () => { });
         let agentServer = aioResolve.agents.agents[ server.agent ];
-
-        console.log( "serverNameIs", server );
 
         slotManager.nextSlot( SlotName.OUT ).then(value => {
             if( !value ) {
@@ -298,13 +290,15 @@ function startAgentServer(){
 
             if( agent.slots[SlotName.OUT].length < agentConfigs.maximumSlots/3 ) createSlots( SlotName.OUT ).then();
         }).catch( reason => console.error( reason))
-    }).listen( agentConfigs.clientPort, ()=>{});
+    }).listen( agentConfigs.clientPort, ()=>{
+        console.log( chalk.greenBright`AGENT SERVER [ON]` )
+    });
 }
 
 startDNSServer();
 connect().then( value => {
+    console.log( chalk.greenBright`AGENT CONNECTED [ON]` );
     startAgentServer();
-
 });
 
 

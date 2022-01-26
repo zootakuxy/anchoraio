@@ -8,5 +8,3 @@ export const apps:{ apps:{ [p:string]:string|number|{
     port:number|string
     address?:string
 }}} = exists ? ini.parse( fs.readFileSync( path.join( configs.etc, "apps.conf" )).toString("utf8") ) as any: { apps: {} };
-
-console.log( apps );

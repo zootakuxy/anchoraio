@@ -20,6 +20,7 @@ export function eventCode(type:Event, ...code:string[] ):string {
 
 
 export const showHeader = (any) =>{
+    return;
     console.log( `${"".padEnd( 38, "=")} HEADER ${"".padEnd( 38, "=")}` );
     Object.keys( any ).forEach( key => {
         console.log( `${key} `.padEnd( 40, "-" )+"  ", any[ key ])
