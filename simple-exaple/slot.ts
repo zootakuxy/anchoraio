@@ -5,13 +5,14 @@ export enum SlotName {
     OUT="out"
 }
 
+const OPTS = Symbol( "SlotManager.opts" );
 export type SlotManagerOpts<T> = {
     handlerCreator( slotName:SlotName, anchorID:string, ...opts ):Promise<boolean>,
     slots( ...opts ):{ [p in SlotName ]:T[]},
     [p:string]:any
 }
 
-const OPTS = Symbol( "SlotManager.opts" );
+
 export class SlotManager<T extends {busy?:boolean, socket:SocketConnection, id:string }> {
     [OPTS]:SlotManagerOpts<T>;
 
