@@ -1,5 +1,4 @@
 import "./init"
-import { identifier} from "./maps";
 import * as net from "net";
 import {Server} from "net";
 import {
@@ -13,12 +12,15 @@ import {
 } from "./share";
 import {SlotManager, SlotName} from "./slot";
 import {startDNSServer} from "./dns/server";
-import {aioResolve} from "./dns/aio.resolve";
+import {aioResolve, asAio} from "./dns/aio.resolve";
 import {apps} from "./apps";
+
+export const serverHost = process.argv[2];
+export const identifier = asAio( process.argv[3] ).identifier;
 
 const agentConfigs = {
     identifier: identifier,
-    serverHost: DEFAULT_SHARE.SERVER_HOST,
+    serverHost: serverHost,
     serverPort: DEFAULT_SHARE.SERVER_PORT,
     anchorPort: DEFAULT_SHARE.SERVER_ANCHOR_PORT,
     clientPort: DEFAULT_SHARE.AGENT_PORT,

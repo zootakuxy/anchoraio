@@ -1,6 +1,12 @@
 import net from "net";
-import {agentPort, serverAnchorPort, serverHost, serverPort} from "./maps";
+import {agentPort, serverAnchorPort,  serverPort} from "./maps";
 import {Buffer} from "buffer";
+
+export const DEFAULT_SHARE = {
+    SERVER_PORT: serverPort,
+    SERVER_ANCHOR_PORT: serverAnchorPort,
+    AGENT_PORT: agentPort,
+}
 
 export enum Event {
     AIO="Event.AIO",
@@ -12,12 +18,6 @@ export function eventCode(type:Event, ...code:string[] ):string {
     return `${type}://${code.join("/")}`;
 }
 
-export const DEFAULT_SHARE = {
-    SERVER_HOST: serverHost,
-    SERVER_PORT: serverPort,
-    SERVER_ANCHOR_PORT: serverAnchorPort,
-    AGENT_PORT: agentPort,
-}
 
 export const showHeader = (any) =>{
     console.log( `${"".padEnd( 38, "=")} HEADER ${"".padEnd( 38, "=")}` );
