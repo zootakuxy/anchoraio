@@ -5,26 +5,34 @@ import ini from "ini";
 import net from "net";
 
 let exists = fs.existsSync( path.join( configs.etc, "apps.conf" ));
-export const apps:{ apps:{ [p:string]:string|number|{
+export type Application = {
     port:number|string
     address?:string
-}}} = exists ? ini.parse( fs.readFileSync( path.join( configs.etc, "apps.conf" )).toString("utf8") ) as any: { apps: {} };
+}
+
+export const apps:{ apps:{ [p:string]:string|number|Application}} = exists ? ini.parse( fs.readFileSync( path.join( configs.etc, "apps.conf" )).toString("utf8") ) as any: { apps: {} };
 
 
 
 export function createApp( application:string|number ){
     if( !application ) application = "default";
-    let app:any = apps[ application ];
+    let app:Application|string|number = apps.apps[ application ];
+    let _app:Application;
 
-    if( typeof app === "string" || typeof app === "number" ){
-        application = app;
-        app = null;
-    }
+    if( app && typeof app === "object" && Number.isSafeInteger(Number( app.port )) ){
+        _app = app;
+    } else if( (typeof app === "string" || typeof app === "number" ) && Number.isSafeInteger( Number( app ))){
+        _app = {
+            port: Number( app ),
+            address: "127.0.0.1"
+        }
+    } else if(  typeof app === "string" || typeof app === "number" ) _app = null;
+
     let connection :net.Socket;
-    if( app ){
+    if( _app ){
         connection = net.createConnection({
-            host: app.address||"127.0.0.1",
-            port: app.port
+            host: _app.address||"127.0.0.1",
+            port: Number( _app.port )
         });
         connection.on( "error", err => {
             console.error( "server:error", err.message )
