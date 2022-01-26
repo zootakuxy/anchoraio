@@ -13,23 +13,11 @@ import {
 import {SlotManager, SlotName} from "./slot";
 import {startDNSServer} from "./dns/server";
 import {aioResolve, asAio} from "./dns/aio.resolve";
-import {apps} from "./apps";
+import {apps, createApp} from "./apps";
 import chalk from "chalk";
 
 export const serverHost = process.argv[2];
 export const identifier = asAio( process.argv[3] ).identifier;
-
-const agentConfigs = {
-    identifier: identifier,
-    serverHost: serverHost,
-    serverPort: DEFAULT_SHARE.SERVER_PORT,
-    anchorPort: DEFAULT_SHARE.SERVER_ANCHOR_PORT,
-    clientPort: DEFAULT_SHARE.AGENT_PORT,
-    timeout: 1000*5,
-    apps: apps.apps,
-    maximumSlots:20
-}
-
 
 export function registerConnection<T>(socket:net.Socket, namespace:"agent"|"anchor"|"req", collector?:{ [p:string]:AgentConnection }, metadata?:T, ):Promise<AgentConnection>{
     if( !metadata ) metadata = {} as any;
@@ -41,7 +29,6 @@ export function registerConnection<T>(socket:net.Socket, namespace:"agent"|"anch
                 connected: true
             };
             socket.on( "close", hadError =>{
-                console.error( hadError );
                 _status.connected = false
             } );
             socket.on( "connect", () => _status.connected = true );
@@ -64,13 +51,22 @@ export function registerConnection<T>(socket:net.Socket, namespace:"agent"|"anch
             if( collector ){
                 collector[ id ] = result;
                 socket.on( "close", hadError => {
-                    console.error( hadError );
                     delete collector[ id ];
                 });
             }
             resolve( result )
         });
     })
+}
+
+const agentConfigs = {
+    identifier: identifier,
+    serverHost: serverHost,
+    serverPort: DEFAULT_SHARE.SERVER_PORT,
+    anchorPort: DEFAULT_SHARE.SERVER_ANCHOR_PORT,
+    clientPort: DEFAULT_SHARE.AGENT_PORT,
+    timeout: 1000*5,
+    maximumSlots:20
 }
 
 export const agent:{
@@ -80,37 +76,9 @@ export const agent:{
     id?: string,
     identifier:string,
     slots:{ [p in SlotName ]:AgentConnection[]}
-    inCreate:SlotName[]
+    inCreate:SlotName[],
 } = { anchors:{}, identifier: agentConfigs.identifier, slots:{ [SlotName.IN]:[], [SlotName.OUT]:[]}, inCreate:[] }
 
-
-function createApp( application:string|number ){
-    if( !application ) application = "default";
-    let app:any = agentConfigs.apps[ application ];
-
-    if( typeof app === "string" || typeof app === "number" ){
-         application = app;
-         app = null;
-    }
-    let connection :net.Socket;
-    console.log({ app, application } );
-    if( app ){
-        connection = net.createConnection({
-            host: app.address,
-            port: app.port
-        });
-        connection.on( "error", err => {
-            console.error( "server:error", err.message )
-        });
-    } else if(Number.isSafeInteger( Number( application )) ) {
-        connection = net.createConnection({
-            host: "127.0.0.1",
-            port: Number( application )
-        });
-        connection.on( "error", err => console.error( "server:error", err ));
-    }
-    return connection;
-}
 
 function connect(){
     return new Promise((resolve) => {
@@ -275,10 +243,6 @@ function startAgentServer(){
         let agentServer = aioResolve.agents.agents[ server.agent ];
 
         slotManager.nextSlot( SlotName.OUT ).then(value => {
-            if( !value ) {
-                console.trace();
-                throw new Error( "NoSlot");
-            }
             if( !value ) return req.end();
             writeInSocket( agent.server, headerMap.ANCHOR({
                 origin: agentConfigs.identifier,
