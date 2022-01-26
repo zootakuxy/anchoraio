@@ -33,12 +33,7 @@ export function asAio( name:string ):AgentServer{
 
 
 export const aioResolve = new class AioReso {
-    agents:{ agents:{[p:string|number]:AgentServer}} /*={
-        "zootakuxy.aio": { name:"zootakuxy", identifier: "zootakuxy.aio", match: domainMath( "zootakuxy.aio" ) },
-        "kadafi.aio": { name:"kadafi",    identifier: "kadafi.aio", match: domainMath( "kadafi.aio") },
-        "kazuki.aio": { name:"kazuki",    identifier: "kazuki.aio", match: domainMath( "kazuki.aio" ) },
-    }
-*/
+    agents:{ agents:{[p:string|number]:AgentServer}}
     resolves:{ resolve?:{ aio?:{ [p:string|number]:AioAnswerer} }};
 
     constructor() {
