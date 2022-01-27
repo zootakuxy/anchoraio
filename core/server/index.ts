@@ -3,7 +3,7 @@ import {
     asLine,
     ChunkLine,
     Event,
-    eventCode,
+    eventCode, headerMap,
     SocketConnection,
     writeInSocket
 } from "../global/share";
@@ -138,13 +138,9 @@ export default function ( serverOpts:ServerOptions  ){
                         ]).then( value => {
                             const [ anchorOUT, anchorIN ] = value;
                             anchorOUT.anchor( anchorIN );
-                            writeInSocket( serverResolve.socket, {
-                                origin: opts.origin,
-                                type: [ Event.ANCHOR ],
-                                application: opts.application,
-                                anchor_form: opts.anchor_form,
-                                anchor_to: anchorIN.id
-                            });
+                            writeInSocket( serverResolve.socket, headerMap.ANCHOR(Object.assign( opts, {
+                                anchor_to: anchorIN.id,
+                            })));
                         });
                     }
 

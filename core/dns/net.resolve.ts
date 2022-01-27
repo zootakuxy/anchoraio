@@ -16,7 +16,7 @@ export const netResolve = new class NetResolver {
         return new Promise( (_resolve, reject) => {
             let resolve = ( a:DnsAnswer[], dns)=>{
                 resolve = ()=>{};
-                console.log( "resolve", domainName, "\\", dns )
+                console.log( "[dns resolve]", domainName, "\\", dns.name )
                 this.resolves[ domainName ] = a;
                 _resolve( a );
             }

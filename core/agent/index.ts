@@ -104,17 +104,16 @@ export default function ( agentOpts:AgentOpts ){
         chunkLine.show();
 
         if( chunkLine.type.includes( Event.ANCHOR ) ) {
-            const application = chunkLine.header["application"];
-            const anchor_to = chunkLine.header["anchor_to"];
 
-
-            slotManager.nextSlot( SlotName.IN, anchor_to ).then( anchor => {
-                let appResponse:net.Socket = createApp( application );
+            slotManager.nextSlot( SlotName.IN, chunkLine.as.ANCHOR.anchor_to ).then( anchor => {
+                let appResponse:net.Socket = createApp( chunkLine.as.ANCHOR.application );
 
                 if( appResponse ){
                     appResponse.pipe( anchor.socket );
                     anchor.socket.pipe( appResponse );
+                    console.log( `[anchor application]`, chunkLine.as.ANCHOR.origin, "->", agentOpts.identifier, chunkLine.as.ANCHOR.application, "\\", chalk.greenBright( "connected" ));
                 } else {
+                    console.log( "[anchor application]", chunkLine.as.ANCHOR.origin, "->", agentOpts.identifier, chunkLine.as.ANCHOR.application, "\\", chalk.yellowBright( "canceled" ));
                     anchor.socket.end();
                 }
                 if( agent.slots[SlotName.IN].length < agentOpts.maxSlots/3 ) createSlots( SlotName.IN ).then();
@@ -225,7 +224,10 @@ export default function ( agentOpts:AgentOpts ){
             let agentServer = aioResolve.agents.agents[ server.agent ];
 
             slotManager.nextSlot( SlotName.OUT ).then(value => {
-                if( !value ) return req.end();
+                if( !value ){
+                    console.log( "[anchor request]", agentServer.identifier, server.application, "\\", chalk.redBright("rejected"));
+                    return req.end();
+                }
                 writeInSocket( agent.server, headerMap.ANCHOR({
                     origin: agentOpts.identifier,
                     server: agentServer.identifier,
@@ -237,6 +239,7 @@ export default function ( agentOpts:AgentOpts ){
                 value.anchor( req );
 
                 if( agent.slots[SlotName.OUT].length < agentOpts.maxSlots/3 ) createSlots( SlotName.OUT ).then();
+                console.log( "[anchor request]", agentServer.identifier, server.application, "\\", chalk.blueBright( "accepted" ));
             }).catch( reason => console.error( reason))
         }).listen( agentOpts.agentPort, ()=>{
             console.log( chalk.greenBright`AGENT SERVER [ON]` )
