@@ -1,10 +1,11 @@
 import {DnsAnswer} from "dns2";
+import moment from "moment";
 const { TCPClient } = require('dns2');
 
 let clients = [
     "8.8.8.8",
     "8.8.4.4",
-    "1.1.1.1"
+    // "1.1.1.1"
 ];
 
 export const netResolve = new class NetResolver {
@@ -29,7 +30,7 @@ export const netResolve = new class NetResolver {
             this.dnsResolves.forEach( dns => {
                 dns.resolve( domainName ).then( ( result )=>{
                     if( result.answers.length > 0 ) resolve( result.answers );
-                }).catch( reason => console.error( dns.name, reason ))
+                }).catch( reason => console.error("dns error", moment(), dns.name, reason.message ))
             });
         })
     }

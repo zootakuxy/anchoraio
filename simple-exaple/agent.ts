@@ -25,12 +25,7 @@ export function registerConnection<T>(socket:net.Socket, namespace:"agent"|"anch
         socket.once( "data", data => {
             const _data = JSON.parse( data.toString());
             let id = _data.id;
-            let _status = {
-                connected: true
-            };
-            socket.on( "close", hadError =>{
-                _status.connected = false
-            } );
+            let _status = { connected: true };
             socket.on( "connect", () => _status.connected = true );
             let connection:SocketConnection&T = Object.assign(socket, metadata, {
                 id,
@@ -47,13 +42,11 @@ export function registerConnection<T>(socket:net.Socket, namespace:"agent"|"anch
                     }
                 }
             }
-
-            if( collector ){
-                collector[ id ] = result;
-                socket.on( "close", hadError => {
-                    delete collector[ id ];
-                });
-            }
+            if( !!collector ) collector[ id ] = result;
+            socket.on( "close", hadError => {
+                _status.connected = false
+                if( collector ) delete collector[ id ];
+            })
             resolve( result )
         });
     })
@@ -64,7 +57,7 @@ const agentConfigs = {
     serverHost: serverHost,
     serverPort: DEFAULT_SHARE.SERVER_PORT,
     anchorPort: DEFAULT_SHARE.SERVER_ANCHOR_PORT,
-    clientPort: DEFAULT_SHARE.AGENT_PORT,
+    agentPort: DEFAULT_SHARE.AGENT_PORT,
     timeout: 1000*5,
     maximumSlots:20
 }
@@ -248,13 +241,15 @@ function startAgentServer(){
                 origin: agentConfigs.identifier,
                 server: agentServer.identifier,
                 application: server.application,
+                domainName: server.domainName,
+                port: agentConfigs.agentPort,
                 anchor_form: value.id
             }));
             value.anchor( req );
 
             if( agent.slots[SlotName.OUT].length < agentConfigs.maximumSlots/3 ) createSlots( SlotName.OUT ).then();
         }).catch( reason => console.error( reason))
-    }).listen( agentConfigs.clientPort, ()=>{
+    }).listen( agentConfigs.agentPort, ()=>{
         console.log( chalk.greenBright`AGENT SERVER [ON]` )
     });
 }

@@ -90,7 +90,7 @@ export type SocketConnection = net.Socket & { id:string, connected:boolean }
 
 
 type ServerHeader = { origin:string, server:string, id:string };
-type AnchorHeader = { origin:string, server:string, application:string|number, anchor_form: string};
+type AnchorHeader = { origin:string, server:string, application:string|number, anchor_form: string, domainName:string, port:number };
 type AIOHeader = { slot:string, origin:string, server:string, agent: string, anchor:string, slotCode:string, id:string};
 
 function _header<T>( type:Event, opts:T, ...types:(Event|string)[]  ):T &{type:Event|string[]}{
