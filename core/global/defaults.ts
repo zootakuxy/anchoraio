@@ -5,7 +5,7 @@ export const Defaults = {
     envFile: path.join(__dirname, "../../etc/sample.conf" ),
     serverPort: 39630,
     agentPort:  80,
-    anchorPort: 39632,
+    anchorPort: 39631,
     dnsPort:    53,
     serverHost: "127.0.0.1",
     reconnectTimeout: 1000,
