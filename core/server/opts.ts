@@ -31,7 +31,7 @@ export function serverBuilderOptions(yargs:Argv<ServerOptions> ){
         default: Defaults.serverPort
     });
 
-    yargs.option( "anchorPort", { alias: [ "a" ],
+    yargs.option( "anchorPort", { alias: [ "P" ],
         type: "number",
         coerce: typeParser.asInt,
         default: Defaults.anchorPort

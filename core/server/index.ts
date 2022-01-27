@@ -37,6 +37,7 @@ type EventName = string|Event;
 
 
 export default function ( serverOpts:ServerOptions  ){
+    console.log( serverOpts );
     function createConnectionId ( socket:net.Socket, namespace, metadata?:{[p:string|number]:any} ){
         socket.on( "error", err => { console.error( err ) } );
         let id = `${namespace}://${nanoid( 32 )}`;

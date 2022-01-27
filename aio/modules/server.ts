@@ -3,7 +3,7 @@ import {serverOpts, ServerOptions, serverBuilderOptions} from "../../core/server
 import {globalOptsBuilder} from "../../core/global/opts";
 
 export const command = "server";
-export const desc:string = "aio server service";
+export const desc:string = "Start server service";
 
 export const builder:BuilderCallback<ServerOptions, any> = yargs => {
     return globalOptsBuilder(serverBuilderOptions( yargs ), value => {

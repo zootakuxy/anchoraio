@@ -32,10 +32,11 @@ export type OptionBuilder = {
 }
 
 export function agentOptsBuilder( yargs:Argv<AgentOpts> ){
-    yargs.option( "identifier", { alias: [ "id" ],
+    yargs.option( "identifier", { alias: [ "id", "i" ],
         type: "string",
         coerce: typeParser.asString,
-        description: "Identificador unico do agent"
+        description: "Identificador unico do agent",
+        demandOption: true
     });
 
     yargs.check( argv => {
@@ -67,7 +68,7 @@ export function agentOptsBuilder( yargs:Argv<AgentOpts> ){
         demandOption: true
     });
 
-    yargs.option( "anchorPort", { alias: [ "a" ],
+    yargs.option( "anchorPort", { alias: [ "P" ],
         type: "number",
         coerce: typeParser.asInt,
         default: Defaults.anchorPort

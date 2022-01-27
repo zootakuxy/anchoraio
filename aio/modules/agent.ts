@@ -3,7 +3,7 @@ import {agentOptions, AgentOpts, agentOptsBuilder} from "../../core/agent/opts";
 import {globalOptsBuilder} from "../../core/global/opts";
 
 export const command = "agent";
-export const desc:string = "aio agent service";
+export const desc:string = "Start agent service";
 
 export const builder:BuilderCallback<AgentOpts, any> = yargs => {
     return globalOptsBuilder(agentOptsBuilder( yargs ), values => {

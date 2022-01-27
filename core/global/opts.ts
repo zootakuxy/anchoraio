@@ -14,9 +14,8 @@ export function globalOptsBuilder( yargs:Argv<GlobalOpts>, parse:( value:any )=>
     return yargs.env("AIO" )
         .options("envFile", {
             default: Defaults.envFile,
-            description: "Camoinho para ficheiro das variaveis"
         })
-        .config("envFile", configPath => {
+        .config("envFile", "Camoinho para ficheiro das variaveis", configPath => {
             const values =  loadConfigsFile<{ agent?:AgentOpts, etc?:string, dns?: { dns:string[], dnsPort:number } }>( configPath, "utf8" );
             let etc = values?.etc;
             if( etc && !Path.isAbsolute( etc ) ) {
