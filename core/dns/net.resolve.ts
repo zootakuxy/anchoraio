@@ -1,25 +1,22 @@
 import {DnsAnswer} from "dns2";
 import moment from "moment";
+import {agentOptions } from "../agent/opts";
 const { TCPClient } = require('dns2');
 
-let clients = [
-    "8.8.8.8",
-    "8.8.4.4",
-    // "1.1.1.1"
-];
-
 export const netResolve = new class NetResolver {
-    dnsResolves = clients.map( name => {
+    dnsResolves = agentOptions().dns.map( name => {
         return {
             resolve: TCPClient( name ),
             name
         }
-    } );
+    });
+
     resolves:{ [domain:string]:DnsAnswer[] } = {};
     async resolve( domainName:string ):Promise<DnsAnswer[]>{
         return new Promise( (_resolve, reject) => {
-            let resolve = ( a:DnsAnswer[])=>{
+            let resolve = ( a:DnsAnswer[], dns)=>{
                 resolve = ()=>{};
+                console.log( "resolve", domainName, "\\", dns )
                 this.resolves[ domainName ] = a;
                 _resolve( a );
             }
@@ -29,10 +26,10 @@ export const netResolve = new class NetResolver {
 
             this.dnsResolves.forEach( dns => {
                 dns.resolve( domainName ).then( ( result )=>{
-                    if( result.answers.length > 0 ) resolve( result.answers );
+                    if( result.answers.length > 0 ) resolve( result.answers, dns );
                 }).catch( reason => console.error("dns error", moment(), dns.name, reason.message ))
             });
         })
     }
-}()
+};
 

@@ -1,16 +1,18 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as ini from "ini";
-import {configs} from "../configs";
 import { Addr } from 'netaddr';
+import {agentOptions} from "../agent/opts";
 
-let existsLocalhost =  fs.existsSync( path.join(configs.etc, "localhost.conf" ));
+const agentOpts = agentOptions();
+
+let existsLocalhost =  fs.existsSync( path.join(agentOpts.etc, "localhost.conf" ));
 const status:{
     localhost?:{
         init?:string,
         last?:string
     }
-} = existsLocalhost? ini.parse( fs.readFileSync( path.join(configs.etc, "localhost.conf" ) ).toString() ): { localhost:{} };
+} = existsLocalhost? ini.parse( fs.readFileSync( path.join(agentOpts.etc, "localhost.conf" ) ).toString() ): { localhost:{} };
 
 let next;
 if( !status.localhost ) status.localhost = {};
@@ -30,7 +32,7 @@ export const localhost = new class Localhost {
         let _next = this.current();
         this._next = this._next.increment();
         status.localhost.last = _next;
-        fs.writeFile( path.join(configs.etc, "localhost.conf" ), ini.stringify( status ), ()=>{});
+        fs.writeFile( path.join(agentOpts.etc, "localhost.conf" ), ini.stringify( status ), ()=>{});
         return _next;
     }
     current():string{

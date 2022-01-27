@@ -1,11 +1,12 @@
 import {aioResolve} from "./aio.resolve";
 import {netResolve} from "./net.resolve";
 import chalk from "chalk";
+import {AgentOpts} from "../agent/opts";
 
 const dns2 = require('dns2');
 const { Packet } = dns2;
 
-export function startDNSServer (){
+export function startDNSServer ( agentOpts:AgentOpts ){
     const server = dns2.createServer({
         udp: true,
         tcp: true,
@@ -32,8 +33,8 @@ export function startDNSServer (){
     });
 
     server.listen({
-        udp: 53,
-        tcp: 53
+        udp: agentOpts.dnsPort,
+        tcp: agentOpts.dnsPort
     }).then( value => {
         console.log( chalk.greenBright`DNS SERVER [ON]` );
     })

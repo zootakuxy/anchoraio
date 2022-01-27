@@ -1,17 +1,16 @@
 import * as fs from "fs";
-import {configs} from "./configs";
 import * as path from "path";
 import ini from "ini";
 import net from "net";
+import {agentOptions} from "./opts";
 
-let exists = fs.existsSync( path.join( configs.etc, "apps.conf" ));
+let exists = fs.existsSync( path.join( agentOptions().etc, "apps.conf" ));
 export type Application = {
     port:number|string
     address?:string
 }
 
-export const apps:{ apps:{ [p:string]:string|number|Application}} = exists ? ini.parse( fs.readFileSync( path.join( configs.etc, "apps.conf" )).toString("utf8") ) as any: { apps: {} };
-
+export const apps:{ apps:{ [p:string]:string|number|Application}} = exists ? ini.parse( fs.readFileSync( path.join( agentOptions().etc, "apps.conf" )).toString("utf8") ) as any: { apps: {} };
 
 
 export function createApp( application:string|number ){

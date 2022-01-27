@@ -1,9 +1,9 @@
 import {DnsAnswer, Packet} from "dns2";
 import {localhost} from "./localhost";
 import * as fs from "fs";
-import {configs} from "../configs";
 import * as path from "path";
 import ini from "ini";
+import {agentOptions} from "../agent/opts";
 export type AgentServer = { name:string, identifier:string, match:RegExp }
 export type AioAnswerer = {
     address:string,
@@ -31,14 +31,16 @@ export function asAio( name:string ):AgentServer{
     return { name, identifier, match:domainMath( identifier ) };
 }
 
+const agentOpts = agentOptions();
+
 
 export const aioResolve = new class AioReso {
     agents:{ agents:{[p:string|number]:AgentServer}}
     resolves:{ resolve?:{ aio?:{ [p:string|number]:AioAnswerer} }};
 
     constructor() {
-        if( fs.existsSync( path.join( configs.etc, "aoi.resolve.conf" ) ) ) {
-            this.resolves = ini.parse( fs.readFileSync( path.join( configs.etc, "aoi.resolve.conf")).toString() );
+        if( fs.existsSync( path.join( agentOpts.etc, "aoi.resolve.conf" ) ) ) {
+            this.resolves = ini.parse( fs.readFileSync( path.join( agentOpts.etc, "aoi.resolve.conf")).toString() );
             if( !this.resolves ) this.resolves = {};
             if( !this.resolves.resolve ) this.resolves.resolve = {};
             if( !this.resolves.resolve.aio ) this.resolves.resolve.aio = {};
@@ -54,7 +56,7 @@ export const aioResolve = new class AioReso {
             this.resolves = { resolve: { aio: {}}}
         }
 
-        this.agents = ini.parse( fs.readFileSync( path.join( configs.etc, "agent.conf") ).toString() ) as any;
+        this.agents = ini.parse( fs.readFileSync( path.join( agentOpts.etc, "agent.conf") ).toString() ) as any;
         Object.keys( this.agents.agents ).forEach( key => {
             let agent = this.agents.agents[ key ];
 
@@ -106,7 +108,7 @@ export const aioResolve = new class AioReso {
             if( application ) resolve.application = application;
 
             this.resolves.resolve.aio[address] = ( resolve )
-            fs.writeFile( path.join( configs.etc, "aoi.resolve.conf" ), ini.stringify( this.resolves, {
+            fs.writeFile( path.join( agentOpts.etc, "aoi.resolve.conf" ), ini.stringify( this.resolves, {
                 whitespace: true
             }), ()=>{})
         }

@@ -1,12 +1,6 @@
 import net from "net";
-import {agentPort, serverAnchorPort,  serverPort} from "./maps";
 import {Buffer} from "buffer";
 
-export const DEFAULT_SHARE = {
-    SERVER_PORT: serverPort,
-    SERVER_ANCHOR_PORT: serverAnchorPort,
-    AGENT_PORT: agentPort,
-}
 
 export enum Event {
     AIO="Event.AIO",
