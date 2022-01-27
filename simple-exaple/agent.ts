@@ -13,7 +13,7 @@ import {
 import {SlotManager, SlotName} from "./slot";
 import {startDNSServer} from "./dns/server";
 import {aioResolve, asAio} from "./dns/aio.resolve";
-import {apps, createApp} from "./apps";
+import { createApp} from "./apps";
 import chalk from "chalk";
 
 export const serverHost = process.argv[2];
