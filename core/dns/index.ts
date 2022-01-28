@@ -7,7 +7,7 @@ const dns2 = require('dns2');
 const { Packet } = dns2;
 
 export function startDNSServer ( agentOpts:AgentOpts ){
-    let server:ReturnType<typeof dns2.createUDPServer>;
+    let server;
     // server = dns2.createServer({
     //     udp: true,
     //     tcp: true,
@@ -54,10 +54,10 @@ export function startDNSServer ( agentOpts:AgentOpts ){
     //     udp: agentOpts.dnsPort,
     //     tcp: agentOpts.dnsPort
     // }).then( value => {
-    //     console.log( chalk.greenBright(`DNS SERVER [ON|:${"5333"}]`) );
+    //     console.log( chalk.greenBright(`DNS SERVER [ON|:${String(agentOpts.dnsPort)}]`) );
     // })
 
-    server.listen( agentOpts.dnsPort, "127.0.0.13").then( value => {
-            console.log( chalk.greenBright(`DNS SERVER [ON|:${String( agentOpts.dnsPort )}]`) );
+    server.listen(agentOpts.dnsPort).then( value => {
+        console.log( chalk.greenBright(`DNS SERVER [ON|:${String(agentOpts.dnsPort)}]`) );
     })
 }
