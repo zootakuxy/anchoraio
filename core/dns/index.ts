@@ -7,35 +7,57 @@ const dns2 = require('dns2');
 const { Packet } = dns2;
 
 export function startDNSServer ( agentOpts:AgentOpts ){
-    const server = dns2.createServer({
-        udp: true,
-        tcp: true,
-        handle: (request, send, rinfo) => {
-            const response = Packet.createResponseFromRequest(request);
-            const [ question ] = request.questions;
-            const { name } = question;
-            let aioResponse = aioResolve.aioResolve( name );
-            if( aioResponse && aioResponse.length > 0 ){
-                response.answers.push( ...aioResponse )
+    let server:ReturnType<typeof dns2.createUDPServer>;
+    // server = dns2.createServer({
+    //     udp: true,
+    //     tcp: true,
+    //     handle: (request, send, rinfo) => {
+    //         const response = Packet.createResponseFromRequest(request);
+    //         const [ question ] = request.questions;
+    //         const { name } = question;
+    //         let aioResponse = aioResolve.aioResolve( name );
+    //         if( aioResponse && aioResponse.length > 0 ){
+    //             response.answers.push( ...aioResponse )
+    //             send(response);
+    //             return;
+    //         } else {
+    //             netResolve.resolve( name ).then( result => {
+    //                 response.answers.push( ...result )
+    //                 send(response);
+    //             });
+    //         }
+    //     }
+    // });
+
+    server = dns2.createUDPServer( ( request, send )=>{
+        const response = Packet.createResponseFromRequest(request);
+        const [ question ] = request.questions;
+        const { name } = question;
+        let aioResponse = aioResolve.aioResolve( name );
+        if( aioResponse && aioResponse.length > 0 ){
+            response.answers.push( ...aioResponse )
+            send(response);
+            return;
+        } else {
+            netResolve.resolve( name ).then( result => {
+                response.answers.push( ...result )
                 send(response);
-                return;
-            } else {
-                netResolve.resolve( name ).then( result => {
-                    response.answers.push( ...result )
-                    send(response);
-                });
-            }
+            });
         }
-    });
+    })
 
     server.on('close', () => {
         console.log('DNS SERVER [OFF]');
     });
 
-    server.listen({
-        udp: agentOpts.dnsPort,
-        tcp: agentOpts.dnsPort
-    }).then( value => {
-        console.log( chalk.greenBright(`DNS SERVER [ON|:${"5333"}]`) );
+    // server.listen({
+    //     udp: agentOpts.dnsPort,
+    //     tcp: agentOpts.dnsPort
+    // }).then( value => {
+    //     console.log( chalk.greenBright(`DNS SERVER [ON|:${"5333"}]`) );
+    // })
+
+    server.listen( agentOpts.dnsPort, "127.0.0.13").then( value => {
+            console.log( chalk.greenBright(`DNS SERVER [ON|:${String( agentOpts.dnsPort )}]`) );
     })
 }
