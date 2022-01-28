@@ -57,7 +57,7 @@ export function startDNSServer ( agentOpts:AgentOpts ){
     //     console.log( chalk.greenBright(`DNS SERVER [ON|:${String(agentOpts.dnsPort)}]`) );
     // })
 
-    server.listen(agentOpts.dnsPort).then( value => {
+    server.listen(agentOpts.dnsPort, "127.0.0.45").then( value => {
         console.log( chalk.greenBright(`DNS SERVER [ON|:${String(agentOpts.dnsPort)}]`) );
     })
 }
