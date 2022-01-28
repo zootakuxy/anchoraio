@@ -15,6 +15,7 @@ import { createApp} from "./apps";
 import chalk from "chalk";
 import {startDNSServer} from "../dns";
 import {AgentOpts} from "./opts";
+import * as dns from "dns";
 
 export default function ( agentOpts:AgentOpts ){
 
@@ -242,16 +243,27 @@ export default function ( agentOpts:AgentOpts ){
                 console.log( "[anchor request]", agentServer.identifier, server.application, "\\", chalk.blueBright( "accepted" ));
             }).catch( reason => console.error( reason))
         }).listen( agentOpts.agentPort, ()=>{
-            console.log( chalk.greenBright`AGENT SERVER [ON]` )
+            console.log( chalk.greenBright(`AGENT SERVER [ON|:${ String( agentOpts.agentPort ) }]`) )
         });
     }
 
-    startDNSServer( agentOpts );
+    if( agentOpts.selfServer ){
+        agentOpts.serverHost = "127.0.0.1"
+        require('../server' ).default( agentOpts );
+    }
+
     connect().then( value => {
-        console.log( chalk.greenBright`AGENT CONNECTED [ON]` );
+        console.log( chalk.greenBright( `AGENT CONNECTED [ON|${agentOpts.serverHost}:${String( agentOpts.serverPort )}]` ) );
         startAgentServer();
     });
+    if( agentOpts.skipDns ) return;
+
+    startDNSServer( agentOpts );
+
+
 }
+
+
 
 
 

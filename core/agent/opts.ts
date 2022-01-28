@@ -10,10 +10,12 @@ export type AgentOpts = GlobalOpts & {
     agentPort:number,
     anchorPort:number,
     dnsPort: number,
+    skipDns: number
     dns:string[],
     reconnectTimeout:number
     maxSlots:number
     minSlots:number
+    selfServer:boolean
 };
 
 
@@ -91,6 +93,16 @@ export function agentOptsBuilder( yargs:Argv<AgentOpts> ){
         default: Defaults.reconnectTimeout,
         coerce: typeParser.asInt,
         demandOption: true
+    })
+
+    yargs.option( "skipDns",  {
+        type: "boolean",
+        description: "Disable dns server"
+    })
+
+    yargs.option( "selfServer",  {
+        type: "boolean",
+        description: "Start self server"
     })
 
     yargs.option( "maxSlots", {

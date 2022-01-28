@@ -36,6 +36,6 @@ export function startDNSServer ( agentOpts:AgentOpts ){
         udp: agentOpts.dnsPort,
         tcp: agentOpts.dnsPort
     }).then( value => {
-        console.log( chalk.greenBright`DNS SERVER [ON]` );
+        console.log( chalk.greenBright(`DNS SERVER [ON|:${"5333"}]`) );
     })
 }

@@ -27,5 +27,7 @@ export function globalOptsBuilder( yargs:Argv<GlobalOpts>, parse:( value:any )=>
                 etc
             });
             return result;
-        }).parserConfiguration({ "strip-aliased": true })
+        })
+        .parserConfiguration({ "strip-aliased": true
+        })
 }
