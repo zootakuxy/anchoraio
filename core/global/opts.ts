@@ -1,6 +1,6 @@
 import {Argv} from "yargs";
 import {Defaults} from "./defaults";
-import {loadConfigsFile} from "../../aio/load";
+import {loadConfigsFile} from "../../start/load";
 import {AgentOpts} from "../agent/opts";
 import Path from "path";
 

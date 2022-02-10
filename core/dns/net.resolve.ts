@@ -14,13 +14,15 @@ export const netResolve = new class NetResolver {
 
     resolves:{ [domain:string]:DnsAnswer[] } = {};
 
-    async resolve( domainName:string ):Promise<DnsAnswer[]>{
+    async resolve( domainName:string ):Promise<{answers:DnsAnswer[], server}>{
         return new Promise( (_resolve, reject) => {
             let resolve = ( a:DnsAnswer[], dns)=>{
                 resolve = ()=>{};
-                console.log( "[dns resolve]", domainName, "\\", dns.name )
                 this.resolves[ domainName ] = a;
-                _resolve( a );
+                _resolve({
+                    answers: a,
+                    server: dns.name
+                });
             }
 
             if( !this.dnsResolves.length ){

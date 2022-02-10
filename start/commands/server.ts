@@ -11,7 +11,6 @@ export const builder:BuilderCallback<ServerOptions, any> = yargs => {
     })
 };
 export const handler = function ( argv: yargs.Arguments<ServerOptions> ) {
-    console.log( "aadsds")
     serverOpts( argv );
     require( "../../core/server" ).default( argv );
 }
