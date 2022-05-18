@@ -15,7 +15,6 @@ import { createApp} from "./apps";
 import chalk from "chalk";
 import {startDNSServer} from "../dns";
 import {AgentOpts} from "./opts";
-import * as dns from "dns";
 
 export default function ( agentOpts:AgentOpts ){
 

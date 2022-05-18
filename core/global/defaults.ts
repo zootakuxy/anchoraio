@@ -3,9 +3,9 @@ import path from "path";
 export const Defaults = {
     //language=file-reference
     envFile: path.join(__dirname, "../../etc/sample.conf" ),
-    serverPort: 39630,
-    anchorPort: 39631,
-    agentPort:  80,
+    agentPort:  39600,
+    serverPort: 39601,
+    anchorPort: 39602,
     dnsPort:    53,
     serverHost: "127.0.0.1",
     reconnectTimeout: 1000,
