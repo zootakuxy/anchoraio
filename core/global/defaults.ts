@@ -2,7 +2,7 @@ import path from "path";
 
 export const Defaults = {
     //language=file-reference
-    envFile: path.join(__dirname, "../../etc/sample.conf" ),
+    envFile: path.join(__dirname, "../../etc/anchoraio.conf" ),
     agentPort:  36900,
     agentAPI :  36901,
     serverPort: 36902,
