@@ -8,9 +8,11 @@ export type AgentOpts = GlobalOpts & {
     serverHost:string,
     serverPort:number,
     agentPort:number,
+    agentAPI:number,
     anchorPort:number,
     dnsPort: number,
-    skipDns: number
+    noDNS: boolean
+    noAPI: boolean
     dns:string[],
     reconnectTimeout:number
     maxSlots:number
@@ -70,6 +72,13 @@ export function agentOptsBuilder( yargs:Argv<AgentOpts> ){
         demandOption: true
     });
 
+    yargs.option( "agentAPI", { alias: [ "api", "a" ],
+        type:"number",
+        coerce: typeParser.asInt,
+        default: Defaults.agentAPI,
+        demandOption: true
+    });
+
     yargs.option( "anchorPort", { alias: [ "P" ],
         type: "number",
         coerce: typeParser.asInt,
@@ -95,10 +104,18 @@ export function agentOptsBuilder( yargs:Argv<AgentOpts> ){
         demandOption: true
     })
 
-    yargs.option( "skipDns",  {
+    yargs.option( "noDNS",  {
         type: "boolean",
         description: "Disable dns server"
-    })
+    });
+
+
+    yargs.option( "noAPI",  {
+        type: "boolean",
+        description: "Disable api"
+    });
+
+
 
     yargs.option( "selfServer",  {
         type: "boolean",

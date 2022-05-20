@@ -72,6 +72,31 @@ export const aioResolve = new class AioReso {
         });
     }
 
+    createAgent( identifier:string ){
+        let _parts = identifier.split( "." );
+        if( _parts.pop() !== "aio" ) return null;
+        if( _parts.length <= 0 ) return null;
+
+        let name = _parts.pop();
+        if( !name ) return null;
+        if( _parts.length > 0 ) return null;
+        let agent = this.agents.agents[ name ];
+
+        if( !agent ){
+            agent = {
+                name,
+                identifier,
+                match: domainMath( identifier )
+            }
+            this.agents.agents[ name ] = agent;
+        }
+
+        fs.writeFile( path.join( agentOpts.etc, "agent.conf" ), ini.stringify( this.agents, {
+            whitespace: true
+        }), ()=>{})
+        return  agent;
+    }
+
     aioResolve( domainName:string ):DnsAnswer[]{
         let key = Object.keys( this.agents.agents ).find(next => { return this.agents.agents[next].match.test( domainName ); })
         let server = this.agents.agents[ key ];

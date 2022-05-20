@@ -6,7 +6,7 @@ import {AgentOpts} from "../agent/opts";
 const dns2 = require('dns2');
 const { Packet } = dns2;
 
-export function startDNSServer ( agentOpts:AgentOpts ){
+export function startDNS (agentOpts:AgentOpts ){
     let server;
     server = dns2.createServer({
         udp: true,

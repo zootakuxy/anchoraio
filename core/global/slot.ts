@@ -1,14 +1,14 @@
 import { SocketConnection} from "./share";
 
-export enum SlotName {
+export enum SlotType {
     IN="in",
     OUT="out"
 }
 
 const OPTS = Symbol( "SlotManager.opts" );
 export type SlotManagerOpts<T> = {
-    handlerCreator( slotName:SlotName, anchorID:string, ...opts ):Promise<boolean>,
-    slots( ...opts ):{ [p in SlotName ]:T[]},
+    handlerCreator(slotName:SlotType, anchorID:string, ...opts ):Promise<boolean>,
+    slots( ...opts ):{ [p in SlotType ]:T[]},
     [p:string]:any
 }
 
@@ -20,7 +20,7 @@ export class SlotManager<T extends {busy?:boolean, socket:SocketConnection, id:s
         this[OPTS] = opts;
     }
 
-    nextSlot( slotName:SlotName, anchorID?:string, ...opts ):Promise<T>{
+    nextSlot(slotName:SlotType, anchorID?:string, ...opts ):Promise<T>{
         if( anchorID ){
             let index = this[OPTS].slots( ...opts )[ slotName].findIndex( value => value.id === anchorID );
             let next = this[OPTS].slots( ...opts )[ slotName ][ index ];
@@ -39,7 +39,7 @@ export class SlotManager<T extends {busy?:boolean, socket:SocketConnection, id:s
                 return  true;
             }
 
-            while ( !next && this[OPTS].slots( ...opts )[ slotName].length ){
+            while ( !next && this[OPTS].slots( ...opts )?.[ slotName].length ){
                 next = this[OPTS].slots( ...opts )[slotName].shift();
                 if( next.busy ) next = null;
             }

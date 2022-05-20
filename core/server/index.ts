@@ -9,7 +9,7 @@ import {
 } from "../global/share";
 import net from "net";
 import {nanoid} from "nanoid";
-import {SlotManager, SlotName} from "../global/slot";
+import {SlotManager, SlotType} from "../global/slot";
 import {ServerOptions} from "./opts";
 
 
@@ -18,8 +18,9 @@ type ServerConnection={
     id:string,
     keys:string[],
     anchor:(anchor:string|ServerConnection)=>void,
-    slots:{ [p in SlotName]:ServerConnection[]}
-    busy?:boolean
+    slots:{ [p in SlotType]:ServerConnection[]}
+    busy?:boolean,
+    close()
     once( string:EventName, cb:( event:EventName, chunkLine?:ChunkLine)=>void )
     on( string:EventName, cb:( event:EventName, chunkLine?:ChunkLine )=>void )
     notify( string:EventName, chunkLine?:ChunkLine )
@@ -27,10 +28,15 @@ type ServerConnection={
 
 
 export const root: {
+    _last?:number
     connections:{[p:string]:ServerConnection},
     servers:{[p:string]:string},
     req:{[p:string]:string},
-} = { connections: {}, req: {}, servers:{}}
+    next:number
+} = { connections: {}, _last:0, req: {}, servers:{}, get next(){
+    this._last = this._last || 0;
+    return ++this._last;
+}}
 
 
 type EventName = string|Event;
@@ -39,7 +45,7 @@ type EventName = string|Event;
 export default function ( serverOpts:ServerOptions  ){
     function createConnectionId ( socket:net.Socket, namespace, metadata?:{[p:string|number]:any} ){
         socket.on( "error", err => { console.error( err ) } );
-        let id = `${namespace}://${nanoid( 32 )}`;
+        let id = `${namespace}://${nanoid( 32 )}|${ root.next }`;
         socket[ "id" ] = id;
         let _once:{ [p:string]:(( event:string, ...data)=>void)[ ]} = new Proxy( {}, {
             get(target, p): any {
@@ -59,6 +65,7 @@ export default function ( serverOpts:ServerOptions  ){
 
         socket.on( "close", hadError =>{
             _status.connected = false
+            delete root.connections[ id ];
         });
         socket.on( "connect", () => _status.connected = true );
 
@@ -69,7 +76,7 @@ export default function ( serverOpts:ServerOptions  ){
                 get connected(){ return _status.connected }
             }),
             keys: [],
-            slots:{ [SlotName.OUT]:[], [SlotName.IN]:[] },
+            slots:{ [SlotType.OUT]:[], [SlotType.IN]:[] },
             anchor( anchor ){
                 if( typeof anchor === "string" ) anchor = root.connections[ id ];
                 anchor.socket.pipe( this.socket );
@@ -82,6 +89,8 @@ export default function ( serverOpts:ServerOptions  ){
                 _once[ "*" ].splice(0, _once[ event ].length) .forEach( value => value( event, ...data ) );
                 _on[ event ].forEach( (value) => value( event, ...data ) );
                 _on[ "*" ].forEach( (value) => value( event, ...data ) );
+            }, close() {
+                socket.end( () => { });
             }
         }
         root.connections[ id ] = connection;
@@ -89,7 +98,7 @@ export default function ( serverOpts:ServerOptions  ){
         return connection;
     }
 
-    function requireSlot( slotName:SlotName, connection:ServerConnection ):Promise<boolean>{
+    function requireSlot(slotName:SlotType, connection:ServerConnection ):Promise<boolean>{
         return new Promise<boolean>( (resolve ) => {
             let slotCode = nanoid(16 );
              writeInSocket( connection.socket, {
@@ -104,8 +113,8 @@ export default function ( serverOpts:ServerOptions  ){
     }
 
     const serverSlotManager = new SlotManager<ServerConnection>({
-        slots( server:ServerConnection){ return server.slots },
-        handlerCreator( slotName:SlotName, anchorID:string, server:ServerConnection, ...opts ){
+        slots( server:ServerConnection){ return server?.slots },
+        handlerCreator(slotName:SlotType, anchorID:string, server:ServerConnection, ...opts ){
             return requireSlot(  slotName, server )
         }
     })
@@ -113,7 +122,9 @@ export default function ( serverOpts:ServerOptions  ){
     function start(){
         net.createServer( socket => {
             createConnectionId( socket, "anchor" );
-        }).listen( serverOpts.anchorPort );
+        }).listen( serverOpts.anchorPort, ()=>{
+            console.log( `[ANCHORAIO] Server anchor port liste on  ${ serverOpts.anchorPort }`)
+        } );
 
         net.createServer(function( socket) {
             const connection =  createConnectionId( socket, "server" );
@@ -121,38 +132,52 @@ export default function ( serverOpts:ServerOptions  ){
                 asLine( data ).forEach( async chunkLine => {
                     chunkLine.show();
 
+                    //Quando o agent identifica-se no servidor
                     if( chunkLine.type.includes( Event.SERVER ) ){
                         let opts = chunkLine.as.SERVER;
                         const  connection = root.connections[opts.id];
                         connection.keys.push( opts.id, opts.server );
                         root.servers[ opts.server ] = opts.id;
+                        console.log( `[ANCHORAIO] Server> Connection ${ opts.id } registred as AGENT SERVER!`)
                     }
 
+                    //Quando o agente solicita uma nova anchora
                     if(  chunkLine.type.includes( Event.ANCHOR ) ){
                         let opts = chunkLine.as.ANCHOR;
                         let serverResolve = root.connections[ root.servers[ opts.server ] ];
+                        if( !serverResolve ) {
+                            console.log( `[ANCHORAIO] Server> Anchor from ${ chunkLine.header.anchor_form } to ${ chunkLine.header.server } has CANCELLED!`)
+                            return writeInSocket( connection.socket, headerMap.CANSEL( Object.assign(opts )))
+                        }
 
                         Promise.all([
-                            serverSlotManager.nextSlot( SlotName.OUT, opts.anchor_form, connection ),
-                            serverSlotManager.nextSlot( SlotName.IN, null, serverResolve )
+                            serverSlotManager.nextSlot( SlotType.OUT, opts.anchor_form, connection ),
+                            serverSlotManager.nextSlot( SlotType.IN, null, serverResolve )
                         ]).then( value => {
                             const [ anchorOUT, anchorIN ] = value;
                             anchorOUT.anchor( anchorIN );
                             writeInSocket( serverResolve.socket, headerMap.ANCHOR(Object.assign( opts, {
                                 anchor_to: anchorIN.id,
                             })));
+                            console.log( `[ANCHORAIO] Server> Anchor from ${ chunkLine.header.anchor_form } to ${ chunkLine.header.server } has ANCHORED!`)
+
                         });
                     }
 
+                    //Quando o agente determinar que tipo de anchor é a connexão IN anchor or OUT anchor
                     if( chunkLine.type.includes( Event.AIO ) ){
                         let opts = chunkLine.as.AIO;
-                        let anchorConnection = root.connections[ opts.anchor ];
-                        connection.slots[ opts.slot ].push( anchorConnection );
-                        connection.notify( Event.AIO );
-                        anchorConnection.socket.on( "close", ()=>{
-                            let index = connection.slots[ opts.slot ].findIndex( value1 => value1.id === opts.anchor );
-                            if( index !== -1 ) connection.slots[ opts.slot ].splice( index, 1 );
+                        opts.anchors.forEach( anchorId => {
+                            let anchorConnection = root.connections[ anchorId ];
+                            connection.slots[ opts.slot ].push( anchorConnection );
+                            connection.notify( Event.AIO );
+                            anchorConnection.socket.on( "close", ()=>{
+                                let index = connection.slots[ opts.slot ].findIndex( value1 => value1.id === anchorId );
+                                if( index !== -1 ) connection.slots[ opts.slot ].splice( index, 1 );
+                            });
                         });
+
+                        console.log( `[ANCHORAIO] ${ opts.anchors.length } connection anchors registered as ${ opts.slot } slot. ANCHORS: ${ opts.anchors.join( ", ") }` );
                     }
 
                     chunkLine.type.forEach( value => {
@@ -161,7 +186,9 @@ export default function ( serverOpts:ServerOptions  ){
                 })
             });
 
-        }).listen( serverOpts.serverPort );
+        }).listen( serverOpts.serverPort, () => {
+            console.log( `[ANCHORAIO] Server listem on port ${ serverOpts.serverPort }`)
+        } );
     }
 
     start();
