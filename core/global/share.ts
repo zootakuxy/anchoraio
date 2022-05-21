@@ -7,7 +7,14 @@ export enum Event {
     SERVER="Event.SERVER",
     ANCHOR="Event.ANCHOR",
     CANSEL="Event.CANSEL",
+    REJECTED="Event.REJECTED",
+    ACCEPTED="Event.ACCEPTED",
 }
+
+export enum Emitter {
+    EMITTER_ERROR_REJECTED = "Emitter.EMITTER_ERROR_REJECTED"
+}
+
 
 export function eventCode(type:Event, ...code:string[] ):string {
     return `${type}://${code.join("/")}`;
@@ -97,8 +104,14 @@ export const headerMap = {
     SERVER(opts:ServerHeader, ...types:(Event|string)[]){
         return _header( Event.SERVER, opts, ...types );
 
+    },ACCEPTED(opts:ServerHeader, ...types:(Event|string)[]){
+        return _header( Event.ACCEPTED, opts, ...types );
+
     }, ANCHOR( opts:AnchorHeader, ...types:(Event|string)[]){
         return _header( Event.ANCHOR, opts, ...types );
+
+    }, REJECTED( opts:ServerHeader, ...types:(Event|string)[]){
+        return _header( Event.REJECTED, opts, ...types );
 
     }, CANSEL( opts:AnchorHeader, ...types:(Event|string)[]){
         return _header( Event.CANSEL, opts, ...types );

@@ -34,13 +34,13 @@ export function startDNS (agentOpts:AgentOpts ){
     });
 
     server.on('close', () => {
-        console.log('DNS SERVER [OFF]');
+        console.log('[ANCHORAIO] DNS>', "OFF");
     });
 
     server.listen({
         udp: agentOpts.dnsPort,
         tcp: agentOpts.dnsPort
     }).then( value => {
-        console.log( chalk.greenBright(`DNS SERVER [ON|:${String(agentOpts.dnsPort)}]`) );
+        console.log( "[ANCHORAIO] Agent>", chalk.greenBright(`DNS server running on port ${agentOpts.dnsPort}`) );
     })
 }

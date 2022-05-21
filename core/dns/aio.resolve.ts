@@ -36,7 +36,7 @@ const agentOpts = agentOptions();
 
 export const aioResolve = new class AioReso {
     agents:{ agents:{[p:string|number]:AgentServer}}
-    resolves:{ resolve?:{ aio?:{ [p:string|number]:AioAnswerer} }};
+    resolves:{ resolve?:{ aio?:{ [p:string|number]:AioAnswerer } }};
 
     constructor() {
         if( fs.existsSync( path.join( agentOpts.etc, "aoi.resolve.conf" ) ) ) {
@@ -56,7 +56,17 @@ export const aioResolve = new class AioReso {
             this.resolves = { resolve: { aio: {}}}
         }
 
+        if( !fs.existsSync( path.join( agentOpts.etc, "agent.conf") ) ){
+            fs.mkdirSync( path.dirname( path.join( agentOpts.etc, "agent.conf") ), { recursive: true });
+            fs.writeFileSync( path.join( agentOpts.etc, "agent.conf"), ini.stringify( {
+                agents:{ }
+            }));
+        }
+
         this.agents = ini.parse( fs.readFileSync( path.join( agentOpts.etc, "agent.conf") ).toString() ) as any;
+        if( !this.agents ) this.agents = { agents: {} };
+        if( !this.agents.agents ) this.agents.agents = {};
+
         Object.keys( this.agents.agents ).forEach( key => {
             let agent = this.agents.agents[ key ];
 

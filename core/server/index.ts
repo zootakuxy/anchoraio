@@ -1,7 +1,7 @@
 import "../global/init"
 import {
     asLine,
-    ChunkLine,
+    ChunkLine, Emitter,
     Event,
     eventCode, headerMap,
     SocketConnection,
@@ -11,6 +11,7 @@ import net from "net";
 import {nanoid} from "nanoid";
 import {SlotManager, SlotType} from "../global/slot";
 import {ServerOptions} from "./opts";
+import chalk from "chalk";
 
 
 type ServerConnection={
@@ -128,17 +129,31 @@ export default function ( serverOpts:ServerOptions  ){
 
         net.createServer(function( socket) {
             const connection =  createConnectionId( socket, "server" );
+
             socket.on( "data", data => {
+                console.log( data.toString() );
+
                 asLine( data ).forEach( async chunkLine => {
                     chunkLine.show();
 
                     //Quando o agent identifica-se no servidor
                     if( chunkLine.type.includes( Event.SERVER ) ){
+
                         let opts = chunkLine.as.SERVER;
-                        const  connection = root.connections[opts.id];
+
+                        let _id = root.servers[ opts.server ];
+                        let _server = root.connections[ _id ];
+                        if( _id && _server && _server.socket.connected ){
+                            console.log( "[ANCHORAIO] Server>", chalk.greenBright( `Already exists another agent for ${ opts.server }. CONNECTION REJECTED!`));
+                            writeInSocket( socket, headerMap.REJECTED( opts ));
+                            return;
+                        }
+
+                        const  connection = root.connections[ opts.id ];
                         connection.keys.push( opts.id, opts.server );
                         root.servers[ opts.server ] = opts.id;
-                        console.log( `[ANCHORAIO] Server> Connection ${ opts.id } registred as AGENT SERVER!`)
+                        console.log( "[ANCHORAIO] Server>", chalk.greenBright( `Agent ${ opts.server } connected with id ${ opts.id } `));
+                        writeInSocket( connection.socket, headerMap.ACCEPTED( opts ))
                     }
 
                     //Quando o agente solicita uma nova anchora
@@ -146,7 +161,7 @@ export default function ( serverOpts:ServerOptions  ){
                         let opts = chunkLine.as.ANCHOR;
                         let serverResolve = root.connections[ root.servers[ opts.server ] ];
                         if( !serverResolve ) {
-                            console.log( `[ANCHORAIO] Server> Anchor from ${ chunkLine.header.anchor_form } to ${ chunkLine.header.server } has CANCELLED!`)
+                            console.log( "[ANCHORAIO] Server>", chalk.redBright `Anchor from ${ chunkLine.header.anchor_form } to ${ chunkLine.header.server } has CANCELLED!`)
                             return writeInSocket( connection.socket, headerMap.CANSEL( Object.assign(opts )))
                         }
 
@@ -159,7 +174,7 @@ export default function ( serverOpts:ServerOptions  ){
                             writeInSocket( serverResolve.socket, headerMap.ANCHOR(Object.assign( opts, {
                                 anchor_to: anchorIN.id,
                             })));
-                            console.log( `[ANCHORAIO] Server> Anchor from ${ chunkLine.header.anchor_form } to ${ chunkLine.header.server } has ANCHORED!`)
+                            console.log( "[ANCHORAIO] Server>",  `Anchor from ${ chunkLine.header.anchor_form } to ${ chunkLine.header.server } has ANCHORED`)
 
                         });
                     }
