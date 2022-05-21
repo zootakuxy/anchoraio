@@ -144,7 +144,7 @@ export default function ( serverOpts:ServerOptions  ){
                         let _id = root.servers[ opts.server ];
                         let _server = root.connections[ _id ];
                         if( _id && _server && _server.socket.connected ){
-                            console.log( "[ANCHORAIO] Server>", chalk.greenBright( `Already exists another agent for ${ opts.server }. CONNECTION REJECTED!`));
+                            console.log( "[ANCHORAIO] Server>", chalk.redBright( `Already exists another agent for ${ opts.server }. CONNECTION REJECTED!`));
                             writeInSocket( socket, headerMap.REJECTED( opts ));
                             return;
                         }
