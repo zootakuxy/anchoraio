@@ -1,20 +1,14 @@
 import "../global/init"
 import * as net from "net";
 import {Server} from "net";
-import {
-    asLine,
-    ChunkLine, Emitter,
-    Event,
-    eventCode, headerMap,
-    SocketConnection,
-    writeInSocket
-} from "../global/share";
+import {asLine, ChunkLine, Event, eventCode, headerMap, SocketConnection, writeInSocket} from "../global/share";
 import {SlotManager, SlotType} from "../global/slot";
 import {AgentServer, AioAnswerer, aioResolve} from "../dns/aio.resolve";
-import { createConnection} from "./apps";
+import {createConnection} from "./apps";
 import chalk from "chalk";
 import {AgentOpts} from "./opts";
 import {nanoid} from "nanoid";
+import detectPort from "detect-port";
 
 type CreatSlotOpts = { query?:number, slotCode?:string };
 
@@ -58,7 +52,7 @@ export interface Agent {
     id?: string,
 
     /** Identifier or domain of this agent */
-    identifier:string,
+    identifier?:string,
 
     /**  */
     slots:{ [p in SlotType ]:AgentConnection[]}
@@ -68,183 +62,140 @@ export interface Agent {
     requests:AgentRequest[],
 }
 
-export default function ( agentOpts:AgentOpts ){
+export const agent = new( class AgentImplement implements Agent{
+    anchors:{}
+    slots:{ [SlotType.IN ]: AgentConnection[], [SlotType.OUT]:  AgentConnection[]} = { [SlotType.IN]:[], [SlotType.OUT]:[]}
+    inCreate: SlotType[] = [];
+    authStatus:AuthStatus = "unknown"
+    requests: AgentRequest[] = [];
+    identifier:string
+    id:string
+    server:net.Socket
+    local:Server
+    private slotManager:SlotManager<AgentConnection>
+    private requestCount:number = 0;
+    private _opts:AgentOpts;
 
-    function registerConnection<T>(socket:net.Socket, namespace:"agent"|"anchor"|"req", collector?:{ [p:string]:AgentConnection }, metadata?:T, ):Promise<AgentConnection>{
-        if( !metadata ) metadata = {} as any;
-        return new Promise( (resolve) => {
-            socket.once( "data", data => {
-                const _data = JSON.parse( data.toString());
-                let id = _data.id;
-                let _status = { connected: true };
-                socket.on( "connect", () => _status.connected = true );
-                let connection:SocketConnection&T = Object.assign(socket, metadata, {
-                    id,
-                    get connected(){ return _status.connected;}
+    agentPorts:number[] = [];
+
+    constructor() {
+        this.slotManager = new SlotManager<AgentConnection>({
+            slots(){ return agent.slots },
+            handlerCreator( name, anchorID, opts, ...extras){
+                return this.createSlots( name, opts );
+            }
+        });
+    }
+
+    set opts( opts){
+        this._opts = opts;
+        this.identifier = opts.identifier;
+    }
+
+    get opts(){ return this._opts }
+
+    get isConnected(){
+        return this.server["connected"]
+    } get isAvailable( ){
+        return this.isConnected && this.authStatus === "accepted";
+    } createServer( ){
+        return new Promise(async (resolve, reject) => {
+            let nextPort;
+            if( !this.agentPorts.includes( this.opts.agentPort ) ) nextPort = this.opts.agentPort;
+            else nextPort = await detectPort( this.opts.agentPort +100 );
+
+            let serverListen = net.createServer(req => {
+
+                if( !agent.isAvailable ) return req.end( () => {
+                    let status = "";
+                    if( ! agent.isConnected ) status = "disconnected";
+                    if( agent.authStatus !== "accepted" ) status+= ` ${agent.authStatus}`;
+                    console.log( "[ANCHORAIO] Agente>", chalk.redBright( `Request canceled because agent is offline: ${status.trim()}!`))
                 });
+                let requestId = `${agent.identifier}://${nanoid( 12 )}/${ this.requestCount++}`;
+                console.log( "[ANCHORAIO] Agent>", `Request ${ requestId } received` );
 
-                let result:AgentConnection = {
-                    id: id,
-                    socket: connection,
-                    anchor( req){
-                        this.req = req;
-                        if( req ){
-                            req.pipe( socket );
-                            socket.pipe( req );
-                        }
-                    }
-                }
-                if( !!collector ) collector[ id ] = result;
-                socket.on( "close", hadError => {
-                    _status.connected = false
-                    if( collector ) delete collector[ id ];
-                })
-                resolve( result )
+
+                req.on( "error", err =>{ console.log( "[ANCHORAIO] Agent>", `Request socket error ${err.message}` ); })
+                req.on( "close", () => { })
+
+                const remoteAddressParts = req.address()["address"].split( ":" );
+                const address =  remoteAddressParts[ remoteAddressParts.length-1 ];
+
+
+                let aioAnswerer = aioResolve.serverName( address );
+                if( !aioAnswerer ) return req.end( () => { });
+                let agentServer = aioResolve.agents.agents[ aioAnswerer.agent ];
+                if( !agentServer ) return req.end( () => { });
+                this.nextRequest( { agentServer: agentServer, socket: req, aioAnswerer: aioAnswerer, id: requestId } )
+
+            }).listen( nextPort, ()=>{
+                console.log( "[ANCHORAIO] Agent>", chalk.greenBright(`Running Agent ${ this.identifier } on port ${ nextPort }`) );
+                resolve( nextPort );
+                this.agentPorts.push( nextPort );
+                if( nextPort === this.opts.agentPort ) this.local = serverListen;
             });
+
         })
-    }
 
-    const agent:Agent = {
-        anchors:{}, identifier: agentOpts.identifier, slots:{ [SlotType.IN ]:[], [SlotType.OUT]:[]}, inCreate:[],
-        authStatus: "unknown", requests: [],
-        get isConnected(){
-            return this.server["connected"]
-        }, get isAvailable( ){
-            return this.isConnected && this.authStatus === "accepted";
-        }
-    }
+    } private nextRequest( request:AgentRequest ){
+        request.status = "pendent";
+        this.requests.push( request );
+        if( this.requests.length === 1 ) this.nextAnchor();
 
-    function connect(){
-        return new Promise((resolve) => {
-            agent.server = net.createConnection({
-                host: agentOpts.serverHost,
-                port: agentOpts.serverPort
-            });
+    } protected nextAnchor(){
+        if( !agent.requests.length ) return;
+        let next = agent.requests.find( value => value.status === "pendent" );
+        next.status = "income";
+        let agentServer = next.agentServer;
+        let req = next.socket;
+        let aioAnswerer = next.aioAnswerer;
 
-            agent.server.on("connect", () => {
-                agent.server["connected"] = true;
-                registerConnection( agent.server, "agent" ).then( value => {
-                    agent.id = value.id;
-                    writeInSocket( agent.server, headerMap.SERVER({
-                        origin: agentOpts.identifier,
-                        server: agentOpts.identifier,
-                        id: value.id
-                    }));
-                    resolve( true );
-                });
-            });
+        console.log( "[ANCHORAIO] Agent>", `Anchor request ${ next.id} started!`)
 
-            agent.server.on( "error", err => {
-                if( agent.isConnected ) console.log( "[ANCHORAIO] Agent>", `Connection error ${ err.message}` );
-                if( agent.isConnected && agent.authStatus !== "rejected" ) console.log( "[ANCHORAIO] Agent>", `Try reconnecting to server!` );
-                agent.server["connected"] = false;
-                agent.id = null;
+        this.slotManager.nextSlot( SlotType.OUT ).then(connection => {
+            if( !connection ){
+                console.log( "[ANCHORAIO] Request>", agentServer.identifier, aioAnswerer.application, "\\", chalk.redBright("rejected"));
+                return req.end();
+            }
+            writeInSocket( agent.server, headerMap.ANCHOR({
+                origin: this.identifier,
+                server: agentServer.identifier,
+                request: next.id,
+                application: aioAnswerer.application,
+                domainName: aioAnswerer.domainName,
+                anchor_form: connection.id
+            }));
+            connection.anchor( req );
 
-                if( agent.authStatus === "rejected" ) return;
-
-                setTimeout( ()=>{
-                    agent.server.connect( agentOpts.serverPort );
-                }, agentOpts.reconnectTimeout )
-            });
-
-            agent.server.on( "data", data => {
-                asLine( data ).forEach( (chunkLine) => {
-                    onAgentNextLine( chunkLine );
-                });
-            })
+            if( agent.slots[SlotType.OUT].length < this.opts.minSlots ) this.createSlots( SlotType.OUT ).then();
+            console.log( "[ANCHORAIO] Request>", agentServer.identifier, aioAnswerer.application, "\\", chalk.blueBright( "accepted" ));
+        }).catch( reason => {
+            // console.error(reason)
         })
-    }
 
-    function onAgentNextLine( chunkLine:ChunkLine ){
-        chunkLine.show();
-
-        if( chunkLine.type.includes( Event.ANCHOR ) ) {
-            slotManager.nextSlot( SlotType.IN, chunkLine.as.ANCHOR.anchor_to ).then(anchor => {
-                let appResponse:net.Socket = createConnection( chunkLine.as.ANCHOR.application );
-
-                if( appResponse ){
-                    appResponse.pipe( anchor.socket );
-                    anchor.socket.pipe( appResponse );
-                    console.log( `[ANCHORAIO] Agent>`, chalk.blueBright( `Anchor form ${ chunkLine.as.ANCHOR.origin} to application ${ chunkLine.as.ANCHOR.application } \\CONNECTED!` ));
-                } else {
-                    console.log( `[ANCHORAIO] Agent>`, chalk.redBright( `Anchor form ${ chunkLine.as.ANCHOR.origin} to application ${ chunkLine.as.ANCHOR.application } \\CANSELED!` ));
-                    anchor.socket.end();
-                }
-                if( agent.slots[SlotType.IN].length < agentOpts.minSlots ) createSlots( SlotType.IN ).then();
-            })
-
-        }
-
-        if( chunkLine.type.includes( Event.ANCHOR_SEND )) {
-            let request = chunkLine.as.ANCHOR.request;
-            let index = agent.requests.findIndex( value => value.id === request );
-            agent.requests[ index ].status = "complete";
-            agent.requests.splice( index, 1 );
-            nextAnchor();
-            console.log( "[ANCHORAIO] Agent>", chalk.blueBright( "Anchor send!"))
-        }
-
-        if( chunkLine.type.includes( Event.ANCHOR_CANSEL ) ){
-            let anchorForm = chunkLine.header["anchor_form"];
-            let connection = agent.anchors[ anchorForm ];
-            connection.socket.end();
-            connection.req.end();
-
-            let request = chunkLine.as.ANCHOR.request;
-            let index = agent.requests.findIndex( value => value.id === request );
-            agent.requests[ index ].status = "complete";
-            agent.requests.splice( index, 1 );
-            nextAnchor();
-            console.log( "[ANCHORAIO] Agent>", chalk.redBright( "Anchor faild!"))
-        }
-
-        if( chunkLine.type.includes( Event.REJECTED ) ){
-            agent.authStatus = "rejected";
-            agent.id = null;
-            agent.server["connected"] = false;
-            agent.server.end();
-            console.log( "[ANCHORAIO] Agent>", chalk.redBright( "Auth failed with server!"))
-        }
-
-        if( chunkLine.type.includes( Event.ACCEPTED ) ){
-            agent.authStatus = "accepted";
-            createSlots( SlotType.IN ).then();
-            createSlots( SlotType.OUT ).then();
-            console.log( "[ANCHORAIO] Agent>", chalk.greenBright( "Auth success with server!"))
-        }
-
-        if( chunkLine.type.includes( Event.AIO ) ){
-            let slot = chunkLine.header[ "slot" ];
-            let slotCode = chunkLine.header[ "slotCode" ];
-            createSlots( slot, {
-                slotCode
-            }).catch( reason => {
-                // console.error( reason )
-            });
-            console.log( "[ANCHORAIO] Agent>", chalk.blueBright( "Serve need more anchor slots!"))
-        }
-    }
-
-    function createSlots(slotType:SlotType, opts?:CreatSlotOpts ):Promise<boolean>{
+    } private createSlots(slotType:SlotType, opts?:CreatSlotOpts ):Promise<boolean>{
         if ( !opts ) opts = {};
 
-        if( agent.inCreate.includes( slotType ) ) return Promise.resolve( false );
+        if( this.inCreate.includes( slotType ) ) return Promise.resolve( false );
         agent.inCreate.push( slotType );
 
         return new Promise((resolve ) => {
-            let counts = (agentOpts.maxSlots||1) - agent.slots[slotType].length;
+            let counts = (this.opts.maxSlots||1) - agent.slots[slotType].length;
             if( !opts.query ) opts.query = counts;
             let created = 0;
+
             if( !counts ) return resolve( false );
             let resolved:boolean = false;
 
             let _anchors:string[] = [];
             for ( let i = 0; i< counts; i++ ) {
                 const next = net.createConnection({
-                    host: agentOpts.serverHost,
-                    port: agentOpts.anchorPort
+                    host: this.opts.serverHost,
+                    port: this.opts.anchorPort
                 });
-                registerConnection( next, "anchor", agent.anchors, ).then(connection => {
+
+                this.registerConnection( next, "anchor", agent.anchors, ).then(connection => {
                     agent.slots[ slotType ].push( connection );
                     connection.socket.on( "close", ( ) => {
                         let index = agent.slots[ slotType ].findIndex( value1 => connection.id === value1.id );
@@ -289,94 +240,168 @@ export default function ( agentOpts:AgentOpts ){
                 });
             }
         })
-    }
 
+    } private registerConnection<T>(socket:net.Socket, namespace:"agent"|"anchor"|"req", collector?:{ [p:string]:AgentConnection }, metadata?:T, ):Promise<AgentConnection>{
+        if( !metadata ) metadata = {} as any;
+        return new Promise( (resolve) => {
+            socket.once( "data", data => {
+                const _data = JSON.parse( data.toString());
+                let id = _data.id;
+                let _status = { connected: true };
+                socket.on( "connect", () => _status.connected = true );
+                let connection:SocketConnection&T = Object.assign(socket, metadata, {
+                    id,
+                    get connected(){ return _status.connected;}
+                });
 
-    let slotManager = new SlotManager<AgentConnection>({
-        slots(){ return agent.slots },
-        handlerCreator( name, anchorID, opts, ...extras){
-            return createSlots( name, opts );
-        }
-    })
-
-    function nextAnchor(){
-        if( !agent.requests.length ) return;
-        let next = agent.requests.find( value => value.status === "pendent" );
-        next.status = "income";
-        let agentServer = next.agentServer;
-        let req = next.socket;
-        let aioAnswerer = next.aioAnswerer;
-
-        slotManager.nextSlot( SlotType.OUT ).then(connection => {
-            if( !connection ){
-                console.log( "[ANCHORAIO] Request>", agentServer.identifier, aioAnswerer.application, "\\", chalk.redBright("rejected"));
-                return req.end();
-            }
-            writeInSocket( agent.server, headerMap.ANCHOR({
-                origin: agentOpts.identifier,
-                server: agentServer.identifier,
-                request: next.id,
-                application: aioAnswerer.application,
-                domainName: aioAnswerer.domainName,
-                port: agentOpts.agentPort,
-                anchor_form: connection.id
-            }));
-            connection.anchor( req );
-
-            if( agent.slots[SlotType.OUT].length < agentOpts.minSlots ) createSlots( SlotType.OUT ).then();
-            console.log( "[ANCHORAIO] Request>", agentServer.identifier, aioAnswerer.application, "\\", chalk.blueBright( "accepted" ));
-        }).catch( reason => {
-            // console.error(reason)
+                let result:AgentConnection = {
+                    id: id,
+                    socket: connection,
+                    anchor( req){
+                        this.req = req;
+                        if( req ){
+                            req.pipe( socket );
+                            socket.pipe( req );
+                        }
+                    }
+                }
+                if( !!collector ) collector[ id ] = result;
+                socket.on( "close", hadError => {
+                    _status.connected = false
+                    if( collector ) delete collector[ id ];
+                })
+                resolve( result )
+            });
         })
-    }
 
-    let requestCount = 0;
-    function nextRequest( request:AgentRequest ){
-        request.id = `${agent.identifier}://${nanoid( 12 )}/${requestCount++}`;
-        request.status = "pendent";
-        agent.requests.push( request );
-        if( agent.requests.length === 1 ) nextAnchor();
-    }
 
-    function startAgentServer(){
-        agent.local = net.createServer(req => {
-            if( !agent.isAvailable ) return req.end( () => {
-                let status = "";
-                if( ! agent.isConnected ) status = "disconnected";
-                if( agent.authStatus !== "accepted" ) status+= ` ${agent.authStatus}`;
-
-                console.log( "[ANCHORAIO] Agente>", chalk.redBright( `Request canceled because agent is offline: ${status.trim()}!`))
+    } connect(){
+        return new Promise((resolve) => {
+            agent.server = net.createConnection({
+                host: this.opts.serverHost,
+                port: this.opts.serverPort
             });
 
-            req.on( "error", err =>{
-                console.log( "[ANCHORAIO] Agent>", `Request socket error ${err.message}` );
+            agent.server.on("connect", () => {
+                agent.server["connected"] = true;
+                agent.registerConnection( agent.server, "agent" ).then( value => {
+                    agent.id = value.id;
+                    writeInSocket( agent.server, headerMap.SERVER({
+                        origin: this.identifier,
+                        server: this.identifier,
+                        id: value.id
+                    }));
+                    resolve( true );
+                });
+            });
+
+            agent.server.on( "error", err => {
+                if( agent.isConnected ) console.log( "[ANCHORAIO] Agent>", `Connection error ${ err.message}` );
+                if( agent.isConnected && agent.authStatus !== "rejected" ) console.log( "[ANCHORAIO] Agent>", `Try reconnecting to server!` );
+                agent.server["connected"] = false;
+                agent.id = null;
+
+                if( agent.authStatus === "rejected" ) return;
+
+                setTimeout( ()=>{
+                    agent.server.connect( this.opts.serverPort );
+                }, this.opts.reconnectTimeout )
+            });
+
+            agent.server.on( "data", data => {
+                console.log( data.toString() );
+                console.log();
+                asLine( data ).forEach( (chunkLine) => {
+                    console.log( "onLine", chunkLine.chunk );
+                    this.onAgentNextLine( chunkLine );
+                });
             })
-            req.on( "close", () => {
-            })
-
-            const remoteAddressParts = req.address()["address"].split( ":" );
-            const address =  remoteAddressParts[ remoteAddressParts.length-1 ];
-
-
-            let aioAnswerer = aioResolve.serverName( address );
-            if( !aioAnswerer ) return req.end( () => { });
-            let agentServer = aioResolve.agents.agents[ aioAnswerer.agent ];
-            if( !agentServer ) return req.end( () => { });
-            nextRequest( { agentServer: agentServer, socket: req, aioAnswerer: aioAnswerer} )
-
-        }).listen( agentOpts.agentPort, ()=>{
-            console.log( "[ANCHORAIO] Agent>", chalk.greenBright(`Running Agent ${ agentOpts.identifier } on port ${ agentOpts.agentPort }`) )
         })
+
+
+    } private onAgentNextLine( chunkLine:ChunkLine ){
+        chunkLine.show();
+
+        if( chunkLine.type.includes( Event.ANCHOR ) ) {
+            agent.slotManager.nextSlot( SlotType.IN, chunkLine.as.ANCHOR.anchor_to ).then(anchor => {
+                let appResponse:net.Socket = createConnection( chunkLine.as.ANCHOR.application );
+
+                if( appResponse ){
+                    appResponse.pipe( anchor.socket );
+                    anchor.socket.pipe( appResponse );
+                    console.log( `[ANCHORAIO] Agent>`, chalk.blueBright( `Anchor form ${ chunkLine.as.ANCHOR.origin} to application ${ chunkLine.as.ANCHOR.application } \\CONNECTED!` ));
+                } else {
+                    console.log( `[ANCHORAIO] Agent>`, chalk.redBright( `Anchor form ${ chunkLine.as.ANCHOR.origin} to application ${ chunkLine.as.ANCHOR.application } \\CANSELED!` ));
+                    anchor.socket.end();
+                }
+                if( agent.slots[SlotType.IN].length < this.opts.minSlots ) agent.createSlots( SlotType.IN ).then();
+            })
+
+        }
+
+        if( chunkLine.type.includes( Event.ANCHOR_SEND )) {
+            let request = chunkLine.as.ANCHOR.request;
+            let index = agent.requests.findIndex( value => value.id === request );
+            agent.requests[ index ].status = "complete";
+            agent.requests.splice( index, 1 );
+            agent.nextAnchor();
+            console.log( "[ANCHORAIO] Agent>", chalk.blueBright( "Anchor send!"))
+        }
+
+        if( chunkLine.type.includes( Event.ANCHOR_CANSEL ) ){
+            let anchorForm = chunkLine.header["anchor_form"];
+            let connection = agent.anchors[ anchorForm ];
+            connection.socket.end();
+            connection.req.end();
+
+            let request = chunkLine.as.ANCHOR.request;
+            let index = agent.requests.findIndex( value => value.id === request );
+            agent.requests[ index ].status = "complete";
+            agent.requests.splice( index, 1 );
+            this.nextAnchor();
+            console.log( "[ANCHORAIO] Agent>", chalk.redBright( "Anchor faild!"))
+        }
+
+        if( chunkLine.type.includes( Event.REJECTED ) ){
+            agent.authStatus = "rejected";
+            agent.id = null;
+            agent.server["connected"] = false;
+            agent.server.end();
+            console.log( "[ANCHORAIO] Agent>", chalk.redBright( "Auth failed with server!"))
+        }
+
+        if( chunkLine.type.includes( Event.ACCEPTED ) ){
+            agent.authStatus = "accepted";
+            this.createSlots( SlotType.IN ).then();
+            this.createSlots( SlotType.OUT ).then();
+            console.log( "[ANCHORAIO] Agent>", chalk.greenBright( "Auth success with server!"))
+        }
+
+        if( chunkLine.type.includes( Event.AIO ) ){
+            let slot = chunkLine.header[ "slot" ];
+            let slotCode = chunkLine.header[ "slotCode" ];
+            this.createSlots( slot, {
+                slotCode
+            }).catch( reason => {
+                // console.error( reason )
+            });
+            console.log( "[ANCHORAIO] Agent>", chalk.blueBright( "Serve need more anchor slots!"))
+        }
     }
+
+})()
+
+export default function ( agentOpts:AgentOpts ){
+    agent.opts = agentOpts;
 
     if( agentOpts.selfServer ){
         agentOpts.serverHost = "127.0.0.1"
         require('../server' ).default( agentOpts );
     }
 
-    connect().then( value => {
+    agent.connect().then( value => {
         console.log( "[ANCHORAIO] Agent>", chalk.greenBright( `Connected to server on ${agentOpts.serverHost}:${String( agentOpts.serverPort )}` ) );
-        startAgentServer();
+        agent.createServer().then( value1 => {});
     });
 
     if( !agentOpts.noDNS ) require( "../dns/server" ).startDNS( agentOpts );

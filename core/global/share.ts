@@ -94,7 +94,7 @@ export type SocketConnection = net.Socket & { id:string, connected:boolean }
 
 
 type ServerHeader = { origin:string, server:string, id:string };
-type AnchorHeader = { origin:string, request:string, server:string, application:string|number, anchor_to?:string, anchor_form: string, domainName:string, port:number };
+type AnchorHeader = { origin:string, request:string, server:string, application:string|number, anchor_to?:string, anchor_form: string, domainName:string };
 type AIOHeader = { slot:string, origin:string, server:string, agent: string, anchors:string[], slotCode:string, id:string};
 
 function _header<T>( type:Event, opts:T, ...types:(Event|string)[]  ):T &{type:Event|string[]}{

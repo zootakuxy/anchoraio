@@ -2,7 +2,7 @@ import {AgentOpts} from "../agent/opts";
 import express from "express";
 import * as http from "http";
 import {aioResolve} from "./aio.resolve";
-import {Agent} from "../agent";
+import {agent as agentCorre, Agent} from "../agent";
 
 
 
@@ -58,6 +58,30 @@ export function startAPI( agentOpts:AgentOpts, agent:Agent){
             serverPort: agentOpts.serverPort,
             serverConnection: agent.id,
         }})
+    });
+
+    app.get( "/api/agent/ports", (req, res, next) => {
+
+        let agentCorre = require("../agent").agent;
+
+        let agents:number[] = req.body?.ports || [];
+        let news = [];
+        agentCorre.agentPorts.forEach( nextPort =>{
+            if( !agents.includes( nextPort ) ) news.push( nextPort );
+        });
+
+        let use = news.shift();
+        if( use ) return res.json( {
+            success: true,
+            data: {
+                port: use,
+                ports: agentCorre.agentPorts
+            }
+        });
+
+        agentCorre.createServer().then( value => {
+            res.json({ success: !!value, data: { port: value, ports:agentCorre.agentPorts } } );
+        })
     });
 
     let server = http.createServer({}, app );
