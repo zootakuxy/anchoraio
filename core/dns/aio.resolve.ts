@@ -39,8 +39,8 @@ export const aioResolve = new class AioReso {
     resolves:{ resolve?:{ aio?:{ [p:string|number]:AioAnswerer } }};
 
     constructor() {
-        if( fs.existsSync( path.join( agentOpts.etc, "aoi.resolve.conf" ) ) ) {
-            this.resolves = ini.parse( fs.readFileSync( path.join( agentOpts.etc, "aoi.resolve.conf")).toString() );
+        if( fs.existsSync( path.join( agentOpts.etc, "aio.resolve.conf" ) ) ) {
+            this.resolves = ini.parse( fs.readFileSync( path.join( agentOpts.etc, "aio.resolve.conf")).toString() );
             if( !this.resolves ) this.resolves = {};
             if( !this.resolves.resolve ) this.resolves.resolve = {};
             if( !this.resolves.resolve.aio ) this.resolves.resolve.aio = {};
@@ -143,7 +143,7 @@ export const aioResolve = new class AioReso {
             if( application ) resolve.application = application;
 
             this.resolves.resolve.aio[address] = ( resolve )
-            fs.writeFile( path.join( agentOpts.etc, "aoi.resolve.conf" ), ini.stringify( this.resolves, {
+            fs.writeFile( path.join( agentOpts.etc, "aio.resolve.conf" ), ini.stringify( this.resolves, {
                 whitespace: true
             }), ()=>{})
         }

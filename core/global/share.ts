@@ -1,12 +1,14 @@
 import net from "net";
 import {Buffer} from "buffer";
+import {appLabel} from "../app";
 
 
 export enum Event {
     AIO="Event.AIO",
     SERVER="Event.SERVER",
     ANCHOR="Event.ANCHOR",
-    CANSEL="Event.CANSEL",
+    ANCHOR_CANSEL="Event.ANCHOR_CANSEL",
+    ANCHOR_SEND="Event.ANCHOR_SEND",
     REJECTED="Event.REJECTED",
     ACCEPTED="Event.ACCEPTED",
 }
@@ -52,7 +54,7 @@ export function asLine( buffer:Buffer ):ChunkLine[]{
             console.log( raw );
             console.log( "--------------------------------------------")
             console.log( chunk );
-            console.error( e );
+            console.error( appLabel(), e );
             console.log( "--------------------------------------------")
             return null;
         }
@@ -92,7 +94,7 @@ export type SocketConnection = net.Socket & { id:string, connected:boolean }
 
 
 type ServerHeader = { origin:string, server:string, id:string };
-type AnchorHeader = { origin:string, server:string, application:string|number, anchor_to?:string, anchor_form: string, domainName:string, port:number };
+type AnchorHeader = { origin:string, request:string, server:string, application:string|number, anchor_to?:string, anchor_form: string, domainName:string, port:number };
 type AIOHeader = { slot:string, origin:string, server:string, agent: string, anchors:string[], slotCode:string, id:string};
 
 function _header<T>( type:Event, opts:T, ...types:(Event|string)[]  ):T &{type:Event|string[]}{
@@ -113,8 +115,11 @@ export const headerMap = {
     }, REJECTED( opts:ServerHeader, ...types:(Event|string)[]){
         return _header( Event.REJECTED, opts, ...types );
 
-    }, CANSEL( opts:AnchorHeader, ...types:(Event|string)[]){
-        return _header( Event.CANSEL, opts, ...types );
+    }, ANCHOR_CANSEL(opts:AnchorHeader, ...types:(Event|string)[]){
+        return _header( Event.ANCHOR_CANSEL, opts, ...types );
+
+    }, ANCHOR_SEND(opts:AnchorHeader, ...types:(Event|string)[]){
+        return _header( Event.ANCHOR_SEND, opts, ...types );
 
     }, AIO(opts:AIOHeader, ...types:(Event|string)[]){
         return _header( Event.AIO, opts, ...types );

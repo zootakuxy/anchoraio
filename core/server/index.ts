@@ -44,9 +44,9 @@ type EventName = string|Event;
 
 
 export default function ( serverOpts:ServerOptions  ){
+    let connectionCounts = 0;
     function createConnectionId ( socket:net.Socket, namespace, metadata?:{[p:string|number]:any} ){
-        socket.on( "error", err => { console.error( err ) } );
-        let id = `${namespace}://${nanoid( 32 )}|${ root.next }`;
+        let id = `${namespace}://${nanoid( 12 )}/${ connectionCounts++ }`;
         socket[ "id" ] = id;
         let _once:{ [p:string]:(( event:string, ...data)=>void)[ ]} = new Proxy( {}, {
             get(target, p): any {
@@ -98,10 +98,10 @@ export default function ( serverOpts:ServerOptions  ){
         writeInSocket(socket, { id } );
         return connection;
     }
-
+    let slotCount =0;
     function requireSlot(slotName:SlotType, connection:ServerConnection ):Promise<boolean>{
         return new Promise<boolean>( (resolve ) => {
-            let slotCode = nanoid(16 );
+            let slotCode = `${nanoid( 8 )}/${slotCount++}`;
              writeInSocket( connection.socket, {
                  type: Event.AIO,
                  slot:slotName,
@@ -127,11 +127,11 @@ export default function ( serverOpts:ServerOptions  ){
             console.log( `[ANCHORAIO] Server anchor port liste on  ${ serverOpts.anchorPort }`)
         } );
 
+        let nextCounter = 1;
         net.createServer(function( socket) {
             const connection =  createConnectionId( socket, "server" );
 
             socket.on( "data", data => {
-                console.log( data.toString() );
 
                 asLine( data ).forEach( async chunkLine => {
                     chunkLine.show();
@@ -161,8 +161,8 @@ export default function ( serverOpts:ServerOptions  ){
                         let opts = chunkLine.as.ANCHOR;
                         let serverResolve = root.connections[ root.servers[ opts.server ] ];
                         if( !serverResolve ) {
-                            console.log( "[ANCHORAIO] Server>", chalk.redBright `Anchor from ${ chunkLine.header.anchor_form } to ${ chunkLine.header.server } has CANCELLED!`)
-                            return writeInSocket( connection.socket, headerMap.CANSEL( Object.assign(opts )))
+                            console.log( "[ANCHORAIO] Server>", chalk.redBright `Anchor of request ${ chunkLine.as.ANCHOR.request } from ${ chunkLine.header.anchor_form } to ${ chunkLine.header.server } ${chalk.redBright( "CANCELLED!")}`)
+                            return writeInSocket( connection.socket, headerMap.ANCHOR_CANSEL( Object.assign(opts )))
                         }
 
                         Promise.all([
@@ -174,7 +174,8 @@ export default function ( serverOpts:ServerOptions  ){
                             writeInSocket( serverResolve.socket, headerMap.ANCHOR(Object.assign( opts, {
                                 anchor_to: anchorIN.id,
                             })));
-                            console.log( "[ANCHORAIO] Server>",  `Anchor from ${ chunkLine.header.anchor_form } to ${ chunkLine.header.server } has ANCHORED`)
+                            writeInSocket( connection.socket, headerMap.ANCHOR_SEND( opts ) );
+                            console.log( "[ANCHORAIO] Server>",  `Anchor of request ${ chunkLine.as.ANCHOR.request } from ${ chunkLine.header.anchor_form } to ${ chunkLine.header.server } ${ chalk.greenBright( "ANCHORED" )}`)
 
                         });
                     }
