@@ -309,10 +309,7 @@ export const agent = new( class AgentImplement implements Agent{
             });
 
             agent.server.on( "data", data => {
-                console.log( data.toString() );
-                console.log();
                 asLine( data ).forEach( (chunkLine) => {
-                    console.log( "onLine", chunkLine.chunk );
                     this.onAgentNextLine( chunkLine );
                 });
             })

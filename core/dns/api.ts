@@ -16,6 +16,8 @@ export function startAPI( agentOpts:AgentOpts, agent:Agent){
 
     app.get( "/api/agent/:identifier", (req, res) => {
         let agentIdentifier = req.params.identifier;
+        console.log( "[ANCHORAIO] Agent> API>", `GET /api/agent/${ agentIdentifier }`);
+
         let _agent = aioResolve.createAgent( agentIdentifier );
 
         return res.json( { success: !!_agent && _agent?.identifier && _agent?.name, data: Object.assign({}, _agent, { match:_agent?.match?.source}) } );
@@ -24,6 +26,7 @@ export function startAPI( agentOpts:AgentOpts, agent:Agent){
     app.get( "/api/app/:application", (req, res, next) => {
         let application = req.params.application;
         let _app = require("../agent/apps" ).getApplication( application );
+        console.log( "[ANCHORAIO] Agent> API>", `GET /api/application/${ application }`);
         if( !_app ) return res.json( { success:false });
         else return res.json( { success: true, data: _app } );
     });
@@ -31,7 +34,7 @@ export function startAPI( agentOpts:AgentOpts, agent:Agent){
     app.post( "/api/app/:application", (req, res, next) => {
         let application = req.params.application;
         let app = req.body;
-        console.log( `[ANCHORAIO] Create application`, application, "with", app );
+        console.log( "[ANCHORAIO] Agent> API>", `POST /api/application/${ application }`);
         let _app = require("../agent/apps" ).createApplication( application, app );
         if( !_app ) return res.json( { success:false });
         else return res.json( { success: true, data: _app } );
@@ -40,16 +43,21 @@ export function startAPI( agentOpts:AgentOpts, agent:Agent){
     app.get( "/api/domain/:server", (req, res, next) => {
         let server = req.params.server;
         let answer =  aioResolve.aioResolve( server );
+        console.log( "[ANCHORAIO] Agent> API>", `GET /api/domain/${ server }`);
         return res.json( { success:!!answer && answer?.length> 0 , data: answer });
     });
 
     app.get( "/api/address/:address", (req, res, next) => {
         let address = req.params.address;
+        console.log( "[ANCHORAIO] Agent> API>", `GET /api/address/${ address }`);
+
         let resolved = aioResolve.serverName( address );
         return res.json( { success: !!resolved && resolved?.address && resolved?.answer?.length > 0, data: resolved })
     });
 
     app.get( "/api/status", (req, res, next) => {
+        console.log( "[ANCHORAIO] Agent> API>", `GET /api/status`);
+
         return res.json( { success: true, data: {
             connected: agent.isConnected,
             domain: agent.identifier,
@@ -61,6 +69,7 @@ export function startAPI( agentOpts:AgentOpts, agent:Agent){
     });
 
     app.get( "/api/ports", (req, res, next) => {
+        console.log( "[ANCHORAIO] Agent> API>", `GET /api/ports`);
 
         let agentCore = require("../agent").agent;
 
