@@ -60,14 +60,15 @@ export function startAPI( agentOpts:AgentOpts, agent:Agent){
         }})
     });
 
-    app.get( "/api/agent/ports", (req, res, next) => {
+    app.get( "/api/ports", (req, res, next) => {
 
-        let agentCorre = require("../agent").agent;
+        let agentCore = require("../agent").agent;
 
-        let agents:number[] = req.body?.ports || [];
+        let ports:number[] = req.body?.ports || [];
+
         let news = [];
-        agentCorre.agentPorts.forEach( nextPort =>{
-            if( !agents.includes( nextPort ) ) news.push( nextPort );
+        agentCore.agentPorts.forEach( nextPort =>{
+            if( !ports.includes( nextPort ) ) news.push( nextPort );
         });
 
         let use = news.shift();
@@ -75,12 +76,12 @@ export function startAPI( agentOpts:AgentOpts, agent:Agent){
             success: true,
             data: {
                 port: use,
-                ports: agentCorre.agentPorts
+                ports: agentCore.agentPorts
             }
         });
 
-        agentCorre.createServer().then( value => {
-            res.json({ success: !!value, data: { port: value, ports:agentCorre.agentPorts } } );
+        agentCore.createServer().then( value => {
+            res.json({ success: !!value, data: { port: value, ports:agentCore.agentPorts } } );
         })
     });
 
