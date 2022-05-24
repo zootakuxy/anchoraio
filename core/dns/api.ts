@@ -2,8 +2,7 @@ import {AgentOpts} from "../agent/opts";
 import express from "express";
 import * as http from "http";
 import {aioResolve} from "./aio.resolve";
-import {agent as agentCorre, Agent} from "../agent";
-
+import {agent as agentCore, Agent} from "../agent";
 
 
 export function startAPI( agentOpts:AgentOpts, agent:Agent){
