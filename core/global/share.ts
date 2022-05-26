@@ -6,6 +6,8 @@ import {appLabel} from "../app";
 export enum Event {
     AIO="Event.AIO",
     SERVER="Event.SERVER",
+    SERVER_CHANEL="Event.SERVER_CHANEL",
+    CHANEL_FREE="Event.CHANEL_FREE",
     ANCHOR="Event.ANCHOR",
     ANCHOR_CANSEL="Event.ANCHOR_CANSEL",
     ANCHOR_SEND="Event.ANCHOR_SEND",
@@ -36,6 +38,7 @@ export const showHeader = (any) =>{
 export type ChunkLine = { raw:string, chunk:string, header:any, show(), type:(Event|string)[], id?:string,
     as:{
         SERVER: ReturnType<typeof headerMap.SERVER>,
+        SERVER_CHANEL: ReturnType<typeof headerMap.SERVER_CHANEL>,
         ANCHOR: ReturnType<typeof headerMap.ANCHOR>,
         AIO: ReturnType<typeof headerMap.AIO>,
     }
@@ -74,6 +77,7 @@ export function asLine( buffer:Buffer ):ChunkLine[]{
             }, as:{
                 get ANCHOR(){ return headerMap.ANCHOR( header )},
                 get SERVER(){ return headerMap.SERVER( header )},
+                get SERVER_CHANEL(){ return headerMap.SERVER_CHANEL( header )},
                 get AIO(){ return headerMap.AIO( header )}
             }
         }
@@ -93,9 +97,10 @@ export function writeInSocket( socket:net.Socket, data, cb?:( data?:any, socket?
 export type SocketConnection = net.Socket & { id:string, connected:boolean }
 
 
-type ServerHeader = { origin:string, server:string, id:string };
-type AnchorHeader = { origin:string, request:string, server:string, application:string|number, anchor_to?:string, anchor_form: string, domainName:string };
-type AIOHeader = { slot:string, origin:string, server:string, agent: string, anchors:string[], slotCode:string, id:string};
+export interface ServerHeader { origin:string, server:string, id:string };
+export interface ServerChanel { origin:string, server:string, id:string, referer };
+export interface AnchorHeader { origin:string, request:string, server:string, application:string|number, anchor_to?:string, anchor_form: string, domainName:string };
+export interface AIOHeader    { slot:string, origin:string, server:string, agent: string, anchors:string[], slotCode:string, id:string};
 
 function _header<T>( type:Event, opts:T, ...types:(Event|string)[]  ):T &{type:Event|string[]}{
     return Object.assign( {}, opts, {
@@ -105,6 +110,12 @@ function _header<T>( type:Event, opts:T, ...types:(Event|string)[]  ):T &{type:E
 export const headerMap = {
     SERVER(opts:ServerHeader, ...types:(Event|string)[]){
         return _header( Event.SERVER, opts, ...types );
+
+    }, SERVER_CHANEL(opts:ServerChanel, ...types:(Event|string)[]){
+        return _header( Event.SERVER_CHANEL, opts, ...types );
+
+    }, CHANEL_FREE( opts:ServerChanel, ...types:(Event|string)[]){
+        return _header( Event.CHANEL_FREE, opts, ...types );
 
     },ACCEPTED(opts:ServerHeader, ...types:(Event|string)[]){
         return _header( Event.ACCEPTED, opts, ...types );

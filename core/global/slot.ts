@@ -1,8 +1,8 @@
 import { SocketConnection} from "./share";
 
 export enum SlotType {
-    IN="in",
-    OUT="out"
+    ANCHOR_IN="SlotType.ANCHOR_IN",
+    ANCHOR_OUT="SlotType.ANCHOR_OUT"
 }
 
 const OPTS = Symbol( "SlotManager.opts" );
@@ -20,11 +20,11 @@ export class SlotManager<T extends {busy?:boolean, socket:SocketConnection, id:s
         this[OPTS] = opts;
     }
 
-    nextSlot(slotName:SlotType, anchorID?:string, ...opts ):Promise<T>{
+    nextSlot(slotType:SlotType, anchorID?:string, ...opts ):Promise<T>{
         if( anchorID ){
-            let index = this[OPTS].slots( ...opts )[ slotName].findIndex( value => value.id === anchorID );
-            let next = this[OPTS].slots( ...opts )[ slotName ][ index ];
-            this[OPTS].slots( ...opts)[ slotName ].splice( index, 1 );
+            let index = this[OPTS].slots( ...opts )[ slotType].findIndex( value => value.id === anchorID );
+            let next = this[OPTS].slots( ...opts )[ slotType ][ index ];
+            this[OPTS].slots( ...opts)[ slotType ].splice( index, 1 );
             return Promise.resolve( next );
         }
 
@@ -39,16 +39,16 @@ export class SlotManager<T extends {busy?:boolean, socket:SocketConnection, id:s
                 return  true;
             }
 
-            while ( !next && this[OPTS].slots( ...opts )?.[ slotName].length ){
-                next = this[OPTS].slots( ...opts )[slotName].shift();
+            while ( !next && this[OPTS].slots( ...opts )?.[ slotType].length ){
+                next = this[OPTS].slots( ...opts )[slotType].shift();
                 if( next.busy ) next = null;
             }
 
             if( _resolve() ) return;
-            return this[ OPTS ].handlerCreator( slotName, anchorID, ...opts ).then( created => {
-                if( created ) next = this[OPTS].slots( ...opts )[ slotName ].shift();
+            return this[ OPTS ].handlerCreator( slotType, anchorID, ...opts ).then( created => {
+                if( created ) next = this[OPTS].slots( ...opts )[ slotType ].shift();
                 if( _resolve() ) return;
-                else this.nextSlot( slotName, anchorID ).then( value => {
+                else this.nextSlot( slotType, anchorID ).then( value => {
                     next = value;
                     _resolve()
                 });

@@ -27,14 +27,29 @@ type ServerConnection={
     notify( string:EventName, chunkLine?:ChunkLine )
 }
 
+interface ServerChanel {
+    id:string,
+    referer:string,
+    server:string,
+    origin:string
+    status: "busy"|"free",
+    requests:number
+}
 
 export const root: {
     _last?:number
     connections:{[p:string]:ServerConnection},
     servers:{[p:string]:string},
     req:{[p:string]:string},
-    next:number
-} = { connections: {}, _last:0, req: {}, servers:{}, get next(){
+    next:number,
+    chanel:{[p:string]:ServerChanel[]}
+} = {
+    connections: {},
+    _last:0,
+    req: {},
+    servers:{},
+    chanel:{},
+    get next(){
     this._last = this._last || 0;
     return ++this._last;
 }}
@@ -77,7 +92,7 @@ export default function ( serverOpts:ServerOptions  ){
                 get connected(){ return _status.connected }
             }),
             keys: [],
-            slots:{ [SlotType.OUT]:[], [SlotType.IN]:[] },
+            slots:{ [SlotType.ANCHOR_OUT]:[], [SlotType.ANCHOR_IN]:[] },
             anchor( anchor ){
                 if( typeof anchor === "string" ) anchor = root.connections[ id ];
                 anchor.socket.pipe( this.socket );
@@ -114,7 +129,9 @@ export default function ( serverOpts:ServerOptions  ){
     }
 
     const serverSlotManager = new SlotManager<ServerConnection>({
-        slots( server:ServerConnection){ return server?.slots },
+        slots( server:ServerConnection){
+            return server?.slots
+        },
         handlerCreator(slotName:SlotType, anchorID:string, server:ServerConnection, ...opts ){
             return requireSlot(  slotName, server )
         }
@@ -127,7 +144,6 @@ export default function ( serverOpts:ServerOptions  ){
             console.log( `[ANCHORAIO] Server anchor port liste on  ${ serverOpts.anchorPort }`)
         } );
 
-        let nextCounter = 1;
         net.createServer(function( socket) {
             const connection =  createConnectionId( socket, "server" );
 
@@ -153,11 +169,67 @@ export default function ( serverOpts:ServerOptions  ){
                         connection.keys.push( opts.id, opts.server );
                         root.servers[ opts.server ] = opts.id;
                         console.log( "[ANCHORAIO] Server>", chalk.greenBright( `Agent ${ opts.server } connected with id ${ opts.id } `));
-                        writeInSocket( connection.socket, headerMap.ACCEPTED( opts ))
+                        writeInSocket( connection.socket, headerMap.ACCEPTED( opts ));
+
+                        connection.socket.on( "close", args => {
+                            let chanelList = root.chanel[ opts.server ];
+                            chanelList.filter( chanel => chanel.referer === connection.id ).forEach( chanel => {
+                                let index = chanelList.indexOf( chanel );
+                                if( index === -1 ) return;
+                                chanelList.splice( index, 1 );
+                            });
+                        });
+                    }
+
+                    if( chunkLine.type.includes( Event.SERVER_CHANEL ) ){
+
+                        let referer = chunkLine.as.SERVER_CHANEL.referer;
+                        let server = chunkLine.as.SERVER_CHANEL.server;
+                        if( !root.servers[ server ] || root.servers[ server ] !== referer ){
+                            console.log( "[ANCHORAIO] Server>", chalk.redBright( `Channel auth rejected`));
+                            return;
+                        }
+
+                        let chanel:ServerChanel = {
+                            id: chunkLine.as.SERVER_CHANEL.id,
+                            origin: chunkLine.as.SERVER_CHANEL.origin,
+                            server: chunkLine.as.SERVER_CHANEL.server,
+                            referer: chunkLine.as.SERVER_CHANEL.referer,
+                            status: "free",
+                            requests: 0
+                        }
+
+                        if( !root.chanel[ server ] ) root.chanel[ server ] = [];
+                        root.chanel[ server ].push( chanel );
+
+                        let connectionId = chunkLine.as.SERVER_CHANEL.id;
+                        let connection = root.connections[ connectionId ];
+                        root.connections[ connectionId ] = new Proxy( connection, {
+                            get(target: ServerConnection, p: string | symbol, receiver: any): any {
+                                if( p === "socket" ) return target.socket;
+                                return  root.connections[ referer ][ p ];
+                            }
+                        })
+
+                        socket.on( "close", hadError => {
+                            let index = root.chanel[ server ].indexOf( chanel );
+                            root.chanel[ server ].splice( index, 1 );
+                        });
+                        console.log( "[ANCHORAIO] Server>", chalk.blueBright( `Channel ${  chanel.id } authenticated refer ${ chanel.server }!`));
+
+                    }
+
+                    if( chunkLine.type.includes( Event.CHANEL_FREE ) ){
+                        let opts = chunkLine.as.SERVER_CHANEL;
+                        let chanel = root.chanel[ opts.server ].find( chanel => chanel.id === opts.id );
+                        chanel.requests--;
+                        if( chanel.requests < 1 ) chanel.status = "free";
                     }
 
                     //Quando o agente solicita uma nova anchora
                     if(  chunkLine.type.includes( Event.ANCHOR ) ){
+
+
                         let opts = chunkLine.as.ANCHOR;
                         let serverResolve = root.connections[ root.servers[ opts.server ] ];
                         if( !serverResolve ) {
@@ -165,18 +237,36 @@ export default function ( serverOpts:ServerOptions  ){
                             return writeInSocket( connection.socket, headerMap.ANCHOR_CANSEL( Object.assign(opts )))
                         }
 
+                        let chanel = root.chanel[ opts.server ].find( chanel => chanel.status === "free" );
+                        if( !chanel ){
+                            chanel = root.chanel[ opts.server ].shift();
+                            root.chanel[ opts.server ].push( chanel );
+                        }
+
+                        chanel.status = "busy";
+                        chanel.requests++;
+
+                        let serverResolverConnection = root.connections[ chanel.id ];
+
+
+                        console.log( "[ANCHORAIO] Server>", `Find slots redirect chanel ${ chanel.id }!` );
+                        let slotIN = serverSlotManager.nextSlot( SlotType.ANCHOR_OUT, opts.anchor_form, connection );
+                        let slotOUT = serverSlotManager.nextSlot( SlotType.ANCHOR_IN, null, serverResolverConnection )
+
                         Promise.all([
-                            serverSlotManager.nextSlot( SlotType.OUT, opts.anchor_form, connection ),
-                            serverSlotManager.nextSlot( SlotType.IN, null, serverResolve )
+                            slotIN,
+                            slotOUT
                         ]).then( value => {
                             const [ anchorOUT, anchorIN ] = value;
                             anchorOUT.anchor( anchorIN );
-                            writeInSocket( serverResolve.socket, headerMap.ANCHOR(Object.assign( opts, {
+
+
+                            writeInSocket( serverResolverConnection.socket, headerMap.ANCHOR(Object.assign( opts, {
                                 anchor_to: anchorIN.id,
                             })));
+
                             writeInSocket( connection.socket, headerMap.ANCHOR_SEND( opts ) );
                             console.log( "[ANCHORAIO] Server>",  `Anchor of request ${ chunkLine.as.ANCHOR.request } from ${ chunkLine.header.anchor_form } to ${ chunkLine.header.server } ${ chalk.greenBright( "ANCHORED" )}`)
-
                         });
                     }
 
@@ -193,7 +283,7 @@ export default function ( serverOpts:ServerOptions  ){
                             });
                         });
 
-                        console.log( `[ANCHORAIO] ${ opts.anchors.length } connection anchors registered as ${ opts.slot } slot. ANCHORS: ${ opts.anchors.join( ", ") }` );
+                        console.log( `[ANCHORAIO] ${ opts.anchors.length } connection anchors registered as ${ opts.slot } slot.` );
                     }
 
                     chunkLine.type.forEach( value => {
