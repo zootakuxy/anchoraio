@@ -2,7 +2,8 @@ import {AgentOpts} from "../agent/opts";
 import express from "express";
 import * as http from "http";
 import {aioResolve} from "./aio.resolve";
-import {agent as agentCore } from "../agent";
+import {agent, agent as agentCore} from "../agent";
+import chalk from "chalk";
 
 
 export function startAPI( agentOpts:AgentOpts ){
@@ -94,7 +95,9 @@ export function startAPI( agentOpts:AgentOpts ){
     });
 
     let server = http.createServer({}, app );
-    server.listen( agentOpts.agentAPI );
+    server.listen( agentOpts.agentAPI, ()=>{
+        console.log( "[ANCHORAIO] Agent>", chalk.greenBright(`Running Agent API ${ agent.identifier } on port ${ agentOpts.agentAPI }`) );
+    });
 
     return server;
 }

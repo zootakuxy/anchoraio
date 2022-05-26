@@ -2,6 +2,7 @@ import {aioResolve} from "./aio.resolve";
 import {netResolve} from "./net.resolve";
 import chalk from "chalk";
 import {AgentOpts} from "../agent/opts";
+import {agent} from "../agent";
 
 const dns2 = require('dns2');
 const { Packet } = dns2;
@@ -41,6 +42,6 @@ export function startDNS (agentOpts:AgentOpts ){
         udp: agentOpts.dnsPort,
         tcp: agentOpts.dnsPort
     }).then( value => {
-        console.log( "[ANCHORAIO] Agent>", chalk.greenBright(`DNS server running on port ${agentOpts.dnsPort}`) );
+        console.log( "[ANCHORAIO] Agent>", chalk.greenBright(`Running Agent DNS SERVER ${ agent.identifier } on port ${ agentOpts.dnsPort }`) );
     })
 }
