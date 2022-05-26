@@ -4,6 +4,7 @@ import * as http from "http";
 import  chalk from "chalk";
 import {aioResolve} from "./aio.resolve";
 import { agent } from "../agent";
+import {localListener} from "../agent/listener/local";
 
 
 export function startAPI( agentOpts:AgentOpts ){
@@ -71,12 +72,11 @@ export function startAPI( agentOpts:AgentOpts ){
     app.get( "/api/ports", (req, res, next) => {
         console.log( "[ANCHORAIO] Agent> API>", `GET /api/ports`);
 
-        let agentCore = require("../agent").agent;
 
         let ports:number[] = req.body?.ports || [];
 
         let news = [];
-        agentCore.agentPorts.forEach( nextPort =>{
+        agent.agentPorts.forEach( nextPort =>{
             if( !ports.includes( nextPort ) ) news.push( nextPort );
         });
 
@@ -85,12 +85,12 @@ export function startAPI( agentOpts:AgentOpts ){
             success: true,
             data: {
                 port: use,
-                ports: agentCore.agentPorts
+                ports: agent.agentPorts
             }
         });
 
-        agentCore.createServer().then( value => {
-            res.json({ success: !!value, data: { port: value, ports:agentCore.agentPorts } } );
+        localListener.createServer().then( value => {
+            res.json({ success: !!value, data: { port: value, ports:agent.agentPorts } } );
         })
     });
 
