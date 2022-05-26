@@ -30,38 +30,7 @@ interface AgentRequest {
 }
 
 
-export interface Agent {
-    /** Status of connection with server*/
-    isConnected:boolean
-
-    isAvailable:boolean
-
-    /**  */
-    local?:Server,
-
-    /** Socket instance of server */
-    server?: net.Socket,
-
-    authStatus: AuthStatus
-
-    /**  */
-    anchors:{[p:string]: AgentConnection },
-
-    /** Currente connection identifier (this value can be change on reconnection) */
-    id?: string,
-
-    /** Identifier or domain of this agent */
-    identifier?:string,
-
-    /**  */
-    slots:{ [p in SlotType ]:AgentConnection[]}
-    /**  */
-    inCreate:SlotType[],
-
-    requests:AgentRequest[],
-}
-
-export const agent = new( class AgentImplement implements Agent{
+export const agent = new( class Agent{
     anchors:{}
     slots:{ [SlotType.ANCHOR_IN ]: AgentConnection[], [SlotType.ANCHOR_OUT]:  AgentConnection[]} = { [SlotType.ANCHOR_IN]:[], [SlotType.ANCHOR_OUT]:[]}
     inCreate: SlotType[] = [];
@@ -139,7 +108,8 @@ export const agent = new( class AgentImplement implements Agent{
         agent.inCreate.push( slotType );
 
         return new Promise((resolve ) => {
-            let counts = (this.opts.maxSlots||1) - agent.slots[slotType].length;
+            let counts = ((this.opts.maxSlots||1) - agent.slots[slotType].length)+1;
+            if( counts < 1 ) counts = 1;
             if( !opts.query ) opts.query = counts;
             let created = 0;
 
@@ -169,7 +139,7 @@ export const agent = new( class AgentImplement implements Agent{
                         resolve( true );
                     }
 
-                    let events:(Event|string)[] = [ Event.AIO ];
+                    let events:( Event|string )[] = [ Event.AIO ];
                     if( opts.slotCode ){
                         events.push( eventCode(Event.AIO, opts.slotCode ));
                     }

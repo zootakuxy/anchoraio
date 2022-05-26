@@ -115,7 +115,7 @@ export const remoteListener = new ( class RemoteListener{
 
         this.chanel.length  = 0;
 
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < agent.opts.chanel||3; i++) {
             this.createConnection( "chanel", connection => {
                 console.log( "[ANCHORAIO] Agent>", `Request new create chanel ${ connection.id}  referer ${this.id}!`  );
                 this.chanel.push( connection );
@@ -197,7 +197,7 @@ export const remoteListener = new ( class RemoteListener{
             }).catch( reason => {
                 // console.error( reason )
             });
-            console.log( "[ANCHORAIO] Agent>", chalk.blueBright( "Serve need more anchor slots!"))
+            console.log( "[ANCHORAIO] Agent>", chalk.blueBright( `Server need more anchor slots ${ slot } code: ${ slotCode }!`))
         }
     }
 })();

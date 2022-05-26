@@ -17,6 +17,7 @@ export type AgentOpts = GlobalOpts & {
     reconnectTimeout:number
     maxSlots:number
     minSlots:number
+    chanel:number
     selfServer:boolean
 };
 
@@ -132,6 +133,13 @@ export function agentOptsBuilder( yargs:Argv<AgentOpts> ){
     yargs.option( "minSlots", {
         type: "number",
         default: Defaults.minSlots,
+        demandOption: true,
+        coerce: typeParser.asInt
+    })
+
+    yargs.option( "chanel", {
+        type: "number",
+        default: Defaults.chanel,
         demandOption: true,
         coerce: typeParser.asInt
     })

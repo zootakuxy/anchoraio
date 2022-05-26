@@ -171,7 +171,8 @@ export default function ( serverOpts:ServerOptions  ){
                         console.log( "[ANCHORAIO] Server>", chalk.greenBright( `Agent ${ opts.server } connected with id ${ opts.id } `));
                         writeInSocket( connection.socket, headerMap.ACCEPTED( opts ));
 
-                        connection.socket.on( "close", args => {
+                        connection.socket.on( "close", ( err) => {
+                            if( root.servers[ opts.server ] === opts.id ) delete root.servers[ opts.server ];
                             let chanelList = root.chanel[ opts.server ];
                             chanelList.filter( chanel => chanel.referer === connection.id ).forEach( chanel => {
                                 let index = chanelList.indexOf( chanel );
@@ -179,6 +180,7 @@ export default function ( serverOpts:ServerOptions  ){
                                 chanelList.splice( index, 1 );
                             });
                         });
+                        
                     }
 
                     if( chunkLine.type.includes( Event.SERVER_CHANEL ) ){
