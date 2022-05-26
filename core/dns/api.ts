@@ -2,10 +2,10 @@ import {AgentOpts} from "../agent/opts";
 import express from "express";
 import * as http from "http";
 import {aioResolve} from "./aio.resolve";
-import {agent as agentCore, Agent} from "../agent";
+import {agent} from "../agent";
 
 
-export function startAPI( agentOpts:AgentOpts, agent:Agent){
+export function startAPI( agentOpts:AgentOpts ){
     let app = express();
     const bodyParser = require( 'body-parser' );
     app.use( bodyParser.json( { } ) );
