@@ -158,7 +158,7 @@ export const agent = new( class implements Agent{
                 remoteListener.registerConnection( next, "anchor", agent.anchors, ).then(connection => {
                     agent.slots[ slotType ].push( connection );
                     connection.socket.on( "close", ( ) => {
-                        let index = agent.slots[ slotType ].findIndex( value1 => connection.id === value1.id );
+                        let index = agent.slots[ slotType ].findIndex( slot => connection.id === slot.id );
                         if( index !== -1 ) agent.slots[ slotType ].splice( index, 1 );
                     });
                     created++;
