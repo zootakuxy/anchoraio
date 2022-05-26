@@ -12,8 +12,8 @@ import {SlotManager, SlotType} from "../global/slot";
 import {AgentServer, AioAnswerer } from "../dns/aio.resolve";
 import chalk from "chalk";
 import {AgentOpts} from "./opts";
-import {localListener} from "./listener/local";
-import {AgentConnection, remoteListener} from "./listener/remote";
+import {AgentConnection, RemoteListener} from "./listener/remote";
+import {LocalListener} from "./listener/local";
 
 type CreatSlotOpts = { query?:number, slotCode?:string };
 
@@ -30,7 +30,7 @@ interface AgentRequest {
 }
 
 
-export interface Agent {
+interface _Agent {
     /** Status of connection with server*/
     isConnected:boolean
 
@@ -59,9 +59,12 @@ export interface Agent {
     inCreate:SlotType[],
 
     requests:AgentRequest[],
+
+    localListener:LocalListener
+    remoteListener:RemoteListener
 }
 
-export const agent = new( class implements Agent{
+export class Agent implements _Agent{
     anchors:{}
     slots:{ [SlotType.ANCHOR_IN ]: AgentConnection[], [SlotType.ANCHOR_OUT]:  AgentConnection[]} = { [SlotType.ANCHOR_IN]:[], [SlotType.ANCHOR_OUT]:[]}
     inCreate: SlotType[] = [];
@@ -74,15 +77,23 @@ export const agent = new( class implements Agent{
     public slotManager:SlotManager<AgentConnection>
     private _opts:AgentOpts;
 
+    remoteListener:RemoteListener;
+    localListener:LocalListener
+
     agentPorts:number[] = [];
 
-    constructor() {
+    constructor( opts: AgentOpts ) {
+        let self = this;
         this.slotManager = new SlotManager<AgentConnection>({
-            slots(){ return agent.slots },
+            slots(){ return self.slots },
             handlerCreator( name, anchorID, opts, ...extras){
                 return this.createSlots( name, opts );
             }
         });
+
+        this.opts = opts;
+        this.remoteListener = new RemoteListener( this );
+        this.localListener = new LocalListener( this );
     }
 
     set opts( opts){
@@ -101,18 +112,18 @@ export const agent = new( class implements Agent{
         this.requests.push( request );
         this.nextAnchor();
     } public nextAnchor(){
-        if( !agent.requests.length ) return;
-        let next = agent.requests.find( value => value.status === "pendent" );
+        if( !this.requests.length ) return;
+        let next = this.requests.find( value => value.status === "pendent" );
         next.status = "income";
         let agentServer = next.agentServer;
         let req = next.socket;
         let aioAnswerer = next.aioAnswerer;
 
-        console.log( "[ANCHORAIO] Agent>", `Anchor request ${ next.id} started!`)
+        console.log( "[ANCHORIO] Agent>", `Anchor request ${ next.id} started!`)
 
         this.slotManager.nextSlot( SlotType.ANCHOR_OUT ).then(connection => {
             if( !connection ){
-                console.log( "[ANCHORAIO] Request>", agentServer.identifier, aioAnswerer.application, "\\", chalk.redBright("rejected"));
+                console.log( "[ANCHORIO] Request>", agentServer.identifier, aioAnswerer.application, "\\", chalk.redBright("rejected"));
                 return req.end();
             }
             let pack:AnchorHeader = {
@@ -123,11 +134,11 @@ export const agent = new( class implements Agent{
                 domainName: aioAnswerer.domainName,
                 anchor_form: connection.id
             }
-            writeInSocket( agent.server, headerMap.ANCHOR( pack ));
+            writeInSocket( this.server, headerMap.ANCHOR( pack ));
             connection.anchor( req );
 
-            if( agent.slots[SlotType.ANCHOR_OUT].length < this.opts.minSlots ) this.createSlots( SlotType.ANCHOR_OUT ).then();
-            console.log( "[ANCHORAIO] Request>", agentServer.identifier, aioAnswerer.application, "\\", chalk.blueBright( "accepted" ));
+            if( this.slots[SlotType.ANCHOR_OUT].length < this.opts.minSlots ) this.createSlots( SlotType.ANCHOR_OUT ).then();
+            console.log( "[ANCHORIO] Request>", agentServer.identifier, aioAnswerer.application, "\\", chalk.blueBright( "accepted" ));
         }).catch( reason => {
             // console.error(reason)
         })
@@ -136,10 +147,10 @@ export const agent = new( class implements Agent{
         if ( !opts ) opts = {};
 
         if( this.inCreate.includes( slotType ) ) return Promise.resolve( false );
-        agent.inCreate.push( slotType );
+        this.inCreate.push( slotType );
 
         return new Promise((resolve ) => {
-            let counts = (this.opts.maxSlots||1) - agent.slots[slotType].length;
+            let counts = (this.opts.maxSlots||1) - this.slots[slotType].length;
             if( !counts || counts < 1 ) counts = 1;
             if( !opts.query ) opts.query = counts;
             let created = 0;
@@ -154,11 +165,11 @@ export const agent = new( class implements Agent{
                     port: this.opts.anchorPort
                 });
 
-                remoteListener.registerConnection( next, "anchor", agent.anchors, ).then(connection => {
-                    agent.slots[ slotType ].push( connection );
+                this.remoteListener.registerConnection( next, "anchor", this.anchors, ).then(connection => {
+                    this.slots[ slotType ].push( connection );
                     connection.socket.on( "close", ( ) => {
-                        let index = agent.slots[ slotType ].findIndex( slot => connection.id === slot.id );
-                        if( index !== -1 ) agent.slots[ slotType ].splice( index, 1 );
+                        let index = this.slots[ slotType ].findIndex( slot => connection.id === slot.id );
+                        if( index !== -1 ) this.slots[ slotType ].splice( index, 1 );
                     });
                     created++;
                     if( created === opts.query ){
@@ -169,31 +180,31 @@ export const agent = new( class implements Agent{
                         resolve( true );
                     }
 
-                    let events:(Event|string)[] = [ Event.AIO ];
+                    let events:(Event|string)[] = [ Event.SLOTS ];
                     if( opts.slotCode ){
-                        events.push( eventCode(Event.AIO, opts.slotCode ));
+                        events.push( eventCode(Event.SLOTS, opts.slotCode ));
                     }
 
-                    if( created === counts ) events.push( eventCode( Event.AIO, "END") );
-                    if( created === counts && opts.slotCode ) events.push( eventCode( Event.AIO, "END", opts.slotCode ) );
+                    if( created === counts ) events.push( eventCode( Event.SLOTS, "END") );
+                    if( created === counts && opts.slotCode ) events.push( eventCode( Event.SLOTS, "END", opts.slotCode ) );
 
                     _anchors.push( connection.id );
 
                     if( created == counts ){
-                        writeInSocket( agent.server, headerMap.AIO({
+                        writeInSocket( this.server, headerMap.AIO({
                             slot:slotType,
-                            origin:agent.identifier,
-                            server:agent.identifier,
-                            agent: agent.identifier,
+                            origin:this.identifier,
+                            server:this.identifier,
+                            agent: this.identifier,
                             anchors: _anchors,
                             slotCode: opts.slotCode,
                             id: connection.id,
                         }, ...events ));
 
-                        let index = agent.inCreate.findIndex( value1 => value1 === slotType );
+                        let index = this.inCreate.findIndex( value1 => value1 === slotType );
                         while ( index != -1 ){
-                            agent.inCreate.splice( index, 1 );
-                            index = agent.inCreate.findIndex( value1 => value1 === slotType );
+                            this.inCreate.splice( index, 1 );
+                            index = this.inCreate.findIndex( value1 => value1 === slotType );
                         }
                     }
                 });
@@ -202,7 +213,7 @@ export const agent = new( class implements Agent{
 
     } connect() {
         return new Promise((resolve) => {
-            this.server = remoteListener.createConnection( "agent", connection => {
+            this.server = this.remoteListener.createConnection( "agent", connection => {
                 this.id = connection.id;
                 writeInSocket( connection.socket, headerMap.SERVER({
                     origin: this.identifier,
@@ -216,23 +227,6 @@ export const agent = new( class implements Agent{
         })
     }
 
-})()
-
-export default function ( agentOpts:AgentOpts ){
-    agent.opts = agentOpts;
-
-    if( agentOpts.selfServer ){
-        agentOpts.serverHost = "127.0.0.1"
-        require('../server' ).default( agentOpts );
-    }
-
-    agent.connect().then( value => {
-        console.log( "[ANCHORAIO] Agent>", chalk.greenBright( `Connected to server on ${agentOpts.serverHost}:${String( agentOpts.serverPort )}` ) );
-        localListener.createServer().then( value1 => {});
-    });
-
-    if( !agentOpts.noDNS ) require( "../dns/server" ).startDNS( agentOpts );
-    if( !agentOpts.noAPI ) require( "../dns/api" ).startAPI( agentOpts );
 }
 
 

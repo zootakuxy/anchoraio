@@ -3,7 +3,7 @@ import {SlotType} from "../../global/slot";
 import net from "net";
 import chalk from "chalk";
 import {createConnection} from "../apps";
-import {agent} from "../index";
+import {Agent} from "../index";
 
 export interface AgentConnection {
     id: string,
@@ -15,8 +15,13 @@ export interface AgentConnection {
 
 type Namespace = "agent"|"anchor"|"req"|"chanel";
 
-export const remoteListener = new ( class RemoteListener{
+export class RemoteListener{
     chanel:AgentConnection[] = [];
+    agent:Agent
+
+    constructor( agent:Agent) {
+        this.agent = agent;
+    }
 
     public registerConnection<T>(socket:net.Socket, namespace:Namespace, collector?:{ [p:string]:AgentConnection }, metadata?:T, ):Promise<AgentConnection>{
         if( !metadata ) metadata = {} as any;
@@ -60,8 +65,8 @@ export const remoteListener = new ( class RemoteListener{
 
     public createConnection( namespace:Namespace, onConnect:( connection:AgentConnection )=>void){
         let socket =  net.createConnection({
-            host: agent.opts.serverHost,
-            port: agent.opts.serverPort
+            host: this.agent.opts.serverHost,
+            port: this.agent.opts.serverPort
         });
 
         socket.on("connect", () => {
@@ -73,15 +78,17 @@ export const remoteListener = new ( class RemoteListener{
         });
 
         socket.on( "error", err => {
-            if( agent.isConnected ) console.log( "[ANCHORAIO] Agent>", `Connection error ${ err.message}` );
-            if( agent.isConnected && agent.authStatus !== "rejected" ) console.log( "[ANCHORAIO] Agent>", `Try reconnecting to server!` );
-            socket["connected"] = false;
+            if( namespace === "agent" ){
+                if( this.agent.isConnected ) console.log( "[ANCHORIO] Agent>", `Connection error ${ err.message}` );
+                if( this.agent.isConnected && this.agent.authStatus !== "rejected" ) console.log( "[ANCHORIO] Agent>", `Try reconnecting to server!` );
+                socket["connected"] = false;
 
-            if( agent.authStatus === "rejected" ) return;
+                if( this.agent.authStatus === "rejected" ) return;
 
-            setTimeout( ()=>{
-                socket.connect( agent.opts.serverPort );
-            }, agent.opts.reconnectTimeout )
+                setTimeout( ()=>{
+                    socket.connect( this.agent.opts.serverPort );
+                }, this.agent.opts.reconnectTimeout )
+            }
         });
 
         socket.on( "close", hadError => {
@@ -90,23 +97,23 @@ export const remoteListener = new ( class RemoteListener{
 
         socket.on( "data", data => {
             asLine( data ).forEach( (chunkLine) => {
-                remoteListener.onAgentNextLine( chunkLine );
+                this.onAgentNextLine( chunkLine );
             });
             if( namespace !== "chanel" ) return;
 
             writeInSocket( socket, headerMap.CHANEL_FREE({
-                origin: agent.identifier,
-                server: agent.identifier,
+                origin: this.agent.identifier,
+                server: this.agent.identifier,
                 id: socket["id"],
-                referer: agent.id
+                referer: this.agent.id
             }));
         });
 
         return socket;
     }
 
-    get id(){ return agent.id }
-    get identifier(){ return agent.identifier }
+    get id(){ return this.agent.id }
+    get identifier(){ return this.agent.identifier }
 
     private createChanel(){
         this.chanel.forEach( chanel => {
@@ -115,9 +122,9 @@ export const remoteListener = new ( class RemoteListener{
 
         this.chanel.length  = 0;
 
-        for (let i = 0; i < (agent.opts.chanel||5); i++) {
+        for (let i = 0; i < ( this.agent.opts.chanel||5); i++) {
             this.createConnection( "chanel", connection => {
-                console.log( "[ANCHORAIO] Agent>", `Request new create chanel ${ connection.id}  referer ${this.id}!`  );
+                console.log( "[ANCHORIO] Agent>", `Request new create chanel ${ connection.id}  referer ${this.id}!`  );
                 this.chanel.push( connection );
                 let pack = {
                     origin: this.identifier,
@@ -133,71 +140,71 @@ export const remoteListener = new ( class RemoteListener{
     public onAgentNextLine( chunkLine:ChunkLine ){
         chunkLine.show();
 
-        if( chunkLine.type.includes( Event.ANCHOR ) ) {
-            agent.slotManager.nextSlot( SlotType.ANCHOR_IN, chunkLine.as.ANCHOR.anchor_to ).then(anchor => {
+        if( chunkLine.type.includes( Event.AIO ) ) {
+            this.agent.slotManager.nextSlot( SlotType.ANCHOR_IN, chunkLine.as.ANCHOR.anchor_to ).then(anchor => {
                 let appResponse:net.Socket = createConnection( chunkLine.as.ANCHOR.application );
 
                 if( appResponse ){
                     appResponse.pipe( anchor.socket );
                     anchor.socket.pipe( appResponse );
-                    console.log( `[ANCHORAIO] Agent>`, chalk.blueBright( `Anchor form ${ chunkLine.as.ANCHOR.origin} to application ${ chunkLine.as.ANCHOR.application } \\CONNECTED!` ));
+                    console.log( `[ANCHORIO] Agent>`, chalk.blueBright( `Anchor form ${ chunkLine.as.ANCHOR.origin} to application ${ chunkLine.as.ANCHOR.application } \\CONNECTED!` ));
                 } else {
-                    console.log( `[ANCHORAIO] Agent>`, chalk.redBright( `Anchor form ${ chunkLine.as.ANCHOR.origin} to application ${ chunkLine.as.ANCHOR.application } \\CANSELED!` ));
+                    console.log( `[ANCHORIO] Agent>`, chalk.redBright( `Anchor form ${ chunkLine.as.ANCHOR.origin} to application ${ chunkLine.as.ANCHOR.application } \\CANSELED!` ));
                     anchor.socket.end();
                 }
-                if( agent.slots[SlotType.ANCHOR_IN].length < agent.opts.minSlots ) agent.createSlots( SlotType.ANCHOR_IN ).then();
+                if( this.agent.slots[SlotType.ANCHOR_IN].length < this.agent.opts.minSlots ) this.agent.createSlots( SlotType.ANCHOR_IN ).then();
             })
 
         }
 
-        if( chunkLine.type.includes( Event.ANCHOR_SEND )) {
+        if( chunkLine.type.includes( Event.AIO_SEND )) {
             let request = chunkLine.as.ANCHOR.request;
-            let index = agent.requests.findIndex( value => value.id === request );
-            agent.requests[ index ].status = "complete";
-            agent.requests.splice( index, 1 );
-            agent.nextAnchor();
-            console.log( "[ANCHORAIO] Agent>", chalk.blueBright( "Anchor send!"))
+            let index = this.agent.requests.findIndex( value => value.id === request );
+            this.agent.requests[ index ].status = "complete";
+            this.agent.requests.splice( index, 1 );
+            this.agent.nextAnchor();
+            console.log( "[ANCHORIO] Agent>", chalk.blueBright( "Anchor send!"))
         }
 
-        if( chunkLine.type.includes( Event.ANCHOR_CANSEL ) ){
+        if( chunkLine.type.includes( Event.AIO_CANSEL ) ){
             let anchorForm = chunkLine.header["anchor_form"];
-            let connection = agent.anchors[ anchorForm ];
+            let connection = this.agent.anchors[ anchorForm ];
             connection.socket.end();
             connection.req.end();
 
             let request = chunkLine.as.ANCHOR.request;
-            let index = agent.requests.findIndex( value => value.id === request );
-            agent.requests[ index ].status = "complete";
-            agent.requests.splice( index, 1 );
-            agent.nextAnchor();
-            console.log( "[ANCHORAIO] Agent>", chalk.redBright( "Anchor faild!"))
+            let index = this.agent.requests.findIndex( value => value.id === request );
+            this.agent.requests[ index ].status = "complete";
+            this.agent.requests.splice( index, 1 );
+            this.agent.nextAnchor();
+            console.log( "[ANCHORIO] Agent>", chalk.redBright( "Anchor faild!"))
         }
 
-        if( chunkLine.type.includes( Event.REJECTED ) ){
-            agent.authStatus = "rejected";
-            agent.id = null;
-            agent.server["connected"] = false;
-            agent.server.end();
-            console.log( "[ANCHORAIO] Agent>", chalk.redBright( "Auth failed with server!"))
+        if( chunkLine.type.includes( Event.AUTH_REJECTED ) ){
+            this.agent.authStatus = "rejected";
+            this.agent.id = null;
+            this.agent.server["connected"] = false;
+            this.agent.server.end();
+            console.log( "[ANCHORIO] Agent>", chalk.redBright( "Auth failed with server!"))
         }
 
-        if( chunkLine.type.includes( Event.ACCEPTED ) ){
-            agent.authStatus = "accepted";
-            agent.createSlots( SlotType.ANCHOR_IN ).then();
-            agent.createSlots( SlotType.ANCHOR_OUT ).then();
+        if( chunkLine.type.includes( Event.AUTH_ACCEPTED ) ){
+            this.agent.authStatus = "accepted";
+            this.agent.createSlots( SlotType.ANCHOR_IN ).then();
+            this.agent.createSlots( SlotType.ANCHOR_OUT ).then();
             this.createChanel();
-            console.log( "[ANCHORAIO] Agent>", chalk.greenBright( "Auth success with server!"))
+            console.log( "[ANCHORIO] Agent>", chalk.greenBright( "Auth success with server!"))
         }
 
-        if( chunkLine.type.includes( Event.AIO ) ){
+        if( chunkLine.type.includes( Event.SLOTS ) ){
             let slot = chunkLine.header[ "slot" ];
             let slotCode = chunkLine.header[ "slotCode" ];
-            agent.createSlots( slot, {
+            this.agent.createSlots( slot, {
                 slotCode
             }).catch( reason => {
                 // console.error( reason )
             });
-            console.log( "[ANCHORAIO] Agent>", chalk.blueBright( `Server need more anchor slots ${ slot } code: ${ slotCode }!`))
+            console.log( "[ANCHORIO] Agent>", chalk.blueBright( `Server need more anchor slots ${ slot } code: ${ slotCode }!`))
         }
     }
-})();
+}

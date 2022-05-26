@@ -9,5 +9,5 @@
     process.on( "unhandledRejection", error => {
         // console.error(error)
     });
-    console.log("[ANCHORAIO] Init> OK!");
+    console.log("[ANCHORIO] Init> OK!");
 })();

@@ -37,7 +37,7 @@ export function createConnection(application:string|number ){
             port: Number( _app.port )
         });
         connection.on( "error", err => {
-            console.error( "[ANCHORAIO] Application", `Connection error ${ err.message }` )
+            console.error( "[ANCHORIO] Application", `Connection error ${ err.message }` )
         });
     }
     return connection;

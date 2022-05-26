@@ -5,14 +5,17 @@ import {appLabel} from "../app";
 
 export enum Event {
     AIO="Event.AIO",
-    SERVER="Event.SERVER",
-    SERVER_CHANEL="Event.SERVER_CHANEL",
+    AIO_CANSEL="Event.AIO_CANSEL",
+    AIO_SEND="Event.AIO_SEND",
+
+    SLOTS="Event.SLOTS",
     CHANEL_FREE="Event.CHANEL_FREE",
-    ANCHOR="Event.ANCHOR",
-    ANCHOR_CANSEL="Event.ANCHOR_CANSEL",
-    ANCHOR_SEND="Event.ANCHOR_SEND",
-    REJECTED="Event.REJECTED",
-    ACCEPTED="Event.ACCEPTED",
+
+    AUTH="Event.AUTH",
+    AUTH_ACCEPTED="Event.AUTH_ACCEPTED",
+    AUTH_REJECTED="Event.AUTH_REJECTED",
+    AUTH_CHANEL="Event.AUTH_CHANEL",
+
 }
 
 export enum Emitter {
@@ -109,31 +112,31 @@ function _header<T>( type:Event, opts:T, ...types:(Event|string)[]  ):T &{type:E
 }
 export const headerMap = {
     SERVER(opts:ServerHeader, ...types:(Event|string)[]){
-        return _header( Event.SERVER, opts, ...types );
+        return _header( Event.AUTH, opts, ...types );
 
     }, SERVER_CHANEL(opts:ServerChanel, ...types:(Event|string)[]){
-        return _header( Event.SERVER_CHANEL, opts, ...types );
+        return _header( Event.AUTH_CHANEL, opts, ...types );
 
     }, CHANEL_FREE( opts:ServerChanel, ...types:(Event|string)[]){
         return _header( Event.CHANEL_FREE, opts, ...types );
 
     },ACCEPTED(opts:ServerHeader, ...types:(Event|string)[]){
-        return _header( Event.ACCEPTED, opts, ...types );
+        return _header( Event.AUTH_ACCEPTED, opts, ...types );
 
     }, ANCHOR( opts:AnchorHeader, ...types:(Event|string)[]){
-        return _header( Event.ANCHOR, opts, ...types );
+        return _header( Event.AIO, opts, ...types );
 
     }, REJECTED( opts:ServerHeader, ...types:(Event|string)[]){
-        return _header( Event.REJECTED, opts, ...types );
+        return _header( Event.AUTH_REJECTED, opts, ...types );
 
     }, ANCHOR_CANSEL(opts:AnchorHeader, ...types:(Event|string)[]){
-        return _header( Event.ANCHOR_CANSEL, opts, ...types );
+        return _header( Event.AIO_CANSEL, opts, ...types );
 
     }, ANCHOR_SEND(opts:AnchorHeader, ...types:(Event|string)[]){
-        return _header( Event.ANCHOR_SEND, opts, ...types );
+        return _header( Event.AIO_SEND, opts, ...types );
 
     }, AIO(opts:AIOHeader, ...types:(Event|string)[]){
-        return _header( Event.AIO, opts, ...types );
+        return _header( Event.SLOTS, opts, ...types );
     }
 }
 

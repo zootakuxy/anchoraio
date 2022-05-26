@@ -12,5 +12,5 @@ export const builder:BuilderCallback<AgentOpts, any> = yargs => {
 };
 export const handler = function ( argv: yargs.Arguments<AgentOpts> ) {
     agentOptions( argv );
-    require( "../../core/agent" ).default( argv );
+    require( "../../core/service/agent.service" ).default( argv );
 }
