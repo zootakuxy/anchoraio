@@ -1,9 +1,9 @@
 import {AgentOpts} from "../agent/opts";
 import express from "express";
 import * as http from "http";
+import  chalk from "chalk";
 import {aioResolve} from "./aio.resolve";
-import {agent, agent as agentCore} from "../agent";
-import chalk from "chalk";
+import { agent } from "../agent";
 
 
 export function startAPI( agentOpts:AgentOpts ){
@@ -59,12 +59,12 @@ export function startAPI( agentOpts:AgentOpts ){
         console.log( "[ANCHORAIO] Agent> API>", `GET /api/status`);
 
         return res.json( { success: true, data: {
-            connected: agentCore.isConnected,
-            domain: agentCore.identifier,
+            connected: agent.isConnected,
+            domain: agent.identifier,
             port: agentOpts.agentPort,
             serverHost: agentOpts.serverHost,
             serverPort: agentOpts.serverPort,
-            serverConnection: agentCore.id,
+            serverConnection: agent.id,
         }})
     });
 
@@ -97,7 +97,7 @@ export function startAPI( agentOpts:AgentOpts ){
     let server = http.createServer({}, app );
     server.listen( agentOpts.agentAPI, ()=>{
         console.log( "[ANCHORAIO] Agent>", chalk.greenBright(`Running Agent API ${ agent.identifier } on port ${ agentOpts.agentAPI }`) );
-    });
+    } );
 
     return server;
 }

@@ -115,7 +115,7 @@ export const remoteListener = new ( class RemoteListener{
 
         this.chanel.length  = 0;
 
-        for (let i = 0; i < agent.opts.chanel||3; i++) {
+        for (let i = 0; i < (agent.opts.chanel||5); i++) {
             this.createConnection( "chanel", connection => {
                 console.log( "[ANCHORAIO] Agent>", `Request new create chanel ${ connection.id}  referer ${this.id}!`  );
                 this.chanel.push( connection );

@@ -9,7 +9,7 @@ import {
     writeInSocket
 } from "../global/share";
 import {SlotManager, SlotType} from "../global/slot";
-import {AgentServer, AioAnswerer, aioResolve} from "../dns/aio.resolve";
+import {AgentServer, AioAnswerer } from "../dns/aio.resolve";
 import chalk from "chalk";
 import {AgentOpts} from "./opts";
 import {localListener} from "./listener/local";
@@ -61,7 +61,7 @@ export interface Agent {
     requests:AgentRequest[],
 }
 
-export const agent = new( class Agent{
+export const agent = new( class implements Agent{
     anchors:{}
     slots:{ [SlotType.ANCHOR_IN ]: AgentConnection[], [SlotType.ANCHOR_OUT]:  AgentConnection[]} = { [SlotType.ANCHOR_IN]:[], [SlotType.ANCHOR_OUT]:[]}
     inCreate: SlotType[] = [];
@@ -130,17 +130,18 @@ export const agent = new( class Agent{
 
             if( agent.slots[SlotType.ANCHOR_OUT].length < this.opts.minSlots ) this.createSlots( SlotType.ANCHOR_OUT ).then();
             console.log( "[ANCHORAIO] Request>", agentServer.identifier, aioAnswerer.application, "\\", chalk.blueBright( "accepted" ));
-        }).catch( reason => { })
+        }).catch( reason => {
+            // console.error(reason)
+        })
 
-    } public createSlots( slotType:SlotType, opts?:CreatSlotOpts ):Promise<boolean>{
+    } public createSlots(slotType:SlotType, opts?:CreatSlotOpts ):Promise<boolean>{
         if ( !opts ) opts = {};
 
         if( this.inCreate.includes( slotType ) ) return Promise.resolve( false );
         agent.inCreate.push( slotType );
 
         return new Promise((resolve ) => {
-            let counts = ((this.opts.maxSlots||1) - agent.slots[slotType].length)+1;
-            if( counts < 1 ) counts = 1;
+            let counts = (this.opts.maxSlots||1) - agent.slots[slotType].length;
             if( !opts.query ) opts.query = counts;
             let created = 0;
 
@@ -157,10 +158,9 @@ export const agent = new( class Agent{
                 remoteListener.registerConnection( next, "anchor", agent.anchors, ).then(connection => {
                     agent.slots[ slotType ].push( connection );
                     connection.socket.on( "close", ( ) => {
-                        let index = agent.slots[ slotType ].findIndex( slots => connection.id === slots.id );
+                        let index = agent.slots[ slotType ].findIndex( value1 => connection.id === value1.id );
                         if( index !== -1 ) agent.slots[ slotType ].splice( index, 1 );
                     });
-
                     created++;
                     if( created === opts.query ){
                         resolved = true;
@@ -183,9 +183,9 @@ export const agent = new( class Agent{
                     if( created == counts ){
                         writeInSocket( agent.server, headerMap.AIO({
                             slot:slotType,
-                            origin: agent.identifier,
-                            server: agent.identifier,
-                            agent:  agent.identifier,
+                            origin:agent.identifier,
+                            server:agent.identifier,
+                            agent: agent.identifier,
                             anchors: _anchors,
                             slotCode: opts.slotCode,
                             id: connection.id,
