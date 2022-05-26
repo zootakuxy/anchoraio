@@ -123,7 +123,6 @@ export const agent = new( class implements Agent{
                 domainName: aioAnswerer.domainName,
                 anchor_form: connection.id
             }
-            console.log( pack );
             writeInSocket( agent.server, headerMap.ANCHOR( pack ));
             connection.anchor( req );
 
