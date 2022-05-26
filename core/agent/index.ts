@@ -99,7 +99,6 @@ export const agent = new( class implements Agent{
     }  public nextRequest( request:AgentRequest ){
         request.status = "pendent";
         this.requests.push( request );
-        // if( this.requests.length === 1 ) this.nextAnchor();
         this.nextAnchor();
     } public nextAnchor(){
         if( !agent.requests.length ) return;
@@ -142,6 +141,7 @@ export const agent = new( class implements Agent{
 
         return new Promise((resolve ) => {
             let counts = (this.opts.maxSlots||1) - agent.slots[slotType].length;
+            if( !counts || counts < 1 ) counts = 1;
             if( !opts.query ) opts.query = counts;
             let created = 0;
 
