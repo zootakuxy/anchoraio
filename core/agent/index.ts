@@ -30,6 +30,37 @@ interface AgentRequest {
 }
 
 
+export interface Agent {
+    /** Status of connection with server*/
+    isConnected:boolean
+
+    isAvailable:boolean
+
+    /**  */
+    local?:Server,
+
+    /** Socket instance of server */
+    server?: net.Socket,
+
+    authStatus: AuthStatus
+
+    /**  */
+    anchors:{[p:string]: AgentConnection },
+
+    /** Currente connection identifier (this value can be change on reconnection) */
+    id?: string,
+
+    /** Identifier or domain of this agent */
+    identifier?:string,
+
+    /**  */
+    slots:{ [p in SlotType ]:AgentConnection[]}
+    /**  */
+    inCreate:SlotType[],
+
+    requests:AgentRequest[],
+}
+
 export const agent = new( class Agent{
     anchors:{}
     slots:{ [SlotType.ANCHOR_IN ]: AgentConnection[], [SlotType.ANCHOR_OUT]:  AgentConnection[]} = { [SlotType.ANCHOR_IN]:[], [SlotType.ANCHOR_OUT]:[]}
@@ -139,7 +170,7 @@ export const agent = new( class Agent{
                         resolve( true );
                     }
 
-                    let events:( Event|string )[] = [ Event.AIO ];
+                    let events:(Event|string)[] = [ Event.AIO ];
                     if( opts.slotCode ){
                         events.push( eventCode(Event.AIO, opts.slotCode ));
                     }
@@ -202,7 +233,7 @@ export default function ( agentOpts:AgentOpts ){
     });
 
     if( !agentOpts.noDNS ) require( "../dns/server" ).startDNS( agentOpts );
-    if( !agentOpts.noAPI ) require( "../dns/api" ).startAPI( agentOpts, agent );
+    if( !agentOpts.noAPI ) require( "../dns/api" ).startAPI( agentOpts );
 }
 
 
