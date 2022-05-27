@@ -1,19 +1,21 @@
-import {aioResolve} from "./aio.resolve";
-import {netResolve} from "./net.resolve";
 import chalk from "chalk";
 import {Agent} from "../agent";
 
 const dns2 = require('dns2');
-import  ddd, { DnsServer } from "dns2/server";
+import  { DnsServer } from "dns2/server";
+import {NetResolver} from "./net.resolve";
 
 const { Packet } = dns2;
 
 export class AgentDNS {
     agent:Agent
     server: DnsServer
+    netResolver:NetResolver
 
     constructor (agent:Agent ){
         this.agent = agent;
+        this.netResolver = new NetResolver( this.agent );
+
         this.server  = dns2.createServer({
             udp: true,
             tcp: true,
@@ -21,14 +23,14 @@ export class AgentDNS {
                 const response = Packet.createResponseFromRequest(request);
                 const [ question ] = request.questions;
                 const { name } = question;
-                let aioResponse = aioResolve.aioResolve( name );
+                let aioResponse = agent.aioResolve.aioResolve( name );
                 if( aioResponse && aioResponse.length > 0 ){
                     console.log( "[dns resolve]", name, "\\", "127.0.0.1" )
                     response.answers.push( ...aioResponse )
                     send(response);
                     return;
                 } else {
-                    netResolve.resolve( name ).then( result => {
+                    this.netResolver.resolve( name ).then( result => {
                         if( result.answers.length )
                             console.log( "[dns resolve]", result.server, "\\", "127.0.0.1" )
 

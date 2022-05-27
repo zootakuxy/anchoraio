@@ -1,5 +1,5 @@
 import yargs, {BuilderCallback} from "yargs";
-import {serverOpts, ServerOptions, serverBuilderOptions} from "../../core/server/opts";
+import { ServerOptions, serverBuilderOptions} from "../../core/server/opts";
 import {globalOptsBuilder} from "../../core/global/opts";
 
 export const command = "server";
@@ -11,6 +11,18 @@ export const builder:BuilderCallback<ServerOptions, any> = yargs => {
     })
 };
 export const handler = function ( argv: yargs.Arguments<ServerOptions> ) {
-    serverOpts( argv );
-    require( "../../core/server" ).default( argv );
+    if( argv.mode === "prod" ){
+        process.on( "uncaughtExceptionMonitor", error => {
+            // console.error(error.message)
+        });
+        process.on( "uncaughtException", error => {
+            // console.error(error.message)
+        });
+        process.on( "unhandledRejection", error => {
+            // console.error(error)
+        });
+    }
+    console.log("[ANCHORIO] Init> OK!");
+    const { ServerContext } =  require( "../../core/service/server.service" );
+    new ServerContext( argv ).start();
 }

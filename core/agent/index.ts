@@ -9,11 +9,13 @@ import {
     writeInSocket
 } from "../global/share";
 import {SlotManager, SlotType} from "../global/slot";
-import {AgentServer, AioAnswerer } from "../dns/aio.resolve";
+import {AgentServer, AioAnswerer, AioResolver} from "../dns/aio.resolve";
 import chalk from "chalk";
 import {AgentOpts} from "./opts";
 import {AgentConnection, RemoteListener} from "./listener/remote";
 import {LocalListener} from "./listener/local";
+import {ApplicationManager} from "./apps";
+import {AgentContext} from "../service/agent.service";
 
 type CreatSlotOpts = { query?:number, slotCode?:string };
 
@@ -74,15 +76,21 @@ export class Agent implements _Agent{
     id:string
     server:net.Socket
     local:Server
+    private readonly _aioResolve:AioResolver;
+    private readonly _appManager:ApplicationManager;
+    private readonly _remoteListener:RemoteListener;
+    private readonly _localListener:LocalListener;
+
     public slotManager:SlotManager<AgentConnection>
     private _opts:AgentOpts;
+    private readonly _context:AgentContext;
 
-    remoteListener:RemoteListener;
-    localListener:LocalListener
 
     agentPorts:number[] = [];
 
-    constructor( opts: AgentOpts ) {
+
+    constructor( opts: AgentOpts, context:AgentContext) {
+        this._context = context;
         let self = this;
         this.slotManager = new SlotManager<AgentConnection>({
             slots(){ return self.slots },
@@ -92,8 +100,30 @@ export class Agent implements _Agent{
         });
 
         this.opts = opts;
-        this.remoteListener = new RemoteListener( this );
-        this.localListener = new LocalListener( this );
+        this._remoteListener = new RemoteListener( this );
+        this._localListener = new LocalListener( this );
+        this._appManager = new ApplicationManager( this );
+        this._aioResolve = new AioResolver( this );
+    }
+
+    get aioResolve(): AioResolver {
+        return this._aioResolve;
+    }
+
+    get localListener(): LocalListener {
+        return this._localListener;
+    }
+
+    get remoteListener(): RemoteListener {
+        return this._remoteListener;
+    }
+
+    get appManager(): ApplicationManager {
+        return this._appManager;
+    }
+
+    get context(): AgentContext {
+        return this._context;
     }
 
     set opts( opts){
@@ -126,6 +156,21 @@ export class Agent implements _Agent{
                 console.log( "[ANCHORIO] Request>", agentServer.identifier, aioAnswerer.application, "\\", chalk.redBright("rejected"));
                 return req.end();
             }
+
+            connection.socket.on( "end", (args) => {
+                if( req["connected"]) req.end();
+            });
+
+            req.on( "end", () => {
+                if( connection.socket.connected ) connection.socket.end();
+                connection.socket.end();
+            });
+
+            req.on( "close", hadError => {
+                console.log( "Request Closed!")
+                // connection.socket.end();
+            });
+
             let pack:AnchorHeader = {
                 origin: this.identifier,
                 server: agentServer.identifier,

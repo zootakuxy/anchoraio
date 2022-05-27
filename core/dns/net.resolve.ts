@@ -1,18 +1,20 @@
 import {DnsAnswer} from "dns2";
 import moment from "moment";
-import {agentOptions } from "../agent/opts";
+import {Agent} from "../agent";
+
 const { TCPClient } = require('dns2');
 
-export const netResolve = new class NetResolver {
-    dnsResolves = agentOptions().dns.map( name => {
-        return {
-            resolve: TCPClient( name ),
-            name
-        }
-    });
-
-
+export class NetResolver {
+    agent:Agent
+    dnsResolves:{resolve, name}[];
     resolves:{ [domain:string]:DnsAnswer[] } = {};
+
+    constructor( agent:Agent ) {
+        this.agent = agent;
+        this.dnsResolves = this.agent.opts.dns.map( name => {
+            return { resolve: TCPClient( name ), name }
+        });
+    }
 
     async resolve( domainName:string ):Promise<{answers:DnsAnswer[], server}>{
         return new Promise( (_resolve, reject) => {
@@ -49,4 +51,4 @@ export const netResolve = new class NetResolver {
             });
         })
     }
-};
+}

@@ -21,21 +21,6 @@ export type AgentOpts = GlobalOpts & {
     selfServer:boolean
 };
 
-
-const status:{
-    value?:AgentOpts
-} = {}
-
-export type OptionBuilder = {
-    integer:OptionBuilder,
-    number:OptionBuilder,
-    string:OptionBuilder
-    boolean:OptionBuilder,
-    alias(...alias):OptionBuilder,
-    as( ):OptionBuilder,
-    description( desc:string  ):OptionBuilder
-}
-
 export function agentOptsBuilder( yargs:Argv<AgentOpts> ){
     yargs.option( "identifier", { alias: [ "id", "i" ],
         type: "string",
@@ -144,9 +129,4 @@ export function agentOptsBuilder( yargs:Argv<AgentOpts> ){
         coerce: typeParser.asInt
     })
     return yargs;
-}
-
-export function agentOptions( opts?:AgentOpts ){
-    if( opts && typeof  opts === "object" ) status.value = opts;
-    return status.value;
 }

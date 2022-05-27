@@ -1,5 +1,5 @@
 import yargs, {BuilderCallback} from "yargs";
-import {agentOptions, AgentOpts, agentOptsBuilder} from "../../core/agent/opts";
+import { AgentOpts, agentOptsBuilder} from "../../core/agent/opts";
 import {globalOptsBuilder} from "../../core/global/opts";
 
 export const command = "agent";
@@ -11,6 +11,17 @@ export const builder:BuilderCallback<AgentOpts, any> = yargs => {
     });
 };
 export const handler = function ( argv: yargs.Arguments<AgentOpts> ) {
-    agentOptions( argv );
-    require( "../../core/service/agent.service" ).default( argv );
+    if( argv.mode === "prod" ){
+        process.on( "uncaughtExceptionMonitor", error => {
+            // console.error(error.message)
+        });
+        process.on( "uncaughtException", error => {
+            // console.error(error.message)
+        });
+        process.on( "unhandledRejection", error => {
+            // console.error(error)
+        });
+    }
+    const { AgentContext } = require( "../../core/service/agent.service" );
+    new AgentContext( argv ).start();
 }

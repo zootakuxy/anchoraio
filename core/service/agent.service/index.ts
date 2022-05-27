@@ -4,33 +4,42 @@ import chalk from "chalk";
 import {AgentAPI} from "../../dns/api";
 import {AgentDNS} from "../../dns/server";
 
-export const agentService = new (class AgentService{
+export class AgentContext {
     agent:Agent
     options:AgentOpts
     agentDNS:AgentDNS
     agentApi:AgentAPI
-})();
 
-export default function ( agentOpts:AgentOpts ){
-    let agent = new Agent( agentOpts );
-    agentService.options = agentOpts;
-    agentService.agent = agent;
-
-    if( agentOpts.selfServer ){
-        agentOpts.serverHost = "127.0.0.1"
-        require('../server' ).default( agentOpts );
+    constructor( agentOpts:AgentOpts ) {
+        this.options = agentOpts;
     }
 
-    agentService.agent.connect().then( value => {
-        console.log( "[ANCHORIO] Agent>", chalk.greenBright( `Connected to server on ${agentOpts.serverHost}:${String( agentOpts.serverPort )}` ) );
-        agent.localListener.createServer().then( value1 => {});
-    });
+    public start(){
+        this.start = ()=>{
+            console.log( "Function already started!" );
+        }
 
-    if( !agentOpts.noDNS ) {
-        agentService.agentDNS = new AgentDNS( agent );
-    }
+        let agent = new Agent( this.options, this );
+        this.agent = agent;
 
-    if( !agentOpts.noAPI ){
-        agentService.agentApi = new AgentAPI( agent );
+        if( agent.opts.selfServer ){
+            agent.opts.serverHost = "127.0.0.1"
+            require('../server' ).default( this.options );
+        }
+
+        agent.connect().then( value => {
+            console.log( "[ANCHORIO] Agent>", chalk.greenBright( `Connected to server on ${agent.opts.serverHost}:${String( agent.opts.serverPort )}` ) );
+            agent.localListener.createServer().then( value1 => {});
+        });
+
+        console.log( "scs s cscsc")
+
+        if( !agent.opts.noDNS ) {
+            this.agentDNS = new AgentDNS( agent );
+        }
+
+        if( !agent.opts.noAPI ){
+            this.agentApi = new AgentAPI( agent );
+        }
     }
 }

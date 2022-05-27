@@ -1,9 +1,10 @@
 import {DnsAnswer, Packet} from "dns2";
-import {localhost} from "./localhost";
 import * as fs from "fs";
 import * as path from "path";
 import ini from "ini";
-import {agentOptions} from "../agent/opts";
+import {Agent} from "../agent";
+import {Localhost} from "./localhost";
+
 export type AgentServer = { name:string, identifier:string, match:RegExp }
 export type AioAnswerer = {
     address:string,
@@ -31,16 +32,20 @@ export function asAio( name:string ):AgentServer{
     return { name, identifier, match:domainMath( identifier ) };
 }
 
-const agentOpts = agentOptions();
 
 
-export const aioResolve = new class AioReso {
+export class AioResolver {
     agents:{ agents:{[p:string|number]:AgentServer}}
     resolves:{ resolve?:{ aio?:{ [p:string|number]:AioAnswerer } }};
+    agent:Agent
+    localhost:Localhost;
 
-    constructor() {
-        if( fs.existsSync( path.join( agentOpts.etc, "aio.resolve.conf" ) ) ) {
-            this.resolves = ini.parse( fs.readFileSync( path.join( agentOpts.etc, "aio.resolve.conf")).toString() );
+    constructor( agent:Agent ) {
+        this.agent = agent;
+        this.localhost = new Localhost( agent );
+
+        if( fs.existsSync( path.join( this.agent.opts.etc, "aio.resolve.conf" ) ) ) {
+            this.resolves = ini.parse( fs.readFileSync( path.join( this.agent.opts.etc, "aio.resolve.conf")).toString() );
             if( !this.resolves ) this.resolves = {};
             if( !this.resolves.resolve ) this.resolves.resolve = {};
             if( !this.resolves.resolve.aio ) this.resolves.resolve.aio = {};
@@ -56,14 +61,14 @@ export const aioResolve = new class AioReso {
             this.resolves = { resolve: { aio: {}}}
         }
 
-        if( !fs.existsSync( path.join( agentOpts.etc, "agent.conf") ) ){
-            fs.mkdirSync( path.dirname( path.join( agentOpts.etc, "agent.conf") ), { recursive: true });
-            fs.writeFileSync( path.join( agentOpts.etc, "agent.conf"), ini.stringify( {
+        if( !fs.existsSync( path.join( this.agent.opts.etc, "agent.conf") ) ){
+            fs.mkdirSync( path.dirname( path.join( this.agent.opts.etc, "agent.conf") ), { recursive: true });
+            fs.writeFileSync( path.join( this.agent.opts.etc, "agent.conf"), ini.stringify( {
                 agents:{ }
             }));
         }
 
-        this.agents = ini.parse( fs.readFileSync( path.join( agentOpts.etc, "agent.conf") ).toString() ) as any;
+        this.agents = ini.parse( fs.readFileSync( path.join( this.agent.opts.etc, "agent.conf") ).toString() ) as any;
         if( !this.agents ) this.agents = { agents: {} };
         if( !this.agents.agents ) this.agents.agents = {};
 
@@ -101,7 +106,7 @@ export const aioResolve = new class AioReso {
             this.agents.agents[ name ] = agent;
         }
 
-        fs.writeFile( path.join( agentOpts.etc, "agent.conf" ), ini.stringify( this.agents, {
+        fs.writeFile( path.join( this.agent.opts.etc, "agent.conf" ), ini.stringify( this.agents, {
             whitespace: true
         }), ()=>{})
         return  agent;
@@ -119,7 +124,7 @@ export const aioResolve = new class AioReso {
 
             let address;
             while ( !address ){
-                address = localhost.next();
+                address = this.localhost.next();
                 if( Object.keys( this.resolves.resolve.aio ).includes( address ) ) address = null;
             }
 
@@ -143,7 +148,7 @@ export const aioResolve = new class AioReso {
             if( application ) resolve.application = application;
 
             this.resolves.resolve.aio[address] = ( resolve )
-            fs.writeFile( path.join( agentOpts.etc, "aio.resolve.conf" ), ini.stringify( this.resolves, {
+            fs.writeFile( path.join( this.agent.opts.etc, "aio.resolve.conf" ), ini.stringify( this.resolves, {
                 whitespace: true
             }), ()=>{})
         }
@@ -154,4 +159,4 @@ export const aioResolve = new class AioReso {
     serverName( address:string ){
         return this.resolves.resolve.aio[ address ];
     }
-}();
+}

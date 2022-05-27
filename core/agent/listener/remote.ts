@@ -2,7 +2,6 @@ import {asLine, ChunkLine, Event, headerMap, SocketConnection, writeInSocket} fr
 import {SlotType} from "../../global/slot";
 import net from "net";
 import chalk from "chalk";
-import {createConnection} from "../apps";
 import {Agent} from "../index";
 
 export interface AgentConnection {
@@ -142,11 +141,19 @@ export class RemoteListener{
 
         if( chunkLine.type.includes( Event.AIO ) ) {
             this.agent.slotManager.nextSlot( SlotType.ANCHOR_IN, chunkLine.as.AIO.anchor_to ).then(anchor => {
-                let appResponse:net.Socket = createConnection( chunkLine.as.AIO.application );
+                let appResponse:net.Socket = this.agent.appManager.connectApplication( chunkLine.as.AIO.application );
 
                 if( appResponse ){
                     appResponse.pipe( anchor.socket );
                     anchor.socket.pipe( appResponse );
+                    appResponse.on( "end", () => {
+                        if( anchor.socket.connected ) anchor.socket.end();
+                    });
+
+                    anchor.socket.on( "end", args => {
+                        if( appResponse["connected"] ) appResponse.end();
+                    });
+
                     console.log( `[ANCHORIO] Agent>`, chalk.blueBright( `Anchor form ${ chunkLine.as.AIO.origin} to application ${ chunkLine.as.AIO.application } \\CONNECTED!` ));
                 } else {
                     console.log( `[ANCHORIO] Agent>`, chalk.redBright( `Anchor form ${ chunkLine.as.AIO.origin} to application ${ chunkLine.as.AIO.application } \\CANSELED!` ));
