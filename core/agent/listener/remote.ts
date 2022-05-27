@@ -169,7 +169,6 @@ export class RemoteListener{
             let index = this.agent.requests.findIndex( value => value.id === request );
             this.agent.requests[ index ].status = "complete";
             this.agent.requests.splice( index, 1 );
-            this.agent.nextAnchor();
             console.log( "[ANCHORIO] Agent>", chalk.blueBright( "Anchor send!"))
         }
 
@@ -183,7 +182,6 @@ export class RemoteListener{
             let index = this.agent.requests.findIndex( value => value.id === request );
             this.agent.requests[ index ].status = "complete";
             this.agent.requests.splice( index, 1 );
-            this.agent.nextAnchor();
             console.log( "[ANCHORIO] Agent>", chalk.redBright( "Anchor faild!"))
         }
 

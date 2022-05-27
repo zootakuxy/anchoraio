@@ -137,11 +137,8 @@ export class Agent implements _Agent{
         return this.server["connected"]
     } get isAvailable( ){
         return this.isConnected && this.authStatus === "accepted";
-    }  public nextRequest( request:AgentRequest ){
-        request.status = "pendent";
-        this.requests.push( request );
-        this.nextAnchor();
-    } public nextAnchor(){
+
+    } public startAnchor( request:AgentRequest ){
         if( !this.requests.length ) return;
         let next = this.requests.find( value => value.status === "pendent" );
         next.status = "income";

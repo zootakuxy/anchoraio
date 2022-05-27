@@ -43,7 +43,7 @@ export class LocalListener{
                 if( !aioAnswerer ) return req.end( () => { });
                 let agentServer = this.agent.aioResolve.agents.agents[ aioAnswerer.agent ];
                 if( !agentServer ) return req.end( () => { });
-                this.agent.nextRequest( { agentServer: agentServer, socket: req, aioAnswerer: aioAnswerer, id: requestId } )
+                this.agent.startAnchor( { agentServer: agentServer, socket: req, aioAnswerer: aioAnswerer, id: requestId } )
 
             }).listen( nextPort, ()=>{
                 console.log( "[ANCHORIO] Agent>", chalk.greenBright(`Running Agent ${ this.agent.identifier } on port ${ nextPort }`) );
