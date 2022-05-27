@@ -134,7 +134,7 @@ export class Agent implements _Agent{
                 domainName: aioAnswerer.domainName,
                 anchor_form: connection.id
             }
-            writeInSocket( this.server, headerMap.ANCHOR( pack ));
+            writeInSocket( this.server, headerMap.AIO( pack ));
             connection.anchor( req );
 
             if( this.slots[SlotType.ANCHOR_OUT].length < this.opts.minSlots ) this.createSlots( SlotType.ANCHOR_OUT ).then();
@@ -191,7 +191,7 @@ export class Agent implements _Agent{
                     _anchors.push( connection.id );
 
                     if( created == counts ){
-                        writeInSocket( this.server, headerMap.AIO({
+                        writeInSocket( this.server, headerMap.SLOTS({
                             slot:slotType,
                             origin:this.identifier,
                             server:this.identifier,
@@ -215,7 +215,7 @@ export class Agent implements _Agent{
         return new Promise((resolve) => {
             this.server = this.remoteListener.createConnection( "agent", connection => {
                 this.id = connection.id;
-                writeInSocket( connection.socket, headerMap.SERVER({
+                writeInSocket( connection.socket, headerMap.AUTH({
                     origin: this.identifier,
                     server: this.identifier,
                     id: connection.id

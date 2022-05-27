@@ -36,9 +36,8 @@ export class LocalListener{
 
                 const remoteAddressParts = req.address()["address"].split( ":" );
                 const address =  remoteAddressParts[ remoteAddressParts.length-1 ];
-
-
                 let aioAnswerer = aioResolve.serverName( address );
+
                 if( !aioAnswerer ) return req.end( () => { });
                 let agentServer = aioResolve.agents.agents[ aioAnswerer.agent ];
                 if( !agentServer ) return req.end( () => { });

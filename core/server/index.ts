@@ -157,13 +157,13 @@ export default function ( serverOpts:ServerOptions  ){
                     //Quando o agent identifica-se no servidor
                     if( chunkLine.type.includes( Event.AUTH ) ){
 
-                        let opts = chunkLine.as.SERVER;
+                        let opts = chunkLine.as.AUTH;
 
                         let _id = root.servers[ opts.server ];
                         let _server = root.connections[ _id ];
                         if( _id && _server && _server.socket.connected ){
                             console.log( "[ANCHORIO] Server>", chalk.redBright( `Already exists another agent for ${ opts.server }. CONNECTION REJECTED!`));
-                            writeInSocket( socket, headerMap.REJECTED( opts ));
+                            writeInSocket( socket, headerMap.AUTH_REJECTED( opts ));
                             return;
                         }
 
@@ -173,7 +173,7 @@ export default function ( serverOpts:ServerOptions  ){
                         console.log( "[ANCHORIO] Server>", chalk.greenBright( `Agent ${ opts.server } connected with id ${ opts.id } `));
 
                         connection.auth = true;
-                        writeInSocket( connection.socket, headerMap.ACCEPTED( opts ));
+                        writeInSocket( connection.socket, headerMap.AUTH_ACCEPTED( opts ));
 
                         connection.socket.on( "close", ( err) => {
                             if( root.servers[ opts.server ] === opts.id ) delete root.servers[ opts.server ];
@@ -189,8 +189,8 @@ export default function ( serverOpts:ServerOptions  ){
 
                     if( chunkLine.type.includes( Event.AUTH_CHANEL ) ){
 
-                        let referer = chunkLine.as.SERVER_CHANEL.referer;
-                        let server = chunkLine.as.SERVER_CHANEL.server;
+                        let referer = chunkLine.as.AUTH_CHANEL.referer;
+                        let server = chunkLine.as.AUTH_CHANEL.server;
                         if( !root.servers[ server ] || root.servers[ server ] !== referer ){
                             console.log( "[ANCHORIO] Server>", chalk.redBright( `Channel auth rejected`));
                             connection.socket.end();
@@ -198,10 +198,10 @@ export default function ( serverOpts:ServerOptions  ){
                         }
 
                         let chanel:ServerChanel = {
-                            id: chunkLine.as.SERVER_CHANEL.id,
-                            origin: chunkLine.as.SERVER_CHANEL.origin,
-                            server: chunkLine.as.SERVER_CHANEL.server,
-                            referer: chunkLine.as.SERVER_CHANEL.referer,
+                            id: chunkLine.as.AUTH_CHANEL.id,
+                            origin: chunkLine.as.AUTH_CHANEL.origin,
+                            server: chunkLine.as.AUTH_CHANEL.server,
+                            referer: chunkLine.as.AUTH_CHANEL.referer,
                             status: "free",
                             requests: 0
                         }
@@ -227,7 +227,7 @@ export default function ( serverOpts:ServerOptions  ){
 
                     if( chunkLine.type.includes( Event.CHANEL_FREE ) ){
                         if( !connection.auth ) return;
-                        let opts = chunkLine.as.SERVER_CHANEL;
+                        let opts = chunkLine.as.AUTH_CHANEL;
                         let chanel = root.chanel[ opts.server ].find( chanel => chanel.id === opts.id );
                         chanel.requests--;
                         if( chanel.requests < 1 ) chanel.status = "free";
@@ -236,11 +236,11 @@ export default function ( serverOpts:ServerOptions  ){
                     //Quando o agente solicita uma nova anchora
                     if(  chunkLine.type.includes( Event.AIO ) ){
                         if( !connection.auth ) return;
-                        let opts = chunkLine.as.ANCHOR;
+                        let opts = chunkLine.as.AIO;
                         let serverResolve = root.connections[ root.servers[ opts.server ] ];
                         if( !serverResolve ) {
-                            console.log( "[ANCHORIO] Server>", chalk.redBright `Anchor of request ${ chunkLine.as.ANCHOR.request } from ${ chunkLine.header.anchor_form } to ${ chunkLine.header.server } ${chalk.redBright( "CANCELLED!")}`)
-                            return writeInSocket( connection.socket, headerMap.ANCHOR_CANSEL( Object.assign(opts )))
+                            console.log( "[ANCHORIO] Server>", chalk.redBright `Anchor of request ${ chunkLine.as.AIO.request } from ${ chunkLine.header.anchor_form } to ${ chunkLine.header.server } ${chalk.redBright( "CANCELLED!")}`)
+                            return writeInSocket( connection.socket, headerMap.AIO_CANSEL( Object.assign(opts )))
                         }
 
                         let chanel = root.chanel[ opts.server ].find( chanel => chanel.status === "free" );
@@ -265,21 +265,23 @@ export default function ( serverOpts:ServerOptions  ){
                             anchorOUT.anchor( anchorIN );
 
 
-                            writeInSocket( serverResolverConnection.socket, headerMap.ANCHOR(Object.assign( opts, {
+                            writeInSocket( serverResolverConnection.socket, headerMap.AIO(Object.assign( opts, {
                                 anchor_to: anchorIN.id,
                             })));
 
-                            writeInSocket( connection.socket, headerMap.ANCHOR_SEND( opts ) );
-                            console.log( "[ANCHORIO] Server>",  `Anchor of request ${ chunkLine.as.ANCHOR.request } from ${ chunkLine.header.anchor_form } to ${ chunkLine.header.server } ${ chalk.greenBright( "AIO'K" )}`)
+                            writeInSocket( connection.socket, headerMap.AIO_SEND( opts ) );
+                            console.log( "[ANCHORIO] Server>",  `Anchor of request ${ chunkLine.as.AIO.request } from ${ chunkLine.header.anchor_form } to ${ chunkLine.header.server } ${ chalk.greenBright( "AIO'K" )}`)
                         });
                     }
 
                     //Quando o agente determinar que tipo de anchor é a connexão IN anchor or OUT anchor
                     if( chunkLine.type.includes( Event.SLOTS ) ){
                         if( !connection.auth ) return ;
-                        let opts = chunkLine.as.AIO;
+                        let opts = chunkLine.as.SLOTS;
                         opts.anchors.forEach( anchorId => {
                             let anchorConnection = root.connections[ anchorId ];
+                            anchorConnection.auth = true;
+
                             connection.slots[ opts.slot ].push( anchorConnection );
                             connection.notify( Event.SLOTS );
                             anchorConnection.socket.on( "close", ()=>{

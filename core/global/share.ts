@@ -1,6 +1,7 @@
 import net from "net";
 import {Buffer} from "buffer";
 import {appLabel} from "../app";
+import {SlotType} from "./slot";
 
 
 export enum Event {
@@ -40,10 +41,10 @@ export const showHeader = (any) =>{
 
 export type ChunkLine = { raw:string, chunk:string, header:any, show(), type:(Event|string)[], id?:string,
     as:{
-        SERVER: ReturnType<typeof headerMap.SERVER>,
-        SERVER_CHANEL: ReturnType<typeof headerMap.SERVER_CHANEL>,
-        ANCHOR: ReturnType<typeof headerMap.ANCHOR>,
+        AUTH: ReturnType<typeof headerMap.AUTH>,
+        AUTH_CHANEL: ReturnType<typeof headerMap.AUTH_CHANEL>,
         AIO: ReturnType<typeof headerMap.AIO>,
+        SLOTS: ReturnType<typeof headerMap.SLOTS>,
     }
 };
 
@@ -78,10 +79,10 @@ export function asLine( buffer:Buffer ):ChunkLine[]{
             }, get id(){
                 return header[ "id" ];
             }, as:{
-                get ANCHOR(){ return headerMap.ANCHOR( header )},
-                get SERVER(){ return headerMap.SERVER( header )},
-                get SERVER_CHANEL(){ return headerMap.SERVER_CHANEL( header )},
-                get AIO(){ return headerMap.AIO( header )}
+                get AIO(){ return headerMap.AIO( header )},
+                get AUTH(){ return headerMap.AUTH( header )},
+                get AUTH_CHANEL(){ return headerMap.AUTH_CHANEL( header )},
+                get SLOTS(){ return headerMap.SLOTS( header )}
             }
         }
     }).filter( next=> !!next );
@@ -103,7 +104,7 @@ export type SocketConnection = net.Socket & { id:string, connected:boolean }
 export interface ServerHeader { origin:string, server:string, id:string };
 export interface ServerChanel { origin:string, server:string, id:string, referer };
 export interface AnchorHeader { origin:string, request:string, server:string, application:string|number, anchor_to?:string, anchor_form: string, domainName:string };
-export interface AIOHeader    { slot:string, origin:string, server:string, agent: string, anchors:string[], slotCode:string, id:string};
+export interface AIOHeader    { slot:SlotType, origin:string, server:string, agent: string, anchors:string[], slotCode:string, id:string};
 
 function _header<T>( type:Event, opts:T, ...types:(Event|string)[]  ):T &{type:Event|string[]}{
     return Object.assign( {}, opts, {
@@ -111,31 +112,31 @@ function _header<T>( type:Event, opts:T, ...types:(Event|string)[]  ):T &{type:E
     })
 }
 export const headerMap = {
-    SERVER(opts:ServerHeader, ...types:(Event|string)[]){
+    AUTH(opts:ServerHeader, ...types:(Event|string)[]){
         return _header( Event.AUTH, opts, ...types );
 
-    }, SERVER_CHANEL(opts:ServerChanel, ...types:(Event|string)[]){
+    }, AUTH_CHANEL(opts:ServerChanel, ...types:(Event|string)[]){
         return _header( Event.AUTH_CHANEL, opts, ...types );
 
     }, CHANEL_FREE( opts:ServerChanel, ...types:(Event|string)[]){
         return _header( Event.CHANEL_FREE, opts, ...types );
 
-    },ACCEPTED(opts:ServerHeader, ...types:(Event|string)[]){
+    },AUTH_ACCEPTED(opts:ServerHeader, ...types:(Event|string)[]){
         return _header( Event.AUTH_ACCEPTED, opts, ...types );
 
-    }, ANCHOR( opts:AnchorHeader, ...types:(Event|string)[]){
+    }, AIO(opts:AnchorHeader, ...types:(Event|string)[]){
         return _header( Event.AIO, opts, ...types );
 
-    }, REJECTED( opts:ServerHeader, ...types:(Event|string)[]){
+    }, AUTH_REJECTED(opts:ServerHeader, ...types:(Event|string)[]){
         return _header( Event.AUTH_REJECTED, opts, ...types );
 
-    }, ANCHOR_CANSEL(opts:AnchorHeader, ...types:(Event|string)[]){
+    }, AIO_CANSEL(opts:AnchorHeader, ...types:(Event|string)[]){
         return _header( Event.AIO_CANSEL, opts, ...types );
 
-    }, ANCHOR_SEND(opts:AnchorHeader, ...types:(Event|string)[]){
+    }, AIO_SEND(opts:AnchorHeader, ...types:(Event|string)[]){
         return _header( Event.AIO_SEND, opts, ...types );
 
-    }, AIO(opts:AIOHeader, ...types:(Event|string)[]){
+    }, SLOTS(opts:AIOHeader, ...types:(Event|string)[]){
         return _header( Event.SLOTS, opts, ...types );
     }
 }

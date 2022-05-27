@@ -132,7 +132,7 @@ export class RemoteListener{
                     server: this.identifier,
                     referer: this.id
                 }
-                writeInSocket( connection.socket, headerMap.SERVER_CHANEL(  pack ) );
+                writeInSocket( connection.socket, headerMap.AUTH_CHANEL(  pack ) );
             });
         }
     }
@@ -141,15 +141,15 @@ export class RemoteListener{
         chunkLine.show();
 
         if( chunkLine.type.includes( Event.AIO ) ) {
-            this.agent.slotManager.nextSlot( SlotType.ANCHOR_IN, chunkLine.as.ANCHOR.anchor_to ).then(anchor => {
-                let appResponse:net.Socket = createConnection( chunkLine.as.ANCHOR.application );
+            this.agent.slotManager.nextSlot( SlotType.ANCHOR_IN, chunkLine.as.AIO.anchor_to ).then(anchor => {
+                let appResponse:net.Socket = createConnection( chunkLine.as.AIO.application );
 
                 if( appResponse ){
                     appResponse.pipe( anchor.socket );
                     anchor.socket.pipe( appResponse );
-                    console.log( `[ANCHORIO] Agent>`, chalk.blueBright( `Anchor form ${ chunkLine.as.ANCHOR.origin} to application ${ chunkLine.as.ANCHOR.application } \\CONNECTED!` ));
+                    console.log( `[ANCHORIO] Agent>`, chalk.blueBright( `Anchor form ${ chunkLine.as.AIO.origin} to application ${ chunkLine.as.AIO.application } \\CONNECTED!` ));
                 } else {
-                    console.log( `[ANCHORIO] Agent>`, chalk.redBright( `Anchor form ${ chunkLine.as.ANCHOR.origin} to application ${ chunkLine.as.ANCHOR.application } \\CANSELED!` ));
+                    console.log( `[ANCHORIO] Agent>`, chalk.redBright( `Anchor form ${ chunkLine.as.AIO.origin} to application ${ chunkLine.as.AIO.application } \\CANSELED!` ));
                     anchor.socket.end();
                 }
                 if( this.agent.slots[SlotType.ANCHOR_IN].length < this.agent.opts.minSlots ) this.agent.createSlots( SlotType.ANCHOR_IN ).then();
@@ -158,7 +158,7 @@ export class RemoteListener{
         }
 
         if( chunkLine.type.includes( Event.AIO_SEND )) {
-            let request = chunkLine.as.ANCHOR.request;
+            let request = chunkLine.as.AIO.request;
             let index = this.agent.requests.findIndex( value => value.id === request );
             this.agent.requests[ index ].status = "complete";
             this.agent.requests.splice( index, 1 );
@@ -172,7 +172,7 @@ export class RemoteListener{
             connection.socket.end();
             connection.req.end();
 
-            let request = chunkLine.as.ANCHOR.request;
+            let request = chunkLine.as.AIO.request;
             let index = this.agent.requests.findIndex( value => value.id === request );
             this.agent.requests[ index ].status = "complete";
             this.agent.requests.splice( index, 1 );
@@ -197,8 +197,8 @@ export class RemoteListener{
         }
 
         if( chunkLine.type.includes( Event.SLOTS ) ){
-            let slot = chunkLine.header[ "slot" ];
-            let slotCode = chunkLine.header[ "slotCode" ];
+            let slot = chunkLine.as.SLOTS.slot;
+            let slotCode = chunkLine.as.SLOTS.slotCode ;
             this.agent.createSlots( slot, {
                 slotCode
             }).catch( reason => {
