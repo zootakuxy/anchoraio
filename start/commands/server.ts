@@ -22,7 +22,7 @@ export const handler = function ( argv: yargs.Arguments<ServerOptions> ) {
             // console.error(error)
         });
     }
-    console.log("[ANCHORIO] Init> OK!");
+    console.log( "[ANCHORIO] Server>", "Init...");
     const { ServerContext } =  require( "../../core/service/server.service" );
     new ServerContext( argv ).start();
 }

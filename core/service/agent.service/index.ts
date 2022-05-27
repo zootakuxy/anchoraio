@@ -32,8 +32,6 @@ export class AgentContext {
             agent.localListener.createServer().then( value1 => {});
         });
 
-        console.log( "scs s cscsc")
-
         if( !agent.opts.noDNS ) {
             this.agentDNS = new AgentDNS( agent );
         }

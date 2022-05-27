@@ -55,6 +55,8 @@ export class AIOServer {
             return target[p]++;
         }
     })
+    private agentReciver: net.Server;
+    private anchorReceiver: net.Server;
 
     constructor( opts:ServerOptions ) {
         let self = this;
@@ -66,7 +68,8 @@ export class AIOServer {
             handlerCreator(slotName:SlotType, anchorID:string, server:ServerConnection, ...opts ){
                 return self.requireSlot(  slotName, server )
             }
-        })
+        });
+        this.createServer();
     }
 
 
@@ -99,7 +102,7 @@ export class AIOServer {
             _status.connected = false;
             if( namespace === "server" ){
                 let server = Object.keys( this.servers ).find( key => this.servers[ key ] === id );
-                if( server && hadError ) console.log( "[ANCHORIO] Server>", `Connection with ${server} has closed with error!` );
+                if( server && hadError ) console.log( "[ANCHORIO] Server>", `Connection with ${server} has aborted!` );
                 else if( server ) console.log( "[ANCHORIO] Server>", `Connection with ${server} has ben closed!` );
             }
             delete this.connections[ id ];
@@ -161,16 +164,13 @@ export class AIOServer {
                 return resolve( !!connection.slots[slotName].length );
             })
         })
-    } start(){
+    } private createServer(){
         // let self = this;
-        net.createServer( socket => {
+        this.anchorReceiver = net.createServer( socket => {
             this.identifyConnection( socket, "anchor" );
-        }).listen( this.opts.anchorPort, ()=>{
-            console.log( `[ANCHORIO] Server anchor port liste on  ${ this.opts.anchorPort }`)
-        } );
+        });
 
-
-        net.createServer(( socket) => {
+        this.agentReciver = net.createServer(( socket) => {
             const connection =  this.identifyConnection( socket, "server" );
             let self = this;
 
@@ -324,9 +324,20 @@ export class AIOServer {
                 })
             });
 
-        }).listen( this.opts.serverPort, () => {
-            console.log( "[ANCHORIO] Server>", `Listen on port ${ this.opts.serverPort }`)
+        })
+
+    } start() {
+        this.anchorReceiver.listen( this.opts.anchorPort, ()=>{
+            console.log( "[ANCHORIO] Server>", `Anchor port listen on port  ${ this.opts.anchorPort }`)
         } );
+        this.agentReciver.listen( this.opts.serverPort, () => {
+            console.log( "[ANCHORIO] Server>", `AIO Server listen on port ${ this.opts.serverPort }`)
+        });
+    }
+
+    stop(){
+        this.agentReciver.close( err => {});
+        this.anchorReceiver.close( err => {});
     }
 }
 

@@ -22,6 +22,7 @@ export const handler = function ( argv: yargs.Arguments<AgentOpts> ) {
             // console.error(error)
         });
     }
+    console.log( "[ANCHORIO] Agent>", "Init...");
     const { AgentContext } = require( "../../core/service/agent.service" );
     new AgentContext( argv ).start();
 }
