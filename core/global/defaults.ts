@@ -8,7 +8,7 @@ export const Defaults = {
     serverPort: 36902,
     anchorPort: 36903,
     dnsPort:    53,
-    chanel:     7,
+    chanel:     10,
     serverHost: "127.0.0.1",
     reconnectTimeout: 1000,
     maxSlots: 6,
