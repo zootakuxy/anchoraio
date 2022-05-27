@@ -24,7 +24,9 @@ export class RemoteListener{
 
     public registerConnection<T>(socket:net.Socket, namespace:Namespace, collector?:{ [p:string]:AgentConnection }, metadata?:T, ):Promise<AgentConnection>{
         if( !metadata ) metadata = {} as any;
+
         return new Promise( (resolve) => {
+            socket.on("error", err => {});
             socket.once( "data", data => {
                 const _data = JSON.parse( data.toString());
                 let id = _data.id;

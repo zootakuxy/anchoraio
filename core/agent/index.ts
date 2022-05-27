@@ -138,9 +138,10 @@ export class Agent implements _Agent{
     } get isAvailable( ){
         return this.isConnected && this.authStatus === "accepted";
 
-    } public startAnchor( request:AgentRequest ){
-        if( !this.requests.length ) return;
-        let next = this.requests.find( value => value.status === "pendent" );
+    } public startAnchor( next:AgentRequest ){
+        // if( !this.requests.length ) return;
+        // let next = this.requests.find( value => value.status === "pendent" );
+        this.requests.push( next );
         next.status = "income";
         let agentServer = next.agentServer;
         let req = next.socket;

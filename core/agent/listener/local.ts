@@ -27,7 +27,7 @@ export class LocalListener{
                     console.log( "[ANCHORIO] Agente>", chalk.redBright( `Request canceled because agent is offline: ${status.trim()}!`))
                 });
                 let requestId = `${this.agent.identifier}://${nanoid( 12 )}/${ this.requestCount++}`;
-                console.log( "[ANCHORIO] Agent>", `Request ${ requestId } received` );
+                console.log( "[ANCHORIO] Agent>", `Received request ${ requestId }` );
 
 
                 req.on( "error", err =>{ console.log( "[ANCHORIO] Agent>", `Request ID ${ requestId} socket error ${err.message}` ); })
@@ -39,6 +39,8 @@ export class LocalListener{
                 const remoteAddressParts = req.address()["address"].split( ":" );
                 const address =  remoteAddressParts[ remoteAddressParts.length-1 ];
                 let aioAnswerer = this.agent.aioResolve.serverName( address );
+
+
 
                 if( !aioAnswerer ) return req.end( () => { });
                 let agentServer = this.agent.aioResolve.agents.agents[ aioAnswerer.agent ];
