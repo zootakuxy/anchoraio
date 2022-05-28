@@ -1,4 +1,4 @@
-import { SocketConnection} from "./share";
+import {AIOSocket} from "./AIOSocket";
 
 export enum SlotType {
     ANCHOR_IN="SlotType.ANCHOR_IN",
@@ -13,7 +13,7 @@ export type SlotManagerOpts<T> = {
 }
 
 
-export class SlotManager<T extends {busy?:boolean, socket:SocketConnection, id:string }> {
+export class SlotManager<T extends {busy?:boolean, socket:AIOSocket, id:string }> {
     [OPTS]:SlotManagerOpts<T>;
 
     constructor( opts:SlotManagerOpts<T>) {

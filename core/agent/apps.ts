@@ -3,6 +3,8 @@ import * as path from "path";
 import ini from "ini";
 import net from "net";
 import {Agent} from "./index";
+import {asAIOSocket, AIOSocket} from "../global/AIOSocket";
+import {nanoid} from "nanoid";
 
 export type Application = {
     port:number|string
@@ -12,6 +14,7 @@ export type Application = {
 export class ApplicationManager {
     apps:{ apps:{ [p:string]:string|number|Application } };
     agent:Agent
+    seq:number = 0;
 
     constructor( agent:Agent ) {
         this.agent = agent;
@@ -30,26 +33,29 @@ export class ApplicationManager {
         }
         return _app;
 
-    } connectApplication(application:string|number ){
+    } connectApplication(application:string|number ):AIOSocket{
         let _app = this.getApplication( application );
-        let connection:net.Socket;
+        let connection:AIOSocket;
 
         if( _app ){
-            connection = net.createConnection({
+            let resolverId = `resolver://${this.agent.identifier}/${nanoid( 16)}?${ this.seq++ }`;
+            let socket:net.Socket = net.createConnection({
                 host: _app.address||"127.0.0.1",
                 port: Number( _app.port )
             });
 
-            connection.on( "connect", ()=>{
-                connection["connected"] = true;
+            connection = asAIOSocket( socket, resolverId );
+
+            socket.on( "connect", ()=>{
+                socket["connected"] = true;
             });
 
-            connection.on( "close", hadError => {
-                connection["connected"] = false;
+            socket.on( "close", hadError => {
+                socket["connected"] = false;
             });
 
-            connection.on( "error", err => {
-                connection["connected"] = false;
+            socket.on( "error", err => {
+                socket["connected"] = false;
                 console.error( "[ANCHORIO] Application", `Connection error ${ err.message }` )
             });
         }

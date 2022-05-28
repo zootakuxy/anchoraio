@@ -98,9 +98,6 @@ export function writeInSocket( socket:net.Socket, data, cb?:( data?:any, socket?
     socket.write( "\n", "utf-8", cb );
 }
 
-export type SocketConnection = net.Socket & { id:string, connected:boolean }
-
-
 export interface ServerHeader { origin:string, server:string, id:string };
 export interface ServerChanel { origin:string, server:string, id:string, referer };
 export interface AnchorHeader { origin:string, request:string, server:string, application:string|number, anchor_to?:string, anchor_form: string, domainName:string };

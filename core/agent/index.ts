@@ -16,6 +16,8 @@ import {AgentConnection, RemoteListener} from "./listener/remote";
 import {LocalListener} from "./listener/local";
 import {ApplicationManager} from "./apps";
 import {AgentContext} from "../service/agent.service";
+import {Anchor} from "../anchor/index";
+import {AIOSocket} from "../global/AIOSocket";
 
 type CreatSlotOpts = { query?:number, slotCode?:string };
 
@@ -26,7 +28,7 @@ type AuthStatus = "unknown"|"accepted"|"rejected";
 interface AgentRequest {
     id?:string
     status?:"pendent"|"income"|"complete"
-    socket:net.Socket,
+    requestConnection:AIOSocket,
     agentServer:AgentServer
     aioAnswerer: AioAnswerer
 }
@@ -76,6 +78,9 @@ export class Agent implements _Agent{
     id:string
     server:net.Socket
     local:Server
+
+    anchorManager:Anchor;
+
     private readonly _aioResolve:AioResolver;
     private readonly _appManager:ApplicationManager;
     private readonly _remoteListener:RemoteListener;
@@ -94,12 +99,13 @@ export class Agent implements _Agent{
         let self = this;
         this.slotManager = new SlotManager<AgentConnection>({
             slots(){ return self.slots },
-            handlerCreator( name, anchorID, opts, ...extras){
-                return this.createSlots( name, opts );
+            handlerCreator( type, anchorID, opts, ...extras){
+                return this.createSlots( type, opts );
             }
         });
 
         this.opts = opts;
+        this.anchorManager = new Anchor();
         this._remoteListener = new RemoteListener( this );
         this._localListener = new LocalListener( this );
         this._appManager = new ApplicationManager( this );
@@ -139,17 +145,16 @@ export class Agent implements _Agent{
         return this.isConnected && this.authStatus === "accepted";
 
     } public startAnchor( next:AgentRequest ){
-        // if( !this.requests.length ) return;
-        // let next = this.requests.find( value => value.status === "pendent" );
+
         this.requests.push( next );
         next.status = "income";
         let agentServer = next.agentServer;
-        let req = next.socket;
+        let req = next.requestConnection;
         let aioAnswerer = next.aioAnswerer;
 
         console.log( "[ANCHORIO] Agent>", `Anchor request ${ next.id} started!`)
 
-        this.slotManager.nextSlot( SlotType.ANCHOR_OUT ).then(connection => {
+        this.slotManager.nextSlot( SlotType.ANCHOR_OUT ).then( connection => {
             if( !connection ){
                 console.log( "[ANCHORIO] Request>", agentServer.identifier, aioAnswerer.application, "\\", chalk.redBright("rejected"));
                 return req.end();
@@ -178,7 +183,8 @@ export class Agent implements _Agent{
                 anchor_form: connection.id
             }
             writeInSocket( this.server, headerMap.AIO( pack ));
-            connection.anchor( req );
+
+            this.anchorManager.anchor( connection.socket, req );
 
             if( this.slots[SlotType.ANCHOR_OUT].length < this.opts.minSlots ) this.createSlots( SlotType.ANCHOR_OUT ).then();
             console.log( "[ANCHORIO] Request>", agentServer.identifier, aioAnswerer.application, "\\", chalk.blueBright( "accepted" ));
@@ -209,6 +215,7 @@ export class Agent implements _Agent{
                 });
 
                 this.remoteListener.registerConnection( next, "anchor", this.anchors, ).then(connection => {
+                    this.anchorManager.register( connection.socket );
                     this.slots[ slotType ].push( connection );
                     connection.socket.on( "close", ( ) => {
                         let index = this.slots[ slotType ].findIndex( slot => connection.id === slot.id );

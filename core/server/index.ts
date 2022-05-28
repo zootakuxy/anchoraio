@@ -4,7 +4,6 @@ import {
     ChunkLine, Emitter,
     Event,
     eventCode, headerMap,
-    SocketConnection,
     writeInSocket
 } from "../global/share";
 import net from "net";
@@ -12,16 +11,20 @@ import {nanoid} from "nanoid";
 import {SlotManager, SlotType} from "../global/slot";
 import {ServerOptions} from "./opts";
 import chalk from "chalk";
+import {AnchorListener} from "./listen/anchorListener";
+import {AIOSocket} from "../global/AIOSocket";
 
 
-type ServerConnection={
-    socket: SocketConnection,
+
+export interface ServerConnection{
+    socket: AIOSocket,
     auth:boolean
     id:string,
     keys:string[],
-    anchor:(anchor:string|ServerConnection)=>void,
-    slots:{ [p in SlotType]:ServerConnection[]}
+    slots:{ [p in SlotType]:ServerConnection[]},
     busy?:boolean,
+    namespace:"anchor"|"server",
+    status:"unknown"|"authenticated"|"anchored"
     close()
     once( string:EventName, cb:( event:EventName, chunkLine?:ChunkLine)=>void )
     on( string:EventName, cb:( event:EventName, chunkLine?:ChunkLine )=>void )
@@ -47,8 +50,9 @@ export class AIOServer {
     chanel:{[p:string]:ServerChanel[]} = {}
     opts:ServerOptions;
     serverSlotManager:SlotManager<ServerConnection>;
+    anchorListener:AnchorListener;
 
-    sequence:{ connection?:number, slot?:number, [p:string]:number } = new Proxy( {}, {
+    sequence:{ connection?:number, slot?:number, pack?:number, [p:string]:number } = new Proxy( {}, {
         get(target: {}, p: string | symbol, receiver: any): any {
             if( target[p] ) return target[p]++;
             target[p]=0;
@@ -56,7 +60,6 @@ export class AIOServer {
         }
     })
     private agentReciver: net.Server;
-    private anchorReceiver: net.Server;
 
     constructor( opts:ServerOptions ) {
         let self = this;
@@ -69,6 +72,7 @@ export class AIOServer {
                 return self.requireSlot(  slotName, server )
             }
         });
+        this.anchorListener = new AnchorListener( this );
         this.createServer();
     }
 
@@ -114,6 +118,8 @@ export class AIOServer {
 
         let connection:ServerConnection = {
             auth: false,
+            namespace,
+            status: "unknown",
             id: id,
             socket: Object.assign(  socket, metadata||{}, {
                 id: id,
@@ -121,24 +127,7 @@ export class AIOServer {
             }),
             keys: [],
             slots:{ [SlotType.ANCHOR_OUT]:[], [SlotType.ANCHOR_IN]:[] },
-            anchor( anchor ){
-                let _anchor:ServerConnection;
-                if( typeof anchor === "string" ) _anchor = self.connections[ id ];
-                else _anchor = anchor;
-
-
-                _anchor.socket.pipe( this.socket );
-                this.socket.pipe( _anchor.socket );
-
-                this.socket.on( "end", args => {
-                    if( _anchor.socket.connected ) _anchor.socket.end();
-                });
-
-                _anchor.socket.on( "end", ()=>{
-                    if( this.socket.connected ) this.socket.end();
-                });
-
-            }, once(event: EventName, cb:(event:EventName, ...data )=>void) { _once[ event ].push( cb );
+            once(event: EventName, cb:(event:EventName, ...data )=>void) { _once[ event ].push( cb );
             }, on(event: EventName, cb:(event:EventName, ...data )=>void) { _on[ event ].push( cb );
             }, notify( event, ...data ){
                 _once[ event ].splice(0, _once[ event ].length) .forEach( value => value( event, ...data ) );
@@ -165,10 +154,13 @@ export class AIOServer {
             })
         })
     } private createServer(){
-        // let self = this;
-        this.anchorReceiver = net.createServer( socket => {
-            this.identifyConnection( socket, "anchor" );
-        });
+        // // let self = this;
+        // this.anchorReceiver = net.createServer( socket => {
+        //     let connection = this.identifyConnection( socket, "anchor" );
+        //     connection.socket.on( "data", args => {
+        //
+        //     });
+        // });
 
         this.agentReciver = net.createServer(( socket) => {
             const connection =  this.identifyConnection( socket, "server" );
@@ -198,6 +190,8 @@ export class AIOServer {
                         console.log( "[ANCHORIO] Server>", chalk.greenBright( `Agent ${ opts.server } connected with id ${ opts.id } `));
 
                         connection.auth = true;
+                        connection.status = "authenticated";
+
                         writeInSocket( connection.socket, headerMap.AUTH_ACCEPTED( opts ));
 
                         connection.socket.on( "close", ( err) => {
@@ -246,8 +240,30 @@ export class AIOServer {
                             this.chanel[ server ].splice( index, 1 );
                         });
                         connection.auth = true;
+                        connection.status = "authenticated";
                         console.log( "[ANCHORIO] Server>", chalk.blueBright( `Channel ${  chanel.id } authenticated refer ${ chanel.server }!`));
 
+                    }
+
+
+                    //Quando o agente determinar que tipo de anchor é a connexão IN anchor or OUT anchor
+                    if( chunkLine.type.includes( Event.SLOTS ) ){
+                        if( !connection.auth ) return ;
+                        let opts = chunkLine.as.SLOTS;
+                        opts.anchors.forEach( anchorId => {
+                            let anchorConnection = this.connections[ anchorId ];
+                            anchorConnection.auth = true;
+                            anchorConnection.status = "authenticated";
+
+                            connection.slots[ opts.slot ].push( anchorConnection );
+                            connection.notify( Event.SLOTS );
+                            anchorConnection.socket.on( "close", ()=>{
+                                let index = connection.slots[ opts.slot ].findIndex( value1 => value1.id === anchorId );
+                                if( index !== -1 ) connection.slots[ opts.slot ].splice( index, 1 );
+                            });
+                        });
+
+                        console.log( "[ANCHORIO] Server>", `${ opts.anchors.length } connection anchors registered as ${ opts.slot } slot.` );
                     }
 
                     if( chunkLine.type.includes( Event.CHANEL_FREE ) ){
@@ -262,60 +278,44 @@ export class AIOServer {
                     if(  chunkLine.type.includes( Event.AIO ) ){
                         if( !connection.auth ) return;
                         let opts = chunkLine.as.AIO;
-                        let serverResolve = this.connections[ this.servers[ opts.server ] ];
-                        if( !serverResolve ) {
+                        let serverConnection = this.connections[ this.servers[ opts.server ] ];
+                        if( !serverConnection ) {
                             console.log( "[ANCHORIO] Server>", chalk.redBright `Anchor of request ${ chunkLine.as.AIO.request } from ${ chunkLine.header.anchor_form } to ${ chunkLine.header.server } ${chalk.redBright( "CANCELLED!")}`)
                             return writeInSocket( connection.socket, headerMap.AIO_CANSEL( Object.assign(opts )))
                         }
 
                         let chanel = this.chanel[ opts.server ].find( chanel => chanel.status === "free" );
                         if( !chanel ){
-                            chanel = this.chanel[ opts.server ].shift();
-                            this.chanel[ opts.server ].push( chanel );
+                            chanel = this.chanel[ opts.server ][0];
                         }
 
-                        chanel.status = "busy";
-                        chanel.requests++;
-
-                        let serverResolverConnection = this.connections[ chanel.id ];
+                        let chanelConnection, useServerConnection:ServerConnection = serverConnection;
+                        if( chanel ){
+                            let index = this.chanel[ opts.server ].indexOf( chanel );
+                            this.chanel[ opts.server ].splice( index, 1 );
+                            this.chanel[ opts.server ].push( chanel );
+                            chanel.status = "busy";
+                            chanel.requests++;
+                            chanelConnection = this.connections[ chanel.id ];
+                            useServerConnection = chanelConnection;
+                        }
 
                         let slotIN = this.serverSlotManager.nextSlot( SlotType.ANCHOR_OUT, opts.anchor_form, connection );
-                        let slotOUT = this.serverSlotManager.nextSlot( SlotType.ANCHOR_IN, null, serverResolverConnection )
+                        let slotOUT = this.serverSlotManager.nextSlot( SlotType.ANCHOR_IN, null, useServerConnection )
 
                         Promise.all([
                             slotIN,
                             slotOUT
                         ]).then( value => {
                             const [ anchorOUT, anchorIN ] = value;
-                            anchorOUT.anchor( anchorIN );
-
-
-                            writeInSocket( serverResolverConnection.socket, headerMap.AIO(Object.assign( opts, {
+                            this.anchorListener.anchor( anchorOUT.socket, anchorIN.socket );
+                            writeInSocket( useServerConnection.socket, headerMap.AIO(Object.assign( opts, {
                                 anchor_to: anchorIN.id,
                             })));
 
                             writeInSocket( connection.socket, headerMap.AIO_SEND( opts ) );
                             console.log( "[ANCHORIO] Server>",  `Anchor of request ${ chunkLine.as.AIO.request } from ${ chunkLine.header.anchor_form } to ${ chunkLine.header.server } ${ chalk.greenBright( "AIO'K" )}`)
                         });
-                    }
-
-                    //Quando o agente determinar que tipo de anchor é a connexão IN anchor or OUT anchor
-                    if( chunkLine.type.includes( Event.SLOTS ) ){
-                        if( !connection.auth ) return ;
-                        let opts = chunkLine.as.SLOTS;
-                        opts.anchors.forEach( anchorId => {
-                            let anchorConnection = this.connections[ anchorId ];
-                            anchorConnection.auth = true;
-
-                            connection.slots[ opts.slot ].push( anchorConnection );
-                            connection.notify( Event.SLOTS );
-                            anchorConnection.socket.on( "close", ()=>{
-                                let index = connection.slots[ opts.slot ].findIndex( value1 => value1.id === anchorId );
-                                if( index !== -1 ) connection.slots[ opts.slot ].splice( index, 1 );
-                            });
-                        });
-
-                        console.log( "[ANCHORIO] Server>", `${ opts.anchors.length } connection anchors registered as ${ opts.slot } slot.` );
                     }
 
                     chunkLine.type.forEach( value => {
@@ -327,9 +327,8 @@ export class AIOServer {
         })
 
     } start() {
-        this.anchorReceiver.listen( this.opts.anchorPort, ()=>{
-            console.log( "[ANCHORIO] Server>", `Anchor port listen on port  ${ this.opts.anchorPort }`)
-        } );
+        this.anchorListener.start();
+
         this.agentReciver.listen( this.opts.serverPort, () => {
             console.log( "[ANCHORIO] Server>", `AIO Server listen on port ${ this.opts.serverPort }`)
         });
@@ -337,7 +336,7 @@ export class AIOServer {
 
     stop(){
         this.agentReciver.close( err => {});
-        this.anchorReceiver.close( err => {});
+        this.anchorListener.stop();
     }
 }
 

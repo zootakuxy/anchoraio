@@ -1,12 +1,13 @@
-import {asLine, ChunkLine, Event, headerMap, SocketConnection, writeInSocket} from "../../global/share";
+import {asLine, ChunkLine, Event, headerMap, writeInSocket} from "../../global/share";
 import {SlotType} from "../../global/slot";
 import net from "net";
 import chalk from "chalk";
 import {Agent} from "../index";
+import {AIOSocket} from "../../global/AIOSocket";
 
 export interface AgentConnection {
     id: string,
-    socket:SocketConnection,
+    socket:AIOSocket,
     req?:net.Socket,
     busy?:boolean
     anchor( socket:net.Socket ),
@@ -32,7 +33,7 @@ export class RemoteListener{
                 let id = _data.id;
                 let _status = { connected: true };
                 socket.on( "connect", () => _status.connected = true );
-                let connection:SocketConnection&T = Object.assign(socket, metadata, {
+                let connection:AIOSocket&T = Object.assign(socket, metadata, {
                     id,
                     get connected(){ return _status.connected;}
                 });
@@ -143,19 +144,11 @@ export class RemoteListener{
 
         if( chunkLine.type.includes( Event.AIO ) ) {
             this.agent.slotManager.nextSlot( SlotType.ANCHOR_IN, chunkLine.as.AIO.anchor_to ).then(anchor => {
-                let appResponse:net.Socket = this.agent.appManager.connectApplication( chunkLine.as.AIO.application );
+                let appResponse:AIOSocket = this.agent.appManager.connectApplication( chunkLine.as.AIO.application );
 
                 if( appResponse ){
-                    appResponse.pipe( anchor.socket );
-                    anchor.socket.pipe( appResponse );
-                    appResponse.on( "end", () => {
-                        if( anchor.socket.connected ) anchor.socket.end();
-                    });
-
-                    anchor.socket.on( "end", args => {
-                        if( appResponse["connected"] ) appResponse.end();
-                    });
-
+                    this.agent.anchorManager.register( appResponse );
+                    this.agent.anchorManager.anchor( anchor.socket, appResponse );
                     console.log( `[ANCHORIO] Agent>`, chalk.blueBright( `Anchor form ${ chunkLine.as.AIO.origin} to application ${ chunkLine.as.AIO.application } \\CONNECTED!` ));
                 } else {
                     console.log( `[ANCHORIO] Agent>`, chalk.redBright( `Anchor form ${ chunkLine.as.AIO.origin} to application ${ chunkLine.as.AIO.application } \\CANSELED!` ));

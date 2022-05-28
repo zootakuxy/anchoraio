@@ -3,6 +3,7 @@ import net from "net";
 import {nanoid} from "nanoid";
 import chalk from "chalk";
 import {Agent} from "../index";
+import {asAIOSocket} from "../../global/AIOSocket";
 
 export class LocalListener{
     public requestCount:number = 0;
@@ -45,7 +46,12 @@ export class LocalListener{
                 if( !aioAnswerer ) return req.end( () => { });
                 let agentServer = this.agent.aioResolve.agents.agents[ aioAnswerer.agent ];
                 if( !agentServer ) return req.end( () => { });
-                this.agent.startAnchor( { agentServer: agentServer, socket: req, aioAnswerer: aioAnswerer, id: requestId } )
+
+                let requestConnection = asAIOSocket( req, requestId );
+
+
+                this.agent.anchorManager.register( requestConnection  );
+                this.agent.startAnchor( {  agentServer,  requestConnection,  aioAnswerer, id: requestId } )
 
             }).listen( nextPort, ()=>{
                 console.log( "[ANCHORIO] Agent>", chalk.greenBright(`Running Agent ${ this.agent.identifier } on port ${ nextPort }`) );
