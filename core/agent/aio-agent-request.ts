@@ -26,7 +26,7 @@ export class AioAgentRequest {
             busy: req.id,
             origin: this.agent.identifier,
             needOpts:{},
-        }, this.agent.connect.id, "END" );
+        }, this.agent.connect.id, { onError: "END", name: "REQUEST"} );
 
 
         console.log( "[ANCHORIO] Agent>", `Anchor request ${ req.id} started!`);

@@ -6,10 +6,12 @@ import {aio} from "./aio";
 import { RestoreOpts, SlotHeader} from "../global/share";
 import {nanoid} from "nanoid";
 
+type ListenEvent = "data"|"ready"|"end"
 interface Chunk {
     sequence:number,
-    buffer:Buffer,
-    connection:string
+    buffer?:Buffer,
+    connection:string,
+    event:ListenEvent
 }
 
 export enum AioType {
@@ -49,7 +51,10 @@ export interface AnchorMeta<E> {
     extras?:E,
     anchorPoint?: AnchorPoint,
     onError?:OnAnchorError,
-    redirect?(data:Buffer):void
+    anchorName?:string
+    dataRedirect?(data:Buffer):void
+    readyRedirect?():void
+    endRedirect?():void
 }
 
 export interface NeedAnchorOpts {
@@ -69,6 +74,11 @@ export interface AnchorServerOpts<E> {
     anchorPoint?: AnchorPoint,
     onNeedAnchor:OnNeedAnchor<E>,
     chanelOf( server:string ):AioSocket<any>
+}
+
+export interface AnchorAuthOption {
+    name:string,
+    onError:OnAnchorError
 }
 
 
@@ -130,8 +140,8 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
                 busy: true,
                 restoreRequest
             }
-
             this._needAnchors[ aioType ][ server ].push( { opts: opts, callback: anchor => {
+                console.log( "RESOLVED-NEEDS")
                     resolve( anchor );
                 }});
             this.anchorOpts.onNeedAnchor( aioType, server, opts ).catch();
@@ -149,33 +159,32 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
         aioAnchor.meta.anchorPoint = opts.anchorPoint;
 
         aioSocket.on("lookup", (err, address) => {  console.log( "===Lookup" ); })
-        aioSocket.on("error", (err, address) => {  console.log( "===Error" ); })
-        aioSocket.on("data", (err, address) => {  console.log( "===Data" ); })
+        // aioSocket.on("error", (err, address) => {  console.log( "===Error" ); })
+        // aioSocket.on("data", (err, address) => {  console.log( "===Data" ); })
         aioSocket.on("timeout", (err, address) => {  console.log( "===Timeout" ); })
         aioSocket.on("drain", (err, address) => {  console.log( "===Drain" ); })
         aioSocket.on("connect", (err, address) => {  console.log( "===Connect" ); })
-        aioSocket.on("ready", () => {  console.log( "===Ready" ); })
+        // aioSocket.on("ready", () => {  console.log( "===Ready" ); })
         aioSocket.on("end", () => {  console.log( "===End" ); })
-        aioSocket.on("close", () => {  console.log( "===Close" ); })
+        // aioSocket.on("close", () => {  console.log( "===Close" ); })
 
-        aioAnchor.on( "data", ( data:Buffer )=>{
+        let capture = ( event:ListenEvent, data?:Buffer )=>{
             let capture = aioAnchor.meta.anchorStatus !== "busy" || aioAnchor.meta.pendents.length || aioAnchor.meta.anchorConnection !== "connected";
-            // console.log( "ANCHOR-DATA", capture, [
-            //     aioAnchor.meta.anchorStatus,
-            //         aioAnchor.meta.pendents.length,
-            //         aioAnchor.meta.anchorConnection
-            //     ], data.toString() );
-
             if( capture ){
                 let pack:Chunk = {
                     sequence: this.seq++,
                     connection: aioAnchor.id,
-                    buffer: data
+                    buffer: data,
+                    event: event
                 };
                 console.log( "CAPTURED CHUNK", aioAnchor.meta.anchorStatus, aioAnchor.meta.pendents.length, aioAnchor.meta.anchorConnection, data.toString())
                 aioAnchor.meta.pendents.push( pack );
             }
-        });
+        }
+
+        aioAnchor.on( "data", ( data:Buffer )=>{ capture( "data", data ); });
+        // aioAnchor.on( "ready", () => capture( "ready" ) );
+        aioAnchor.on( "end", () => capture( "end" ) );
 
         aioAnchor.on( "error", err => {
             console.log( "CONNECTION-ERROR", err.message );
@@ -191,18 +200,21 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
             }
 
             if( aioAnchor.meta.onError === "RESTORE" ){
-                console.log( "RESTORE CONNECTION START")
                 let current = this.of( aioAnchor.meta.anchorWith );
                 if( current ){
                     current.meta.anchorConnection = "lost";
                     current.meta.anchorWith = null;
-                    current.off( "data", current.meta.redirect );
+                    current.off( "data", current.meta.dataRedirect );
                 }
 
+                console.log( "RESTORE CONNECTION START", aioAnchor.meta.anchorRequest)
                 this.needAnchor( aioAnchor.meta.aioType, aioAnchor.meta.server, aioAnchor.meta.anchorRequest ).then( restore => {
+                    console.log( "NEED-ANCHOR-RESTORE" )
                     this.waitAnchor( aioAnchor ).then( other =>{
+                        console.log( "WAIT-ANCHOR-RESTORE")
                         if( !other ) return;
                         if( other.meta.aioType === "IOType.ANCHOR_IN" ) this.anchor( other, restore, aioAnchor.meta.anchorRequest );
+                        else this.anchor( restore, other, aioAnchor.meta.anchorRequest );
                     });
                 });
             }
@@ -234,7 +246,7 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
     }
 
 
-    auth( slots:SlotHeader, referer:string, onError:OnAnchorError ){
+    auth( slots:SlotHeader, referer:string, opts:AnchorAuthOption ){
         if( !slots.origin ) throw new Error( "[Anchoraio] No slot server identification!" );
         if( !slots.aioType ) throw new Error( "[Anchoraio] No slot aioType marks!" );
 
@@ -246,31 +258,51 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
             socket.meta.aioType = slots.aioType;
             socket.meta.server = slots.origin;
             socket.meta.referer = referer;
-            socket.meta.onError = onError;
+            socket.meta.onError = opts.onError;
+            socket.meta.anchorName = opts.name;
+
+            if( slots.busy === socket.id  ) {
+                socket.meta.anchorStatus = "busy";
+                this.busy( slots, socket );
+            } else this._aio[ slots.aioType ][ slots.origin ].push( socket.id );
 
             if( slots.busy && slots.needOpts?.restoreRequest ){
                 socket.meta.anchorStatus = "busy";
                 this.restore( slots, socket )
-            } else if( slots.busy === socket.id  ) {
-                socket.meta.anchorStatus = "busy";
-                this.busy( slots, socket );
-            } else {
-                this._aio[ slots.aioType ][ slots.origin ].push( socket.id );
             }
-
-
         });
 
     }
 
-    private restore( slot:SlotHeader, socket:AioSocket<AnchorMeta<E>> ){
+    private restore( slot:SlotHeader, restore:AioSocket<AnchorMeta<E>> ){
+        console.log( "ON-NEED-RESTORE-APPLY" );
+
         let restorers = this._restore[ slot.aioType ][ slot.origin ];
         let index = restorers.findIndex( value => {
             return value.opts.request === slot.restore.request
         });
-        restorers.splice( index, 1 ).forEach( value => {
-            value.callback( socket );
+
+        let _restores = restorers.splice( index, 1 );
+        if( _restores.length ) return _restores.forEach( value => {
+            value.callback( restore );
         })
+
+        let other = this.findSocketByMeta( (meta, next) => {
+            return ( next.connected && meta.anchorWith === restore.id )
+                || ( next.meta.anchorRequest == restore.meta.anchorRequest
+                    && next.meta.aioType !== restore.meta.aioType
+                    && next.id !== restore.id
+                    // && next.connected
+                    // && next.meta.anchorConnection !== "connected"
+                )
+        });
+
+        if( !other ) return;
+        if( other.meta.isAnchored && restore.meta.isAnchored ) return;
+
+        if( other.meta.aioType === AioType.AIO_IN ) this.anchor( other, restore, slot.needOpts.restoreRequest );
+        else this.anchor( restore, other, slot.needOpts.restoreRequest );
+
     }
 
     private busy( slots:SlotHeader, socket:AioSocket<AnchorMeta<E>> ){
@@ -325,23 +357,22 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
     }
 
     anchor( from:AioSocket<AnchorMeta<E>>, to:AioSocket<AnchorMeta<E>>, anchorRequest:string ){
+        // console.trace( "anchored!================")
+        console.log( "ANCHOR-FROM", from.meta.isAnchored, from.id );
+        console.log( "ANCHOR-TO", to.meta.isAnchored, to.id );
         if( from.meta.isAnchored && to.meta.isAnchored ) {
+            // return;
             throw new Error( `Connection ${ from.id } already preview anchored!`)
         }
 
         from.meta.isAnchored = true;
         to.meta.isAnchored = true;
 
+
         let fromPendent:Chunk[] = from.meta.pendents || [];
         let toPendent:Chunk[] = to.meta.pendents || [];
 
-        from.meta.redirect = data => to.write( data );
-        to.meta.redirect = data => from.write( data );
-        from.on( "data", from.meta.redirect );
-        to.on( "data", to.meta.redirect );
-
-        // from.pipe( to );
-        // to.pipe( from );
+        this.pipe( from, to, anchorRequest );
 
         let reverse = { [from.id]: to, [ to.id]: from };
         while ( toPendent.length > 0 || fromPendent.length > 0 ){
@@ -349,12 +380,41 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
             if( !toPendent.length ) next = fromPendent.shift();
             else if( !fromPendent.length ) next = toPendent.shift();
             else if( toPendent[0].sequence < fromPendent[0].sequence ) next = toPendent.shift();
-            else fromPendent.shift();
-            reverse[ next.connection ].write( next.buffer );
+            else next = fromPendent.shift();
+            if( !next ) break;
+
+            if ( next.event === "data" ) reverse[ next.connection ].write( next.buffer );
+            else if( next.event === "ready" ) reverse[ next.connection ].emit( "ready" );
+            else if( next.event === "end" ) reverse[ next.connection ].close();
         }
 
+
+    }
+
+    private pipe( from:AioSocket<AnchorMeta<E>>, to:AioSocket<AnchorMeta<E>>, anchorRequest:string ){
         [ { _from:from, _to:to }, { _from:to, _to: from }].forEach( value => {
             let { _from, _to } = value;
+
+            _from.meta.dataRedirect = data => {
+                console.log( "REDIRECT-DATA FROM", _from.meta.anchorName, "TO", _to.meta.anchorName, data.toString() )
+                if( _from.meta.pendents.length ) return;
+                _to.write( data );
+            }
+            //
+            // _from.meta.readyRedirect = () =>{
+            //     console.log( "Redirect Ready....", _from.id );
+            //     if( _from.meta.pendents.length ) return;
+            //     _to.emit( "ready" );
+            // }
+
+            _from.meta.endRedirect = () =>{
+                if( _from.meta.pendents.length ) return;
+                _to.close();
+            }
+
+            _from.on( "data", _from.meta.dataRedirect );
+            // _from.on( "ready", _from.meta.readyRedirect );
+            _from.on( "end", _from.meta.endRedirect );
 
             _from.meta.anchorStatus = "busy";
             _from.meta.anchorConnection = "connected";
@@ -366,7 +426,6 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
                 _to.close();
             });
         });
-
     }
 
 
@@ -376,6 +435,8 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
                 return ( socket.connected && meta.anchorWith === aioAnchor.id )
                     || ( socket.meta.anchorRequest == aioAnchor.meta.anchorRequest
                         && socket.meta.aioType !== aioAnchor.meta.aioType
+                        && socket.connected
+                        && socket.meta.anchorConnection !== "connected"
                         && socket.id !== aioAnchor.id
                     )
             });

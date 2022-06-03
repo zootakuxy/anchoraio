@@ -38,7 +38,7 @@ export class AioCentralListener {
         this._server.onConnection( aioSocket => {
             aioSocket.meta.status = "unknown";
             // aioSocket.pause();
-            aioSocket.onListen( "chunk", chunk => console.log( chunk ))
+            // aioSocket.onListen( "chunk", chunk => console.log( chunk ))
             aioSocket.onListen( Event.AIO, ( args ) => this.onCentralAio( aioSocket, args ));
             aioSocket.onListen( Event.AUTH_CHANEL, ( args ) => this.onCentralAuthChanel( aioSocket, args ) )
             aioSocket.onListen( Event.SLOTS, ( args ) => this.onCentralSlot( aioSocket, args ) )
@@ -200,7 +200,7 @@ export class AioCentralListener {
 
     private onCentralSlot( aioSocket:AioSocket<CentralMeta>, slots:SlotHeader ) {
         if( !aioSocket.isAuth() ) return;
-        this.central.anchorServer.auth( slots, aioSocket.meta.channel === "primary"? aioSocket.id : aioSocket.meta.referer, "KEEP" );
+        this.central.anchorServer.auth( slots, aioSocket.meta.channel === "primary"? aioSocket.id : aioSocket.meta.referer, { onError: "KEEP", name: `${ slots.aioType }-CONNECTION`} );
         console.log( "[ANCHORIO] Server>", `${ slots.anchors.length } connection anchors registered as ${ slots.aioType } to ${ aioSocket.meta.server }.` );
 
     }

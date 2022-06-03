@@ -1,9 +1,9 @@
-import {AioSocket, ConnectionParams } from "../aio/socket";
-import {AgentRequest, AioAgent} from "./aio-agent";
-import {AuthHeader, Event, eventCode, headerMap} from "../global/share";
-import {AioAgentListener} from "./aio-agent-listener";
-import {aio} from "../aio/aio";
-import {AioType, AnchorMeta, NeedAnchorOpts} from "../aio/anchor-server";
+import { AioSocket, ConnectionParams } from "../aio/socket";
+import { AgentRequest, AioAgent} from "./aio-agent";
+import { Event, headerMap } from "../global/share";
+import { AioAgentListener } from "./aio-agent-listener";
+import { aio } from "../aio/aio";
+import { AioType, AnchorMeta, NeedAnchorOpts } from "../aio/anchor-server";
 type AuthStatus = "unknown"|"accepted"|"rejected";
 
 export class AioAgentConnect {
@@ -55,14 +55,12 @@ export class AioAgentConnect {
 
 
     needAnchor( type:AioType, _server?:string, opts?:NeedAnchorOpts ):Promise<(AioSocket<AnchorMeta<AgentRequest>>)>{
-        console.log( "NEED-ANCHOR-RECEIVE......")
         if( !opts ) opts = {};
-        return new Promise<(AioSocket<AnchorMeta<AgentRequest>>)>( (resolve, reject) => {
+        return new Promise<(AioSocket<AnchorMeta<AgentRequest>>)>( ( resolve ) => {
             let counts = ( this.agent.opts.maxSlots||1 ) - this.agent.anchorServer.counts( type, this.agent.identifier );
             if( !counts || counts < 1 ) counts = 1;
             counts = 1;
             let created = 0;
-
 
             let resolved:boolean = false;
             if( !counts ) return resolve( null );
@@ -94,16 +92,17 @@ export class AioAgentConnect {
 
                     _sockets.push( aioAnchor );
                     if( opts?.busy && !_busy ) _busy = aioAnchor.id ;
-
-                    this.agent.anchorServer.auth({
+                    let auth_ = {
                         anchors: [ aioAnchor.id ],
                         busy: _busy,
                         aioType: type,
                         origin: this.agent.identifier,
                         needOpts: opts,
-                    }, this.id, "RESTORE" );
-                    created++;
+                    };
 
+                    console.log( "AUTH-NEED-ANCHOR", auth_ );
+                    this.agent.anchorServer.auth( auth_ , this.id, { onError: "RESTORE", name: `${type}-CONNECTION`} );
+                    created++;
 
                     if( opts?.busy && !resolved ){
                         resolved = true;

@@ -82,7 +82,7 @@ export function convertToAioSocket<M extends Meta>( socket:net.Socket, opts?:str
         autoReconnect:_opts.autoReconnect,
         connected: _opts.isConnected,
         send: function (raw: string) {
-            console.log( "SEND-RAW", aioSocket.connected, raw  )
+            // console.log( "SEND-RAW", aioSocket.connected, raw  )
             let chunk = scapeRaw( raw ) + END_CHUNK;
             if( aioSocket.connected ) return socket.write( chunk );
             else _aio.pendents.push( chunk );

@@ -59,7 +59,7 @@ export class AioAplicationManager {
                 busy: connection.id,
                 origin: this.agent.identifier,
                 needOpts:{}
-            }, this.agent.connect.id, "END" )
+            }, this.agent.connect.id, { onError: "END", name: "SERVER"} )
         }
         return connection;
 
