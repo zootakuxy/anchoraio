@@ -71,9 +71,9 @@ export class AioAgentListener {
             if( application ){
                 this.agent.anchorServer.anchor( anchor, application, args.request );
                 this.connect.server.send( Event.AIO_ANCHORED, args );
-                console.log( `[ANCHORIO] Agent>`, chalk.blueBright( `Anchor form ${ args.origin} to application ${ args.application } \\CONNECTED!` ));
+                console.log( `[ANCHORIO] Agent>`, `Anchor form ${ args.origin} to application ${ args.application }@${ this.agent.identifier } ${chalk.greenBright("\\CONNECTED!")}` );
             } else {
-                console.log( `[ANCHORIO] Agent>`, chalk.redBright( `Anchor form ${ args.origin} to application ${ args.application } not found connection \\REJECTED!` ));
+                console.log( `[ANCHORIO] Agent>`, `Anchor form ${ args.origin} to application ${ args.application }@${ this.agent.identifier } not found connection ${chalk.redBright( "\\REJECTED!")}` );
                 this.connect.server.send( Event.AIO_REJECTED, args );
                 anchor.close();
             }
@@ -91,12 +91,14 @@ export class AioAgentListener {
         let request = this.agent.anchorServer.of( args.request );
         if( !request ) return;
         request.meta.extras.result = "rejected";
-
+        console.log( `[ANCHORIO] Agent>`, `Anchor form local ${ args.origin } to remote application ${ args.application }@${ args.server } not found connection ${chalk.redBright( "\\REJECTED!")}`);
     }
     private onAioAnchored( args:typeof SIMPLE_HEADER.aio) {
         let request = this.agent.anchorServer.of( args.request );
         if( !request ) return;
         request.meta.extras.result = "success";
+        console.log( `[ANCHORIO] Agent>`, `Anchor form local ${ args.origin } to remote application ${ args.application }@${ args.server } not found connection ${chalk.greenBright("\\CONNECTED")}!` );
+
     }
 
     private onAioEnd(event: Event, args:typeof SIMPLE_HEADER.aio ) {

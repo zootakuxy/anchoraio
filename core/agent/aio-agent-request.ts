@@ -48,7 +48,7 @@ export class AioAgentRequest {
                 anchor_form: connection.id
             }) );
             this.agent.anchorServer.anchor( req, connection, pack.request );
-            console.log( "[ANCHORIO] Request>", agentServer.identifier, aioAnswerer.application, "\\", chalk.blueBright( "ACCEPTED AIO ANCHOR" ));
+            console.log( "[ANCHORIO] Agent>", `New request id ${ req.id } from ${ this.agent.identifier } to ${ pack.application }@${ pack.server } ${ chalk.blueBright( "\\ACCEPTED AIO ANCHOR")}`);
         });
     }
 
