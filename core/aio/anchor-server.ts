@@ -207,12 +207,9 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
                     current.off( "data", current.meta.dataRedirect );
                 }
 
-                console.log( "RESTORE CONNECTION START", aioAnchor.meta.anchorRequest)
                 this.needAnchor( aioAnchor.meta.aioType, aioAnchor.meta.server, aioAnchor.meta.anchorRequest ).then( restore => {
-                    console.log( "NEED-ANCHOR-RESTORE" )
                     restore.meta.anchorRequest = aioAnchor.meta.anchorRequest;
                     this.waitAnchor( restore ).then( other =>{
-                        console.log( "WAIT-ANCHOR-RESTORE")
                         if( !other ) return;
                         if( other.meta.anchorConnection === "connected" || restore.meta.anchorConnection !== "connected" ) return;
                         if( other.meta.aioType === AioType.AIO_IN ) this.anchor( other, restore, aioAnchor.meta.anchorRequest );
