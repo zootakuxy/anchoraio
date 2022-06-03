@@ -1,18 +1,19 @@
 import chalk from "chalk";
-import {Agent} from "../agent";
+// import {Agent} from "../agent";
 
 const dns2 = require('dns2');
 import  { DnsServer } from "dns2/server";
 import {NetResolver} from "./net.resolve";
+import {AioAgent} from "../agent/aio-agent";
 
 const { Packet } = dns2;
 
 export class AgentDNS {
-    agent:Agent
+    agent:AioAgent
     server: DnsServer
     netResolver:NetResolver
 
-    constructor (agent:Agent ){
+    constructor (agent:AioAgent ){
         this.agent = agent;
         this.netResolver = new NetResolver( this.agent );
 

@@ -1,16 +1,17 @@
 import express, {Express} from "express";
 import * as http from "http";
 import  chalk from "chalk";
-import {Agent} from "../agent";
+import {AioAgent} from "../agent/aio-agent";
+// import {Agent} from "../agent";
 
 
 export class AgentAPI {
 
-    agent:Agent
+    agent:AioAgent
     app:Express;
     server:http.Server
 
-    constructor( agent:Agent ){
+    constructor( agent:AioAgent ){
         this.agent = agent;
         this.app = express();
         const bodyParser = require( 'body-parser' );
@@ -30,7 +31,7 @@ export class AgentAPI {
 
         this.app.get( "/api/app/:application", (req, res, next) => {
             let application = req.params.application;
-            let _app = this.agent.appManager.getApplication( application );
+            let _app = this.agent.appManager.getApplication( application  );
             console.log( "[ANCHORIO] Agent> API>", `GET /api/application/${ application }`);
             if( !_app ) return res.json( { success:false });
             else return res.json( { success: true, data: _app } );
@@ -69,33 +70,33 @@ export class AgentAPI {
                 port: agent.opts.agentPort,
                 serverHost: agent.opts.serverHost,
                 serverPort: agent.opts.serverPort,
-                serverConnection: agent.id,
+                serverConnection: agent.connect.id,
             }})
         });
 
         this.app.get( "/api/ports", (req, res, next) => {
-            console.log( "[ANCHORIO] Agent> API>", `GET /api/ports`);
-
-
-            let ports:number[] = req.body?.ports || [];
-
-            let news = [];
-            agent.agentPorts.forEach( nextPort =>{
-                if( !ports.includes( nextPort ) ) news.push( nextPort );
-            });
-
-            let use = news.shift();
-            if( use ) return res.json( {
-                success: true,
-                data: {
-                    port: use,
-                    ports: agent.agentPorts
-                }
-            });
-
-            agent.localListener.createServer().then( value => {
-                res.json({ success: !!value, data: { port: value, ports:agent.agentPorts } } );
-            })
+            // console.log( "[ANCHORIO] Agent> API>", `GET /api/ports`);
+            //
+            //
+            // let ports:number[] = req.body?.ports || [];
+            //
+            // let news = [];
+            // agent.agentPorts.forEach( nextPort =>{
+            //     if( !ports.includes( nextPort ) ) news.push( nextPort );
+            // });
+            //
+            // let use = news.shift();
+            // if( use ) return res.json( {
+            //     success: true,
+            //     data: {
+            //         port: use,
+            //         ports: agent.agentPorts
+            //     }
+            // });
+            //
+            // agent.localListener.createServer().then( value => {
+            //     res.json({ success: !!value, data: { port: value, ports:agent.agentPorts } } );
+            // })
         });
 
         this.server = http.createServer({}, this.app );

@@ -2,16 +2,17 @@ import * as fs from "fs";
 import * as path from "path";
 import * as ini from "ini";
 import { Addr } from 'netaddr';
-import {Agent} from "../agent";
+// import {Agent} from "../agent";
+import {AioAgent} from "../agent/aio-agent";
 
 
 
 export class Localhost {
     _next:Addr;
-    agent:Agent;
+    agent:AioAgent;
     private readonly _status:{ localhost?:{ init?:string, last?:string}};
 
-    constructor( agent:Agent ) {
+    constructor( agent:AioAgent ) {
         this.agent = agent;
 
         let existsLocalhost =  fs.existsSync( path.join( this.agent.opts.etc, "localhost.conf" ));

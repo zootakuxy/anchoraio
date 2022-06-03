@@ -2,8 +2,9 @@ import {DnsAnswer, Packet} from "dns2";
 import * as fs from "fs";
 import * as path from "path";
 import ini from "ini";
-import {Agent} from "../agent";
+// import {Agent} from "../agent";
 import {Localhost} from "./localhost";
+import {AioAgent} from "../agent/aio-agent";
 
 export type AgentServer = { name:string, identifier:string, match:RegExp }
 export type AioAnswerer = {
@@ -37,10 +38,10 @@ export function asAio( name:string ):AgentServer{
 export class AioResolver {
     agents:{ agents:{[p:string|number]:AgentServer}}
     resolves:{ resolve?:{ aio?:{ [p:string|number]:AioAnswerer } }};
-    agent:Agent
+    agent:AioAgent
     localhost:Localhost;
 
-    constructor( agent:Agent ) {
+    constructor( agent:AioAgent ) {
         this.agent = agent;
         this.localhost = new Localhost( agent );
 

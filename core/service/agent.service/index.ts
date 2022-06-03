@@ -1,11 +1,12 @@
 import {AgentOpts} from "../../agent/opts";
-import {Agent} from "../../agent";
+// import {Agent} from "../../agent";
 import chalk from "chalk";
 import {AgentAPI} from "../../dns/api";
 import {AgentDNS} from "../../dns/server";
+import {AioAgent} from "../../agent/aio-agent";
 
 export class AgentContext {
-    agent:Agent
+    agent:AioAgent
     options:AgentOpts
     agentDNS:AgentDNS
     agentApi:AgentAPI
@@ -19,7 +20,7 @@ export class AgentContext {
             console.log( "Function already started!" );
         }
 
-        let agent = new Agent( this.options, this );
+        let agent = new AioAgent( this.options, this );
         this.agent = agent;
 
         if( agent.opts.selfServer ){
@@ -27,10 +28,11 @@ export class AgentContext {
             require('../server' ).default( this.options );
         }
 
-        agent.connect().then( value => {
-            console.log( "[ANCHORIO] Agent>", chalk.greenBright( `Connected to server on ${agent.opts.serverHost}:${String( agent.opts.serverPort )}` ) );
-            agent.localListener.createServer().then( value1 => {});
-        });
+        agent.start();
+        // agent.connect().then( value => {
+        //     console.log( "[ANCHORIO] Agent>", chalk.greenBright( `Connected to server on ${agent.opts.serverHost}:${String( agent.opts.serverPort )}` ) );
+        //     agent.localListener.createServer().then( value1 => {});
+        // });
 
         if( !agent.opts.noDNS ) {
             this.agentDNS = new AgentDNS( agent );

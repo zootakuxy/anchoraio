@@ -1,13 +1,13 @@
 import {ServerOptions} from "../../server/opts";
-import {AIOServer} from "../../server";
+import {AioCentral} from "../../server/aio-central";
 
 export class ServerContext{
-    server?:AIOServer
+    server?:AioCentral
     option:ServerOptions
 
     constructor( opts:ServerOptions ) {
         this.option = opts;
-        this.server = new AIOServer( opts );
+        this.server = new AioCentral( opts );
     }
 
     start(){

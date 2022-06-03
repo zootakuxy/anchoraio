@@ -1,22 +1,24 @@
 import * as fs from "fs";
 import * as path from "path";
 import ini from "ini";
-import net from "net";
-import {Agent} from "./index";
-import {asAIOSocket, AIOSocket} from "../global/AIOSocket";
 import {nanoid} from "nanoid";
+import {AgentRequest, AioAgent} from "./aio-agent";
+import {AioSocket} from "../aio/socket";
+import {aio} from "../aio/aio";
+import {AioHeader} from "../global/share";
+import {AioType, AnchorMeta} from "../aio/anchor-server";
 
 export type Application = {
     port:number|string
     address?:string
 }
 
-export class ApplicationManager {
+export class AioAplicationManager {
     apps:{ apps:{ [p:string]:string|number|Application } };
-    agent:Agent
+    agent:AioAgent
     seq:number = 0;
 
-    constructor( agent:Agent ) {
+    constructor( agent:AioAgent ) {
         this.agent = agent;
         let exists = fs.existsSync( path.join( agent.opts.etc, "apps.conf" ));
         this.apps = exists ? ini.parse( fs.readFileSync( path.join( agent.opts.etc, "apps.conf" )).toString("utf8") ) as any: { apps: {} };
@@ -33,31 +35,31 @@ export class ApplicationManager {
         }
         return _app;
 
-    } connectApplication(application:string|number ):AIOSocket{
-        let _app = this.getApplication( application );
-        let connection:AIOSocket;
+    } connectApplication( args:AioHeader ):AioSocket<AnchorMeta<AgentRequest>>{
+        let application = this.getApplication( args.application );
+        let connection:AioSocket<AnchorMeta<AgentRequest>>;
 
-        if( _app ){
+        if( application ){
             let resolverId = `resolver://${this.agent.identifier}/${nanoid( 16)}?${ this.seq++ }`;
-            let socket:net.Socket = net.createConnection({
-                host: _app.address||"127.0.0.1",
-                port: Number( _app.port )
+            connection = aio.connect({
+                host: application.address||"127.0.0.1",
+                port: Number( application.port ),
+                listenEvent: false,
+                id: resolverId,
+                isConnected: false
             });
 
-            connection = asAIOSocket( socket, resolverId );
-
-            socket.on( "connect", ()=>{
-                socket["connected"] = true;
+            connection.on( "error", err => {
+                console.error( "[ANCHORIO] Agent>", `Application Connection error ${ err.message }` )
             });
-
-            socket.on( "close", hadError => {
-                socket["connected"] = false;
-            });
-
-            socket.on( "error", err => {
-                socket["connected"] = false;
-                console.error( "[ANCHORIO] Application", `Connection error ${ err.message }` )
-            });
+            connection = this.agent.anchorServer.register( connection, { anchorPoint: "SERVER" } );
+            this.agent.anchorServer.auth( {
+                aioType: AioType.AIO_OUT,
+                anchors: [ connection.id ],
+                busy: connection.id,
+                origin: this.agent.identifier,
+                needOpts:{}
+            }, this.agent.connect.id, "END" )
         }
         return connection;
 
