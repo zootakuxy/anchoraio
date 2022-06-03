@@ -1,6 +1,6 @@
 import {AioAgentConnect} from "./aio-agent-connect";
 import {AioAgent} from "./aio-agent";
-import {AioHeader, Event, SlotHeader} from "../global/share";
+import {Event, HEADER, SIMPLE_HEADER} from "../global/share";
 import chalk from "chalk"
 import {AioType} from "../aio/anchor-server";
 
@@ -46,26 +46,24 @@ export class AioAgentListener {
 
     private onAgentAuth( identifier, _private ) {
         if( identifier ){
-            this.connect.authStatus = "accepted";
             this.connect.createChanel();
             // this.connect.needAnchor( AioType.AIO_IN ).then()
             // this.connect.needAnchor( AioType.AIO_OUT ).then();
-            console.log( "[ANCHORIO] Agent>", chalk.greenBright(`Connected to server aio://${ this.agent.opts.serverHost }:${this.agent.opts.serverPort } with id ${ this.connect.id } \\AUTHENTICATED-IN-SERVER`) );
+            console.log( "[ANCHORIO] Agent>", `Connected to server aio://${ this.agent.opts.serverHost }:${this.agent.opts.serverPort } with id ${chalk.blueBright(this.connect.id) } ${ chalk.greenBright(`\\AUTHENTICATED-IN-SERVER`)}` );
 
         } else {
             console.log( "[ANCHORIO] Agent>", chalk.redBright(`Auth rejected from server with message ${ _private } \\REJECTED-IN-SERVER`) );
-            this.connect.authStatus = "rejected";
             this.connect.server.close();
         }
     }
-    private onSlot( args:SlotHeader ) {
+    private onSlot( args:typeof SIMPLE_HEADER.slot) {
         let slot = args.aioType;
         let opts = args.needOpts;
         this.connect.needAnchor( slot, this.agent.identifier, opts ).catch( reason => {});
         console.log( "[ANCHORIO] Agent>", chalk.blueBright( `Server need more anchor slots ${ slot } code: ${ opts.key }!`))
     }
 
-    private onAio( args:AioHeader ) {
+    private onAio( args:typeof SIMPLE_HEADER.aio ) {
         this.agent.anchorServer.nextSlot( AioType.AIO_IN, this.agent.identifier, args.anchor_to ).then( anchor => {
             let application = this.agent.appManager.connectApplication( args );
 
@@ -81,27 +79,27 @@ export class AioAgentListener {
             }
         })
     }
-    private onAioCansel( args:AioHeader) {
+    private onAioCansel( args:typeof SIMPLE_HEADER.aio) {
         console.log( `[ANCHORIO] Agent>`, chalk.redBright( `Anchor form ${ args.origin} to application ${ args.application } not found connection \\REJECTED!` ));
 
     }
-    private onAioSend( args:AioHeader ) {
+    private onAioSend( args:typeof SIMPLE_HEADER.aio ) {
         let request = this.agent.anchorServer.of( args.request );
         if( !request ) return;
     }
-    private onAioReject( args:AioHeader ) {
+    private onAioReject( args:typeof SIMPLE_HEADER.aio) {
         let request = this.agent.anchorServer.of( args.request );
         if( !request ) return;
         request.meta.extras.result = "rejected";
 
     }
-    private onAioAnchored( args:AioHeader ) {
+    private onAioAnchored( args:typeof SIMPLE_HEADER.aio) {
         let request = this.agent.anchorServer.of( args.request );
         if( !request ) return;
         request.meta.extras.result = "success";
     }
 
-    private onAioEnd(event: Event, args:AioHeader ) {
+    private onAioEnd(event: Event, args:typeof SIMPLE_HEADER.aio ) {
         let request = this.agent.anchorServer.of( args.request );
         let anchor = this.agent.anchorServer.of( args.anchor_form );
         if( request ) request.meta.extras.status = "complete";

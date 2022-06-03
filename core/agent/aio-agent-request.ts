@@ -1,7 +1,7 @@
 import {AgentRequest, AioAgent} from "./aio-agent";
 import {AioSocket} from "../aio/socket";
 import {AioType, AnchorMeta} from "../aio/anchor-server";
-import {AioHeader, Event} from "../global/share";
+import {Event, HEADER, SIMPLE_HEADER} from "../global/share";
 import chalk from "chalk";
 
 export class AioAgentRequest {
@@ -38,16 +38,15 @@ export class AioAgentRequest {
                 return req.close();
             }
 
-            let pack:AioHeader = {
+            let pack:typeof SIMPLE_HEADER.aio;
+            this.agent.connect.server.send( Event.AIO, pack = HEADER.aio({
                 origin: this.agent.identifier,
                 server: agentServer.identifier,
                 request: req.id,
                 application: aioAnswerer.application,
                 domainName: aioAnswerer.domainName,
                 anchor_form: connection.id
-            }
-
-            this.agent.connect.server.send( Event.AIO, pack );
+            }) );
             this.agent.anchorServer.anchor( req, connection, pack.request );
             console.log( "[ANCHORIO] Request>", agentServer.identifier, aioAnswerer.application, "\\", chalk.blueBright( "ACCEPTED AIO ANCHOR" ));
         });

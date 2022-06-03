@@ -5,8 +5,8 @@ import {nanoid} from "nanoid";
 import {AgentRequest, AioAgent} from "./aio-agent";
 import {AioSocket} from "../aio/socket";
 import {aio} from "../aio/aio";
-import {AioHeader} from "../global/share";
 import {AioType, AnchorMeta} from "../aio/anchor-server";
+import {SIMPLE_HEADER} from "../global/share";
 
 export type Application = {
     port:number|string
@@ -35,7 +35,7 @@ export class AioAplicationManager {
         }
         return _app;
 
-    } connectApplication( args:AioHeader ):AioSocket<AnchorMeta<AgentRequest>>{
+    } connectApplication( args:typeof SIMPLE_HEADER.aio ):AioSocket<AnchorMeta<AgentRequest>>{
         let application = this.getApplication( args.application );
         let connection:AioSocket<AnchorMeta<AgentRequest>>;
 

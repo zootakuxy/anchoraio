@@ -1,5 +1,4 @@
 import {AioType, NeedAnchorOpts} from "../aio/anchor-server";
-import e from "express";
 
 export enum Event {
     AIO="Event.AIO",
@@ -18,54 +17,42 @@ export enum Event {
 
 }
 
-export function eventCode(type:Event, ...code:string[] ):string {
-    return `${type}://${code.join("/")}`;
-}
-
-export interface AuthHeader { token:string, origin:string, server:string, level:"primary"|"secondary", referer?:string }
-export interface ServerChanel { origin:string, server:string, id:string, referer }
-export interface AioHeader { origin:string, request:string, server:string, application:string|number, anchor_to?:string, anchor_form: string, domainName:string }
-
 export interface RestoreOpts {
     request:string
 }
 
-export interface SlotHeader {
-    aioType:AioType,
-    origin:string,
-    anchors:string[],
-    busy?:string,
-    restore?:RestoreOpts
-    needOpts:NeedAnchorOpts,
-}
+export const SIMPLE_HEADER = {
+    aio: null as {
+        origin:string,
+        request:string,
+        server:string,
+        application:string|number,
+        anchor_to?:string,
+        anchor_form: string,
+        domainName:string
+    }, authResult: null as {
+        private:string,
+        anchorPort:number
 
-function _header<T>( opts:T  ):T {
-    return Object.assign( {}, opts )
-}
-export const headerMap = {
-    AUTH(opts:AuthHeader ){
-        return _header( opts  );
+    }, auth: null as {
+        token:string, origin:string, server:string, level:"primary"|"secondary", referer?:string
 
-    }, CHANEL_FREE( opts:ServerChanel ){
-        return _header( opts );
-
-    },AUTH_ACCEPTED(opts:AuthHeader ){
-        return _header(  opts );
-
-    }, AIO(opts:AioHeader ){
-        return _header( opts );
-
-    }, AUTH_REJECTED(opts:AuthHeader ){
-        return _header( opts );
-
-    }, AIO_CANSEL(opts:AioHeader ){
-        return _header( opts );
-
-    }, AIO_SEND(opts:AioHeader ){
-        return _header( opts );
-
-    }, SLOTS(opts:SlotHeader ){
-        return _header(  opts );
+    }, slot: null as {
+        aioType:AioType,
+        origin:string,
+        anchors:string[],
+        busy?:string,
+        restore?:RestoreOpts
+        needOpts:NeedAnchorOpts,
     }
-}
+} as const;
 
+
+export const HEADER :{ [p in keyof typeof SIMPLE_HEADER ]?:( (args: typeof SIMPLE_HEADER[p]) =>typeof SIMPLE_HEADER[p]) } = new Proxy( {}, {
+    get(target: {}, p: keyof typeof SIMPLE_HEADER, receiver: any): any {
+        if( !target[ p ] ) target[ p ] = ( args ) => args;
+        return target[ p ];
+    }, set(target: {}, p: string | symbol, value: any, receiver: any): boolean {
+        return true;
+    }
+});

@@ -101,7 +101,7 @@ export class AgentAPI {
 
         this.server = http.createServer({}, this.app );
         this.server.listen( agent.opts.agentAPI, ()=>{
-            console.log( "[ANCHORIO] Agent>", chalk.greenBright(`Running Agent API ${ agent.identifier } on port ${ agent.opts.agentAPI }`) );
+            console.log( "[ANCHORIO] Agent>", `Running Agent API ${ agent.identifier } on port ${ chalk.greenBright(String(agent.opts.agentAPI)) }` );
         } );
 
     }

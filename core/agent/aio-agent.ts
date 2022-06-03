@@ -88,7 +88,7 @@ export class AioAgent {
 
     } start(){
         this.anchorServer.start( () => {
-            console.log( "[ANCHORIO] Agent>", chalk.greenBright(`Running Agent Proxy ${ this.identifier } on port ${ this.opts.agentPort }`) );
+            console.log( "[ANCHORIO] Agent>", `Running Agent Proxy ${ this.identifier } on port ${ chalk.greenBright(String( this.opts.agentPort)) }`) ;
         });
     }
 

@@ -1,8 +1,9 @@
 import { AioSocket, ConnectionParams } from "../aio/socket";
 import { AgentRequest, AioAgent} from "./aio-agent";
-import { Event, headerMap } from "../global/share";
+import {Event, HEADER, SIMPLE_HEADER} from "../global/share";
 import { AioAgentListener } from "./aio-agent-listener";
 import { aio } from "../aio/aio";
+import chalk  from "chalk";
 import { AioType, AnchorMeta, NeedAnchorOpts } from "../aio/anchor-server";
 type AuthStatus = "unknown"|"accepted"|"rejected";
 
@@ -10,12 +11,13 @@ export class AioAgentConnect {
     private readonly _server:AioSocket<any>;
     private readonly _agent:AioAgent;
     private _id:string;
-    authStatus:AuthStatus
+    private _authStatus:AuthStatus;
     private _listener: AioAgentListener;
     private chanel: AioSocket<any>[] = [];
+    private _anchorPort:number;
 
     constructor( aioAgent:AioAgent ) {
-        this.authStatus = "unknown";
+        this._authStatus = "unknown";
         this._agent = aioAgent;
         let self = this;
         this._server = aio.connect({
@@ -23,7 +25,7 @@ export class AioAgentConnect {
             port: this._agent.opts.serverPort,
             listenEvent: true,
             isConnected: false,
-            auth: headerMap.AUTH(  {
+            auth: HEADER.auth(  {
                 origin: self._agent.identifier,
                 server: self._agent.identifier,
                 token: "1234",
@@ -32,8 +34,21 @@ export class AioAgentConnect {
             autoReconnect: () => this.autoReconnect()
         });
 
-        this._server.onListen( "auth",  ( identifier) => {
-            this._id = identifier;
+        this._server.onListen( "auth",  ( identifier, authResult:typeof SIMPLE_HEADER.authResult ) => {
+            if( !identifier ){
+                this._id = null;
+                this._authStatus = "rejected";
+                this._anchorPort = null;
+                return;
+            }
+
+            if( identifier ){
+                this._id = identifier;
+                this._anchorPort = authResult.anchorPort;
+                this._authStatus = "accepted";
+                return;
+            }
+
         });
 
         this._listener = new AioAgentListener( this );
@@ -47,6 +62,10 @@ export class AioAgentConnect {
         return this._server;
     } get agent(): AioAgent {
         return this._agent;
+    } get authStatus(): AuthStatus {
+        return this._authStatus;
+    } get anchorPort(): number {
+        return this._anchorPort;
     }
 
     private autoReconnect():ConnectionParams {
@@ -72,12 +91,12 @@ export class AioAgentConnect {
                 let _canReconnect = true;
                 const aioAnchor = aio.connect( {
                     host: this.agent.opts.serverHost,
-                    port: this.agent.opts.anchorPort,
+                    port: this.anchorPort,
                     listenEvent: true,
                     isConnected: false,
                     autoReconnect:()=>{
                         if( _canReconnect ) return {
-                            port: this.agent.opts.anchorPort,
+                            port: this.anchorPort,
                             host: this.agent.opts.serverHost
                         }
                     }
@@ -115,7 +134,7 @@ export class AioAgentConnect {
 
                     _anchors.push( aioAnchor.id );
 
-                    let pack = headerMap.SLOTS({
+                    let pack = HEADER.slot({
                         aioType: type,
                         busy: _busy,
                         origin: this.agent.identifier,
@@ -146,7 +165,7 @@ export class AioAgentConnect {
                 port: this.agent.opts.serverPort,
                 listenEvent: true,
                 isConnected: false,
-                auth: headerMap.AUTH( {
+                auth: HEADER.auth( {
                     level: "secondary",
                     origin: this.agent.identifier,
                     server: this.agent.identifier,
@@ -157,7 +176,7 @@ export class AioAgentConnect {
 
             connection.onListen( "auth", identifier => {
                 this.chanel.push( connection );
-                console.log( "[ANCHORIO] Agent>", `Request new create chanel ${ connection.id}  referer ${ this.id }!`  );
+                console.log( "[ANCHORIO] Agent>", `Create new chanel ${ chalk.blueBright( connection.id )}  referer ${ this.id }!`  );
             });
 
         }

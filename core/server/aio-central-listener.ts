@@ -1,6 +1,6 @@
 import {AioCentral} from "./aio-central";
 import {AioServer} from "../aio/server";
-import {AioHeader, AuthHeader, Event, ServerChanel, SlotHeader} from "../global/share";
+import {Event, SIMPLE_HEADER} from "../global/share";
 import {AioSocket} from "../aio/socket";
 import chalk from "chalk";
 import {nanoid} from "nanoid";
@@ -52,7 +52,7 @@ export class AioCentralListener {
         });
     }
 
-    private auth( aioSocket: AioSocket<any>, args:AuthHeader, accept, reject ){
+    private auth( aioSocket: AioSocket<any>, args:typeof SIMPLE_HEADER.auth, accept, reject ){
         if( args.level === "primary" ) return this.onCentralAuth( aioSocket, args ).then( value => {
             if( value ) accept( value );
             else reject( value );
@@ -71,7 +71,7 @@ export class AioCentralListener {
         return this._central;
     }
 
-    private onCentralAuth( aioSocket:AioSocket<CentralMeta>, opts:AuthHeader):Promise<string> {
+    private onCentralAuth( aioSocket:AioSocket<CentralMeta>, opts:typeof SIMPLE_HEADER.auth):Promise<typeof SIMPLE_HEADER.authResult > {
         return new Promise( resolve => {
             // aioSocket.pause();
             let reject = ( message:string, code ) =>{
@@ -97,7 +97,10 @@ export class AioCentralListener {
                 aioSocket.meta.status = "authenticated";
                 aioSocket.meta.private = nanoid( 64 );
                 aioSocket.meta.channel = "primary";
-                resolve( aioSocket.meta.private );
+                resolve( {
+                    anchorPort: this.central.opts.anchorPort,
+                    private: aioSocket.meta.private
+                } );
                 console.log( "[ANCHORIO] Server>", chalk.greenBright( `Agent ${ opts.server } connected with id ${ aioSocket.id } `));
             });
         });
@@ -110,7 +113,7 @@ export class AioCentralListener {
         })
     }
 
-    private onCentralAuthChanel( aioSocket:AioSocket<CentralMeta>, args:AuthHeader ) {
+    private onCentralAuthChanel( aioSocket:AioSocket<CentralMeta>, args:typeof SIMPLE_HEADER.auth ) {
         return new Promise( resolve => {
             aioSocket.meta.channel = "unknown";
             aioSocket.meta.channelStatus = "unknown";
@@ -144,7 +147,7 @@ export class AioCentralListener {
         aio.meta.requests--;
         if( aio.meta.requests < 1 ) aio.meta.channelStatus = "free";
 
-    } private onCentralAio( origin:AioSocket<CentralMeta>, args:AioHeader) {
+    } private onCentralAio( origin:AioSocket<CentralMeta>, args:typeof SIMPLE_HEADER.aio) {
         if( !origin.isAuth() ) return;
         // origin.pause();
         let reject = ( message )=>{
@@ -198,7 +201,7 @@ export class AioCentralListener {
         return destine;
     }
 
-    private onCentralSlot( aioSocket:AioSocket<CentralMeta>, slots:SlotHeader ) {
+    private onCentralSlot( aioSocket:AioSocket<CentralMeta>, slots:typeof SIMPLE_HEADER.slot ) {
         if( !aioSocket.isAuth() ) return;
         this.central.anchorServer.auth( slots, aioSocket.meta.channel === "primary"? aioSocket.id : aioSocket.meta.referer, { onError: "KEEP", name: `${ slots.aioType }-CONNECTION`} );
         console.log( "[ANCHORIO] Server>", `${ slots.anchors.length } connection anchors registered as ${ slots.aioType } to ${ aioSocket.meta.server }.` );
@@ -209,7 +212,7 @@ export class AioCentralListener {
     start(callback?: () => void) { this._server.start(callback); }
     stop( callback?: (err?: Error) => void) { this._server.stop(callback); }
 
-    private onCentralAioAnchored( aioSocket: AioSocket<CentralMeta>, args:AioHeader) {
+    private onCentralAioAnchored( aioSocket: AioSocket<CentralMeta>, args:typeof SIMPLE_HEADER.aio) {
         if( !aioSocket.isAuth() ) return;
         this.chanelOf( args.origin )?.send( Event.AIO_ANCHORED, args );
 

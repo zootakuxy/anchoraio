@@ -9,7 +9,6 @@ export type AgentOpts = GlobalOpts & {
     serverPort:number,
     agentPort:number,
     agentAPI:number,
-    anchorPort:number,
     dnsPort: number,
     noDNS: boolean
     noAPI: boolean
@@ -65,16 +64,10 @@ export function agentOptsBuilder( yargs:Argv<AgentOpts> ){
         demandOption: true
     });
 
-    yargs.option( "anchorPort", { alias: [ "P" ],
-        type: "number",
-        coerce: typeParser.asInt,
-        default: Defaults.anchorPort
-    });
-
     yargs.option( "dnsPort", {
         type: "number",
         coerce: typeParser.asInt,
-        default: Defaults.anchorPort
+        default: Defaults.dnsPort
     });
 
     yargs.option( "dns", {
