@@ -100,7 +100,6 @@ export class AioAgentConnect {
                         needOpts: opts,
                     };
 
-                    console.log( "AUTH-NEED-ANCHOR", auth_ );
                     this.agent.anchorServer.auth( auth_ , this.id, { onError: "RESTORE", name: `${type}-CONNECTION`} );
                     created++;
 

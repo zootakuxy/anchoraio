@@ -3,7 +3,7 @@ import {proxyOfArray} from "../global/proxy";
 import {AioServer, AioServerOpts} from "./server";
 import {AioSocket} from "./socket";
 import {aio} from "./aio";
-import { RestoreOpts, SlotHeader} from "../global/share";
+import {RestoreOpts, SlotHeader} from "../global/share";
 import {nanoid} from "nanoid";
 
 type ListenEvent = "data"|"ready"|"end"
@@ -210,10 +210,12 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
                 console.log( "RESTORE CONNECTION START", aioAnchor.meta.anchorRequest)
                 this.needAnchor( aioAnchor.meta.aioType, aioAnchor.meta.server, aioAnchor.meta.anchorRequest ).then( restore => {
                     console.log( "NEED-ANCHOR-RESTORE" )
-                    this.waitAnchor( aioAnchor ).then( other =>{
+                    restore.meta.anchorRequest = aioAnchor.meta.anchorRequest;
+                    this.waitAnchor( restore ).then( other =>{
                         console.log( "WAIT-ANCHOR-RESTORE")
                         if( !other ) return;
-                        if( other.meta.aioType === "IOType.ANCHOR_IN" ) this.anchor( other, restore, aioAnchor.meta.anchorRequest );
+                        if( other.meta.anchorConnection === "connected" || restore.meta.anchorConnection !== "connected" ) return;
+                        if( other.meta.aioType === AioType.AIO_IN ) this.anchor( other, restore, aioAnchor.meta.anchorRequest );
                         else this.anchor( restore, other, aioAnchor.meta.anchorRequest );
                     });
                 });
@@ -268,6 +270,7 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
 
             if( slots.busy && slots.needOpts?.restoreRequest ){
                 socket.meta.anchorStatus = "busy";
+                socket.meta.anchorRequest = slots.needOpts?.restoreRequest;
                 this.restore( slots, socket )
             }
         });
@@ -287,16 +290,7 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
             value.callback( restore );
         })
 
-        let other = this.findSocketByMeta( (meta, next) => {
-            return ( next.connected && meta.anchorWith === restore.id )
-                || ( next.meta.anchorRequest == restore.meta.anchorRequest
-                    && next.meta.aioType !== restore.meta.aioType
-                    && next.id !== restore.id
-                    // && next.connected
-                    // && next.meta.anchorConnection !== "connected"
-                )
-        });
-
+        let other = this.otherOf( restore );
         if( !other ) return;
         if( other.meta.isAnchored && restore.meta.isAnchored ) return;
 
@@ -358,8 +352,8 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
 
     anchor( from:AioSocket<AnchorMeta<E>>, to:AioSocket<AnchorMeta<E>>, anchorRequest:string ){
         // console.trace( "anchored!================")
-        console.log( "ANCHOR-FROM", from.meta.isAnchored, from.id );
-        console.log( "ANCHOR-TO", to.meta.isAnchored, to.id );
+        console.log( "ANCHOR-FROM", from.meta.isAnchored, from.id, from.meta.anchorConnection );
+        console.log( "ANCHOR-TO", to.meta.isAnchored, to.id, to.meta.anchorConnection );
         if( from.meta.isAnchored && to.meta.isAnchored ) {
             // return;
             throw new Error( `Connection ${ from.id } already preview anchored!`)
@@ -428,23 +422,27 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
         });
     }
 
+    private otherOf( restore:AioSocket<AnchorMeta<E>> ):AioSocket<AnchorMeta<E>>{
+        return this.findSocketByMeta((meta, next) => {
+            return (next.connected && meta.anchorWith === restore.id)
+                || (next.meta.anchorRequest == restore.meta.anchorRequest
+                    && next.meta.aioType !== restore.meta.aioType
+                    && next.id !== restore.id
+                    && next.connected
+                    && next.meta.anchorConnection !== "connected"
+                )
+        });
+    }
 
-    private waitAnchor( aioAnchor:AioSocket<AnchorMeta<E>> ):Promise<AioSocket<AnchorMeta<E>>> {
+
+    private waitAnchor( restore:AioSocket<AnchorMeta<E>> ):Promise<AioSocket<AnchorMeta<E>>> {
         return new Promise( (resolve, reject) => {
-            let other = this.findSocketByMeta( (meta, socket) => {
-                return ( socket.connected && meta.anchorWith === aioAnchor.id )
-                    || ( socket.meta.anchorRequest == aioAnchor.meta.anchorRequest
-                        && socket.meta.aioType !== aioAnchor.meta.aioType
-                        && socket.connected
-                        && socket.meta.anchorConnection !== "connected"
-                        && socket.id !== aioAnchor.id
-                    )
-            });
+            let other = this.otherOf( restore )
 
             if( other ) return  resolve( other );
-            let restoreOpts:RestoreOpts = { request: aioAnchor.meta.anchorRequest };
+            let restoreOpts:RestoreOpts = { request: restore.meta.anchorRequest };
 
-            this._restore[ reverseAioType( aioAnchor.meta.aioType ) ][ aioAnchor.meta.anchorWithOrigin ].push( {
+            this._restore[ reverseAioType( restore.meta.aioType ) ][ restore.meta.anchorWithOrigin ].push( {
                 opts:restoreOpts,
                 callback: ( socket )=>{
                     resolve( socket )
