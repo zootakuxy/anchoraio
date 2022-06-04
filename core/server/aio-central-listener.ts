@@ -1,6 +1,6 @@
 import {AioCentral} from "./aio-central";
 import {AioServer} from "../aio/server";
-import {Event, SIMPLE_HEADER} from "../global/share";
+import {Event, SIMPLE_HEADER} from "../aio/share";
 import {AioSocket} from "../aio/socket";
 import chalk from "chalk";
 import {nanoid} from "nanoid";

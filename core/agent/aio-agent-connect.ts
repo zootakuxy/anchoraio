@@ -1,6 +1,6 @@
 import { AioSocket, ConnectionParams } from "../aio/socket";
 import { AgentRequest, AioAgent} from "./aio-agent";
-import {Event, HEADER, SIMPLE_HEADER} from "../global/share";
+import {Event, HEADER, SIMPLE_HEADER} from "../aio/share";
 import { AioAgentListener } from "./aio-agent-listener";
 import { aio } from "../aio/aio";
 import chalk  from "chalk";

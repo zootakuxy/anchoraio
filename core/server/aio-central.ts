@@ -2,7 +2,7 @@ import {ServerOptions} from "./opts";
 import {AioSocket} from "../aio/socket";
 import chalk from "chalk";
 import {AioCentralListener, CentralMeta} from "./aio-central-listener";
-import {Event, HEADER} from "../global/share";
+import {Event, HEADER} from "../aio/share";
 import {AioType, AnchorMeta, AioAnchorServer, NeedAnchorOpts} from "../aio/anchor-server";
 
 

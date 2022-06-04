@@ -1,6 +1,5 @@
 import net from "net";
-import {proxyOfArray} from "../global/proxy";
-import {aio} from "./aio";
+import {lib} from "./lib";
 
 export class Meta { }
 
@@ -90,8 +89,8 @@ export function convertToAioSocket<M extends Meta>( socket:net.Socket, opts?:str
             // socket.write(chunk);
         },
         pendents:[],
-        on: proxyOfArray<OnSocketAuth|SocketOnReadEvent|SocketOnReadAnyEvent|SocketOnReadChunk>(),
-        once: proxyOfArray<OnSocketAuth|SocketOnReadEvent|SocketOnReadAnyEvent|SocketOnReadChunk>(),
+        on:   lib.proxyOfArray<OnSocketAuth|SocketOnReadEvent|SocketOnReadAnyEvent|SocketOnReadChunk>(),
+        once: lib.proxyOfArray<OnSocketAuth|SocketOnReadEvent|SocketOnReadAnyEvent|SocketOnReadChunk>(),
     }
 
     let registerEvent = ( event:string, callback:(... any)=>void, collector:{ [event:string]:(( ...any)=>void)[]} )=>{

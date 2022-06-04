@@ -1,6 +1,6 @@
 import yargs, {BuilderCallback} from "yargs";
 import { AgentOpts, agentOptsBuilder} from "../../core/agent/opts";
-import {globalOptsBuilder} from "../../core/global/opts";
+import {globalOptsBuilder} from "../opts";
 
 export const command = "agent";
 export const desc:string = "Start agent service";

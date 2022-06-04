@@ -1,6 +1,4 @@
 import {AgentOpts} from "../../agent/opts";
-// import {Agent} from "../../agent";
-import chalk from "chalk";
 import {AgentAPI} from "../../dns/api";
 import {AgentDNS} from "../../dns/server";
 import {AioAgent} from "../../agent/aio-agent";

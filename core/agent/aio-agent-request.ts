@@ -1,7 +1,7 @@
 import {AgentRequest, AioAgent} from "./aio-agent";
 import {AioSocket} from "../aio/socket";
 import {AioType, AnchorMeta} from "../aio/anchor-server";
-import {Event, HEADER, SIMPLE_HEADER} from "../global/share";
+import {Event, HEADER, SIMPLE_HEADER} from "../aio/share";
 import chalk from "chalk";
 
 export class AioAgentRequest {

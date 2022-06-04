@@ -1,9 +1,8 @@
 import  {Argv} from "yargs";
-import {typeParser} from "../global/parser";
-import {Defaults} from "../global/defaults";
-import {GlobalOpts} from "../global/opts";
+import {aio} from "../aio/aio";
+import {lib} from "../aio/lib";
 
-export type AgentOpts = GlobalOpts & {
+export type AgentOpts = aio.GlobalOpts & {
     identifier:string,
     serverHost:string,
     serverPort:number,
@@ -23,7 +22,7 @@ export type AgentOpts = GlobalOpts & {
 export function agentOptsBuilder( yargs:Argv<AgentOpts> ){
     yargs.option( "identifier", { alias: [ "id", "i" ],
         type: "string",
-        coerce: typeParser.asString,
+        coerce: lib.typeParser.asString,
         description: "Identificador unico do agent",
         demandOption: true
     });
@@ -39,47 +38,47 @@ export function agentOptsBuilder( yargs:Argv<AgentOpts> ){
 
     yargs.option( "serverHost", { alias: [ "h", "host" ],
         type: "string",
-        default: Defaults.serverHost,
-        coerce: typeParser.asString,
+        default: aio.Defaults.serverHost,
+        coerce: lib.typeParser.asString,
         demandOption: true
     })
 
     yargs.option( "serverPort", {
         type:"number",
-        coerce: typeParser.asInt,
-        default: Defaults.serverPort
+        coerce: lib.typeParser.asInt,
+        default: aio.Defaults.serverPort
     });
 
     yargs.option( "agentPort", { alias: [ "port", "p" ],
         type:"number",
-        coerce: typeParser.asInt,
-        default: Defaults.agentPort,
+        coerce: lib.typeParser.asInt,
+        default: aio.Defaults.agentPort,
         demandOption: true
     });
 
     yargs.option( "agentAPI", { alias: [ "api", "a" ],
         type:"number",
-        coerce: typeParser.asInt,
-        default: Defaults.agentAPI,
+        coerce: lib.typeParser.asInt,
+        default: aio.Defaults.agentAPI,
         demandOption: true
     });
 
     yargs.option( "dnsPort", {
         type: "number",
-        coerce: typeParser.asInt,
-        default: Defaults.dnsPort
+        coerce: lib.typeParser.asInt,
+        default: aio.Defaults.dnsPort
     });
 
     yargs.option( "dns", {
         type: "string",
         array: true,
-        coerce: typeParser.asStringArray
+        coerce: lib.typeParser.asStringArray
     })
 
     yargs.option( "reconnectTimeout", {
         type: "number",
-        default: Defaults.reconnectTimeout,
-        coerce: typeParser.asInt,
+        default: aio.Defaults.reconnectTimeout,
+        coerce: lib.typeParser.asInt,
         demandOption: true
     })
 
@@ -103,23 +102,23 @@ export function agentOptsBuilder( yargs:Argv<AgentOpts> ){
 
     yargs.option( "maxSlots", {
         type: "number",
-        default: Defaults.maxSlots,
+        default: aio.Defaults.maxSlots,
         demandOption: true,
-        coerce: typeParser.asInt
+        coerce: lib.typeParser.asInt
     })
 
     yargs.option( "minSlots", {
         type: "number",
-        default: Defaults.minSlots,
+        default: aio.Defaults.minSlots,
         demandOption: true,
-        coerce: typeParser.asInt
+        coerce: lib.typeParser.asInt
     })
 
     yargs.option( "chanel", {
         type: "number",
-        default: Defaults.chanel,
+        default: aio.Defaults.chanel,
         demandOption: true,
-        coerce: typeParser.asInt
+        coerce: lib.typeParser.asInt
     })
     return yargs;
 }

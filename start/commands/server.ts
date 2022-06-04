@@ -1,6 +1,6 @@
 import yargs, {BuilderCallback} from "yargs";
 import { ServerOptions, serverBuilderOptions} from "../../core/server/opts";
-import {globalOptsBuilder} from "../../core/global/opts";
+import {globalOptsBuilder} from "../opts";
 
 export const command = "server";
 export const desc:string = "Start server service";

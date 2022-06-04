@@ -1,6 +1,7 @@
 import net, { NetConnectOpts } from "net";
 import {AioSocket, AioSocketOpts, convertToAioSocket, Meta} from "./socket";
 import {AioServer, AioServerOpts} from "./server";
+import path from "path";
 
 export module aio {
     export function connect<T>( opts:(NetConnectOpts&AioSocketOpts<T>)|number, host?:string){
@@ -23,6 +24,27 @@ export module aio {
 
     export function createServer( opts:AioServerOpts){
         return new AioServer( opts )
+    }
+
+    export const Defaults = {
+        //language=file-reference
+        envFile: path.join(__dirname, "../../etc/anchorio.conf" ),
+        agentPort:  36900,
+        agentAPI :  36901,
+        serverPort: 36902,
+        anchorPort: 36903,
+        dnsPort:    53,
+        chanel:     10,
+        serverHost: "127.0.0.1",
+        reconnectTimeout: 1000,
+        maxSlots: 6,
+        minSlots: 3,
+        dns: [ "8.8.8", "8.8.4.4" ]
+    }
+
+    export interface GlobalOpts {
+        etc:string,
+        envFile:string
     }
 }
 

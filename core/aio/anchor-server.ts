@@ -1,11 +1,11 @@
 import {Buffer} from "buffer";
-import {proxyOfArray} from "../global/proxy";
 import {AioServer, AioServerOpts} from "./server";
 import {AioSocket} from "./socket";
 import {aio} from "./aio";
-import {RestoreOpts, SIMPLE_HEADER} from "../global/share";
+import {RestoreOpts, SIMPLE_HEADER} from "./share";
 import {nanoid} from "nanoid";
 import chalk from "chalk";
+import {lib} from "./lib";
 
 type ListenEvent = "data"|"ready"|"end"
 interface Chunk {
@@ -93,18 +93,18 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
     private readonly _anchorOpts:AnchorServerOpts<E>;
 
     private _needAnchors:{ [p in AioType ]: {[p:string]:({ opts:NeedAnchorOpts, callback:( anchor:AioSocket<AnchorMeta<E>>)=>void})[]}} = {
-        [ AioType.AIO_IN ]: proxyOfArray<{ opts:NeedAnchorOpts, callback:( anchor:AioSocket<AnchorMeta<E>>)=>void}>(),
-        [ AioType.AIO_OUT ]: proxyOfArray<{ opts:NeedAnchorOpts, callback:( anchor:AioSocket<AnchorMeta<E>>)=>void}>(),
+        [ AioType.AIO_IN ]: lib.proxyOfArray<{ opts:NeedAnchorOpts, callback:( anchor:AioSocket<AnchorMeta<E>>)=>void}>(),
+        [ AioType.AIO_OUT ]: lib.proxyOfArray<{ opts:NeedAnchorOpts, callback:( anchor:AioSocket<AnchorMeta<E>>)=>void}>(),
     }
 
     private _restore:{ [p in AioType ]: {[p:string]:({ opts:RestoreOpts, callback:( anchor:AioSocket<AnchorMeta<E>>)=>void})[]}} = {
-        [ AioType.AIO_IN ]: proxyOfArray<{ opts:RestoreOpts, callback:( anchor:AioSocket<AnchorMeta<E>>)=>void}>(),
-        [ AioType.AIO_OUT ]: proxyOfArray<{ opts:RestoreOpts, callback:( anchor:AioSocket<AnchorMeta<E>>)=>void}>(),
+        [ AioType.AIO_IN ]:  lib.proxyOfArray<{ opts:RestoreOpts, callback:( anchor:AioSocket<AnchorMeta<E>>)=>void}>(),
+        [ AioType.AIO_OUT ]: lib.proxyOfArray<{ opts:RestoreOpts, callback:( anchor:AioSocket<AnchorMeta<E>>)=>void}>(),
     }
 
     private _aio:{ [p in AioType ]: {[p:string]:string[]}} = {
-        [AioType.AIO_IN]: proxyOfArray<string>(),
-        [AioType.AIO_OUT]: proxyOfArray<string>(),
+        [AioType.AIO_IN]:  lib.proxyOfArray<string>(),
+        [AioType.AIO_OUT]: lib.proxyOfArray<string>(),
     }
 
     constructor( opts:AioServerOpts&AnchorServerOpts<E> ) {

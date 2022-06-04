@@ -1,6 +1,6 @@
 import {AioAgentConnect} from "./aio-agent-connect";
 import {AioAgent} from "./aio-agent";
-import {Event, HEADER, SIMPLE_HEADER} from "../global/share";
+import {Event,  SIMPLE_HEADER} from "../aio/share";
 import chalk from "chalk"
 import {AioType} from "../aio/anchor-server";
 
