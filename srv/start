@@ -2,17 +2,17 @@ args="--noDNS";
 mode="dev";
 
 if [ "$1" == "AGENT" ]; then
-    app="ANCHORAIO-AGENT"
+    app="ANCHOR-AIO-AGENT"
     _command="agent"
 
 elif [ "$1" == "SERVER" ]; then
-    app="ANCHORAIO-SERVER"
+    app="ANCHOR-AIO-SERVER"
     args="${args} --self-server"
     _command="server"
 
 elif [ "$1" == "AGENT-SERVER" ]; then
     _command="agent"
-    app="ANCHORAIO-AGENT-SERVER"
+    app="ANCHOR-AIO-AGENT-SERVER"
 else
   exit;
 fi;
