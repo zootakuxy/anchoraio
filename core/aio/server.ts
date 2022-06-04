@@ -35,8 +35,6 @@ export class AioServer<M extends Meta> {
     constructor( opts:AioServerOpts ) {
         this._opts = opts;
         this._server = net.createServer(( socket)=>{
-            // socket.pause();
-
             let _isAuth:boolean;
             let opts:AioSocketOpts<M> = { id: this.nextId(), isConnected: true, isAuth(){
                 return _isAuth;
@@ -48,6 +46,7 @@ export class AioServer<M extends Meta> {
             let _accept = ( ...data:any[] )=>{
                 _isAuth = true;
                 if( this.opts.sendHeader ) aioSocket.send( "auth", aioSocket.id, ...data );
+
             }, _reject = (...args:any[])=>{
                 _isAuth = false;
                 if( this.opts.sendHeader ) aioSocket.send( "auth", null, ...args );
@@ -55,7 +54,7 @@ export class AioServer<M extends Meta> {
             }
 
             if( typeof this.opts.auth === "function" ) {
-                aioSocket.onListen( "chunk", chunk => {
+                aioSocket.onceListen( "chunk", chunk => {
                     let pack = chunk;
                     try{ pack = JSON.parse( pack ); } catch (e){ }
                     this.opts.auth( aioSocket, pack, _accept, _reject );
@@ -68,7 +67,8 @@ export class AioServer<M extends Meta> {
             });
 
             this._aioSockets[ aioSocket.id ] = aioSocket;
-            // socket.resume();
+
+            this.onAttach( aioSocket );
             this.notifyConnection( aioSocket );
         });
     }
@@ -84,6 +84,9 @@ export class AioServer<M extends Meta> {
 
     get aioSockets(): { [p: string]: AioSocket<M> } {
         return this._aioSockets;
+    }
+
+    protected onAttach( aioSocket:AioSocket<M> ){
     }
 
     protected notifyConnection( aioConnection:AioSocket<M>){

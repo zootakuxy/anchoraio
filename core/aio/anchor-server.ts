@@ -182,10 +182,10 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
             if( aioAnchor.meta.onError === "KEEP" ) return;
 
             if( aioAnchor.meta.onError === "END" ) {
-                console.log( "STOP OTHER ANCHOR ON ERROR" );
                 let other = this.of( aioAnchor.meta.anchorWith );
                 if( !other ) return;
                 other.close();
+                console.log( "[ANCHORIO] Stop anchored par by error" );
                 return;
             }
 

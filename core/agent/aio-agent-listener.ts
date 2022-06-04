@@ -3,6 +3,7 @@ import {AioAgent} from "./aio-agent";
 import {Event, HEADER, SIMPLE_HEADER} from "../global/share";
 import chalk from "chalk"
 import {AioType} from "../aio/anchor-server";
+import {aio} from "../aio/aio";
 
 export class AioAgentListener {
     private readonly _connect:AioAgentConnect;
@@ -44,7 +45,7 @@ export class AioAgentListener {
         return this._agent;
     }
 
-    private onAgentAuth( identifier, _private ) {
+    private onAgentAuth( identifier, _private:typeof SIMPLE_HEADER.authResult) {
         if( identifier ){
             this.connect.createChanel();
             // this.connect.needAnchor( AioType.AIO_IN ).then()

@@ -31,8 +31,10 @@ export const SIMPLE_HEADER = {
         anchor_form: string,
         domainName:string
     }, authResult: null as {
-        private:string,
-        anchorPort:number
+        auth:boolean
+        private?:string,
+        anchorPort?:number
+        message?:string
 
     }, auth: null as {
         token:string, origin:string, server:string, level:"primary"|"secondary", referer?:string

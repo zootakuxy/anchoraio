@@ -54,12 +54,12 @@ export class AioCentralListener {
 
     private auth( aioSocket: AioSocket<any>, args:typeof SIMPLE_HEADER.auth, accept, reject ){
         if( args.level === "primary" ) return this.onCentralAuth( aioSocket, args ).then( value => {
-            if( value ) accept( value );
+            if( value.auth ) accept( value );
             else reject( value );
         });
 
         if( args.level === "secondary" ) return  this.onCentralAuthChanel( aioSocket, args ).then( value=>{
-            if( value ) accept( value );
+            if( value.auth ) accept( value );
             else reject( value );
         })
     }
@@ -78,7 +78,7 @@ export class AioCentralListener {
                 aioSocket.meta.status = "rejected";
                 // aioSocket.resume();
                 console.log( "[ANCHORIO] Server>", chalk.redBright( `Auth rejected for agent ${ opts.server }. ${message}!`));
-                return resolve( null );
+                return resolve({ auth:false, message } );
             }
 
 
@@ -95,9 +95,10 @@ export class AioCentralListener {
 
                 aioSocket.meta.server = opts.server;
                 aioSocket.meta.status = "authenticated";
-                aioSocket.meta.private = nanoid( 64 );
+                aioSocket.meta.private = nanoid( 128 );
                 aioSocket.meta.channel = "primary";
                 resolve( {
+                    auth: true,
                     anchorPort: this.central.opts.anchorPort,
                     private: aioSocket.meta.private
                 } );
@@ -113,7 +114,7 @@ export class AioCentralListener {
         })
     }
 
-    private onCentralAuthChanel( aioSocket:AioSocket<CentralMeta>, args:typeof SIMPLE_HEADER.auth ) {
+    private onCentralAuthChanel( aioSocket:AioSocket<CentralMeta>, args:typeof SIMPLE_HEADER.auth ):Promise<typeof SIMPLE_HEADER.authResult> {
         return new Promise( resolve => {
             aioSocket.meta.channel = "unknown";
             aioSocket.meta.channelStatus = "unknown";
@@ -121,7 +122,7 @@ export class AioCentralListener {
             let reject = ( message:string )=>{
                 aioSocket.close();
                 console.log( "[ANCHORIO] Server>", message, chalk.redBright( `Channel auth rejected` ) );
-                return resolve( null );
+                return resolve({ auth: false, message } );
             }
 
             if( !args?.server ) return  reject( `Missing server of chanel!` );
@@ -137,7 +138,7 @@ export class AioCentralListener {
             aioSocket.meta.channel = "secondary";
             aioSocket.meta.requests = 0;
             aioSocket.meta.channelStatus =  "free";
-            return  resolve( true );
+            return  resolve({ auth: true, private: nanoid( 128 )});
         });
 
     }
