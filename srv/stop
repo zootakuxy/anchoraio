@@ -1,0 +1,27 @@
+args="--noDNS";
+mode="dev";
+
+if [ "$1" == "AGENT" ]; then
+    app="ANCHOR-AIO-AGENT"
+    _command="agent"
+
+elif [ "$1" == "SERVER" ]; then
+    app="ANCHOR-AIO-SERVER"
+    args="${args} --self-server"
+    _command="server"
+
+elif [ "$1" == "AGENT-SERVER" ]; then
+    _command="agent"
+    app="ANCHOR-AIO-AGENT-SERVER"
+else
+  exit;
+fi;
+
+if [ "$2" == "prod" ]; then mode="prod"; fi;
+
+
+#sock_file="$(pwd)/${mode}.sock"
+kill $(ps aux | grep "${app}" | awk '{print $2}')
+#kill $(ps aux | grep "anchoraio-agent:${app}" | awk '{print $2}')
+#rm -rf "${sock_file}"
+
