@@ -63,6 +63,12 @@ export function agentOptsBuilder( yargs:Argv<AgentOpts> ){
         demandOption: true
     });
 
+    yargs.option( "anchorPort", { alias: [ "P" ],
+        type: "number",
+        coerce: lib.typeParser.asInt,
+        default: aio.Defaults.anchorPort
+    });
+
     yargs.option( "dnsPort", {
         type: "number",
         coerce: lib.typeParser.asInt,

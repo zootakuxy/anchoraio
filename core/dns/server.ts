@@ -1,5 +1,4 @@
 import chalk from "chalk";
-// import {Agent} from "../agent";
 
 const dns2 = require('dns2');
 import  { DnsServer } from "dns2/server";

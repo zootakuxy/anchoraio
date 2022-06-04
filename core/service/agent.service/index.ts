@@ -23,7 +23,8 @@ export class AgentContext {
 
         if( agent.opts.selfServer ){
             agent.opts.serverHost = "127.0.0.1"
-            require('../server' ).default( this.options );
+            const {ServerContext} = require('./../server.service' ) ;
+            new ServerContext( agent.opts ).start();
         }
 
         agent.start();
