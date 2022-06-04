@@ -78,7 +78,7 @@ export class AioAgentConnect {
         return new Promise<(AioSocket<AnchorMeta<AgentRequest>>)>( ( resolve ) => {
             let counts = ( this.agent.opts.maxSlots||1 ) - this.agent.anchorServer.counts( type, this.agent.identifier );
             if( !counts || counts < 1 ) counts = 1;
-            counts = 1;
+            // counts = 1;
             let created = 0;
 
             let resolved:boolean = false;

@@ -147,6 +147,16 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
         });
     }
 
+    private openAnchor( aioType:AioType, server:string ):Promise<AioSocket<AnchorMeta<E>>>{
+        return new Promise( ( resolve, reject) => {
+            let opts:NeedAnchorOpts = {}
+            this._needAnchors[ aioType ][ server ].push( { opts: opts, callback: anchor => {
+                resolve( anchor );
+            }});
+            this.anchorOpts.onNeedAnchor( aioType, server, opts ).catch();
+        });
+    }
+
     private _register( aioSocket:AioSocket<any>, opts:AnchorRegisterOpts ){
         super.mergeMeta( aioSocket, {} as AnchorMeta<E> );
         let aioAnchor:AioSocket<AnchorMeta<E>> = aioSocket;
@@ -309,8 +319,7 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
                 _resolve( res );
                 let counts = this.counts( aioType, server );
                 //TODO descomentar aqui depois
-                // if( counts < this._minSlots ) this.needAnchor( aioType, server, {}).catch( err => {
-                // });
+                if( counts < this._minSlots ) this.openAnchor( aioType, server ).catch( err => {});
              }
 
             let freeSlot:AioSocket<AnchorMeta<E>>;
@@ -327,7 +336,7 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
 
             if( freeSlot ) return resolve( freeSlot);
 
-            this.needAnchor( aioType, server ).then( freeSlot => {
+            this.openAnchor( aioType, server ).then( freeSlot => {
                 if( !freeSlot ) return resolve( null );
                 resolve( freeSlot );
             });

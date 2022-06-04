@@ -42,8 +42,8 @@ export class AioAgentListener {
     private onAgentAuth( identifier, _private:typeof SIMPLE_HEADER.authResult) {
         if( identifier ){
             this.connect.createChanel();
-            // this.connect.needAnchor( AioType.AIO_IN ).then()
-            // this.connect.needAnchor( AioType.AIO_OUT ).then();
+            this.connect.needAnchor( AioType.AIO_IN ).then()
+            this.connect.needAnchor( AioType.AIO_OUT ).then();
             console.log( "[ANCHORIO] Agent>", `Connected to server aio://${ this.agent.opts.serverHost }:${this.agent.opts.serverPort } with id ${chalk.blueBright(this.connect.id) } ${ chalk.greenBright(`\\AUTHENTICATED-IN-SERVER`)}` );
 
         } else {
