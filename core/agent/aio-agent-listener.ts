@@ -3,7 +3,6 @@ import {AioAgent} from "./aio-agent";
 import {Event, HEADER, SIMPLE_HEADER} from "../global/share";
 import chalk from "chalk"
 import {AioType} from "../aio/anchor-server";
-import {aio} from "../aio/aio";
 
 export class AioAgentListener {
     private readonly _connect:AioAgentConnect;
@@ -12,11 +11,6 @@ export class AioAgentListener {
     constructor( connect:AioAgentConnect ) {
         this._connect = connect;
         this._agent = connect.agent;
-        this.server.onListen( "line", line => {
-            // console.log( line );
-        });
-        // this.server.on( "data", data => console.log( "DATA-AGENT-LISTENER", data.toString() ))
-        // this.server.onListen( "chunk", chunk => console.log( "CHUNK-AGENT-LISTENER", chunk ) )
         this.server.onListen( "auth", (identifier, _private) => this.onAgentAuth( identifier, _private) )
         this.server.onListen( Event.SLOTS, ( args ) => this.onSlot( args ) )
         this.server.onListen( Event.AIO, ( args ) => this.onAio( args ) )
@@ -53,7 +47,7 @@ export class AioAgentListener {
             console.log( "[ANCHORIO] Agent>", `Connected to server aio://${ this.agent.opts.serverHost }:${this.agent.opts.serverPort } with id ${chalk.blueBright(this.connect.id) } ${ chalk.greenBright(`\\AUTHENTICATED-IN-SERVER`)}` );
 
         } else {
-            console.log( "[ANCHORIO] Agent>", chalk.redBright(`Auth rejected from server with message ${ _private } \\REJECTED-IN-SERVER`) );
+            console.log( "[ANCHORIO] Agent>", chalk.redBright(`Auth rejected from server with message ${ _private.message } \\SERVER REJECTION`) );
             this.connect.server.close();
         }
     }
@@ -61,7 +55,7 @@ export class AioAgentListener {
         let slot = args.aioType;
         let opts = args.needOpts;
         this.connect.needAnchor( slot, this.agent.identifier, opts ).catch( reason => {});
-        console.log( "[ANCHORIO] Agent>", chalk.blueBright( `Server need more anchor slots ${ slot } code: ${ opts.key }!`))
+        console.log( "[ANCHORIO] Agent>", `Server need more anchor slots ${ chalk.blueBright( slot ) } code: ${ chalk.blueBright( opts.key ) }!`)
     }
 
     private onAio( args:typeof SIMPLE_HEADER.aio ) {

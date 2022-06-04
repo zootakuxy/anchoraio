@@ -46,11 +46,13 @@ export class AioServer<M extends Meta> {
             let _accept = ( ...data:any[] )=>{
                 _isAuth = true;
                 if( this.opts.sendHeader ) aioSocket.send( "auth", aioSocket.id, ...data );
+                this.onAccept( aioSocket, ...data )
 
             }, _reject = (...args:any[])=>{
                 _isAuth = false;
                 if( this.opts.sendHeader ) aioSocket.send( "auth", null, ...args );
                 else aioSocket.close();
+                this.onReject( aioSocket, ...args );
             }
 
             if( typeof this.opts.auth === "function" ) {
@@ -73,11 +75,6 @@ export class AioServer<M extends Meta> {
         });
     }
 
-    private sendAuth(){
-
-    }
-
-
     get opts(): AioServerOpts {
         return this._opts;
     }
@@ -86,8 +83,7 @@ export class AioServer<M extends Meta> {
         return this._aioSockets;
     }
 
-    protected onAttach( aioSocket:AioSocket<M> ){
-    }
+    protected onAttach( aioSocket:AioSocket<M> ){ }
 
     protected notifyConnection( aioConnection:AioSocket<M>){
         this._listener.once.splice(0, this._listener.on.length ).forEach( value => value( aioConnection ) )
@@ -171,9 +167,7 @@ export class AioServer<M extends Meta> {
         if( !!this._aioSockets[ socket.id ] ) return false;
         this._aioSockets[ socket.id ] = socket;
         socket.on( "close", hadError =>  this.eject( socket ) );
-    }
-
-    eject( ... sockets: (AioSocket<M>|string)[] ) {
+    } eject( ... sockets: (AioSocket<M>|string)[] ) {
         let _aio = sockets.map( this.of );
         _aio.forEach( value => {
             if( !value ) return;
@@ -184,6 +178,10 @@ export class AioServer<M extends Meta> {
 
     get sockets(){
         return Object.values( this._aioSockets );
+    } get ids(){
+        return Object.keys( this._aioSockets )
+    } get entries():({key:string, value:AioSocket<M>})[]{
+        return Object.entries( this._aioSockets ).map( (value)=> ({key:value[0], value:value[1]}))
     }
 
     get server(): net.Server {
@@ -192,4 +190,8 @@ export class AioServer<M extends Meta> {
 
     start( callback?:()=>void){         this.server.listen( this.opts.port, callback ); }
     stop( callback?:( err?:Error)=>void){  this.server.close( callback ); }
+
+    protected onAccept(aioSocket: AioSocket<any>, ...param2: any[]) {}
+
+    protected onReject(aioSocket: AioSocket<any>, ...param2: any[]) {}
 }

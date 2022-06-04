@@ -174,7 +174,11 @@ export class AioAgentConnect {
                 })
             });
 
-            connection.onListen( "auth", identifier => {
+            connection.onListen( "auth", (identifier, auth:typeof SIMPLE_HEADER.authResult ) => {
+                if( !identifier ){
+                    console.log( "[ANCHORIO] Agent>", chalk.redBright( `Create new chanel rejected by server with ${ auth?.message }!` )  );
+                    return;
+                }
                 this.chanel.push( connection );
                 console.log( "[ANCHORIO] Agent>", `Create new chanel ${ chalk.blueBright( connection.id )}  referer ${ this.id }!`  );
             });

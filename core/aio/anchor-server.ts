@@ -16,8 +16,8 @@ interface Chunk {
 }
 
 export enum AioType {
-    AIO_IN="IOType.ANCHOR_IN",
-    AIO_OUT="IOType.ANCHOR_OUT"
+    AIO_IN="AioType.AIO_IN",
+    AIO_OUT="AioType.AIO_OUT"
 }
 
 export type AnchorPoint = "CLIENT"|"CONNECTION"|"SERVER";
@@ -128,13 +128,10 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
     } get anchorPoint(): AnchorPoint {
         return this._anchorPoint;
 
-    } protected notifyConnection( aioConnection: AioSocket<AnchorMeta<E>> ){
-        this.mergeMeta( aioConnection, { auth: false, status: "unknown", pendents: [],anchorConnection: "lost" })
-        this._register( aioConnection, { anchorPoint: this.anchorPoint } );
-
-        super.notifyConnection( aioConnection );
+    } protected onAttach(aioSocket: AioSocket<AnchorMeta<E>>) {
+        this.mergeMeta( aioSocket, { auth: false, status: "unknown", pendents: [],anchorConnection: "lost" })
+        this._register( aioSocket, { anchorPoint: this.anchorPoint } );
     }
-
 
     private needAnchor( aioType:AioType, server:string, restoreRequest?:string ):Promise<AioSocket<AnchorMeta<E>>>{
         return new Promise( ( resolve, reject) => {
