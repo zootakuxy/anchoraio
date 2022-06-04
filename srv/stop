@@ -11,8 +11,8 @@ elif [ "$1" == "SERVER" ]; then
     _command="server"
 
 elif [ "$1" == "AGENT-SERVER" ]; then
-    _command="agent"
     app="ANCHOR-AIO-AGENT-SERVER"
+    _command="agent"
 else
   exit;
 fi;
