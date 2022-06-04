@@ -1,18 +1,24 @@
-args="--noDNS";
+noDNS="";
 mode="dev";
+selfMaster=""
+
 
 if [ "$1" == "AGENT" ]; then
     app="ANCHOR-AIO-AGENT"
     _command="agent"
-
-elif [ "$1" == "SERVER" ]; then
-    app="ANCHOR-AIO-SERVER"
-    args="${args} --self-server"
-    _command="server"
+    noDNS="--noDNS"
 
 elif [ "$1" == "AGENT-SERVER" ]; then
     _command="agent"
     app="ANCHOR-AIO-AGENT-SERVER"
+    noDNS="--noDNS"
+    selfMaster="--self-server"
+
+elif [ "$1" == "SERVER" ]; then
+    app="ANCHOR-AIO-SERVER"
+    _command="server"
+
+
 else
   exit;
 fi;
@@ -25,5 +31,5 @@ if [ "$2" == "prod" ]; then mode="prod"; fi;
 #  echo "${app} is running... Stop first for continue";
 #  echo "srv/stop ${app}"
 #else
-  node start "${_command}" ${args} --app-label ${app} --mode ${mode} &
+  node start "${_command}" ${selfMaster} ${noDNS} --app-label ${app} --mode ${mode} &
 #fi;
