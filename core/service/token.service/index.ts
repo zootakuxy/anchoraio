@@ -49,7 +49,9 @@ export class TokenService {
     public listAll() {
         let _extension = this.extension;
         let list: ({ identifier, date, filename, cfg, status:"active"|"disable"})[] = [];
+        console.log( "Token folder", this.folder );
         fs.readdirSync( this. folder ).filter( value => _extension.test( value ) ).forEach(configName => {
+            console.log( configName );
             let _token = this.tokenOf( configName );
             if( !_token.token ) return;
             list.push({
