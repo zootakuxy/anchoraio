@@ -28,8 +28,9 @@ export class AioAgentConnect {
             auth: HEADER.auth(  {
                 origin: self._agent.identifier,
                 server: self._agent.identifier,
-                token: "1234",
-                level: "primary"
+                token: self.agent.token.token,
+                level: "primary",
+                instance: self.agent.instance
             }),
             autoReconnect: () => this.autoReconnect()
         });
@@ -42,12 +43,10 @@ export class AioAgentConnect {
                 return;
             }
 
-            if( identifier ){
-                this._id = identifier;
-                this._anchorPort = authResult.anchorPort;
-                this._authStatus = "accepted";
-                return;
-            }
+            this._id = identifier;
+            this._anchorPort = authResult.anchorPort;
+            this._authStatus = "accepted";
+            this.agent.request.continue();
 
         });
 
@@ -170,7 +169,8 @@ export class AioAgentConnect {
                     origin: this.agent.identifier,
                     server: this.agent.identifier,
                     referer: this.id,
-                    token: "1234"
+                    token: this.agent.token.token,
+                    instance: this.agent.instance
                 })
             });
 

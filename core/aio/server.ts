@@ -4,13 +4,15 @@ import {AioSocket, AioSocketOpts, convertToAioSocket, Meta} from "./socket";
 
 export type OnAioConnectionListener<M extends Meta> = (aioSocket:AioSocket<M> ) => void;
 
-export interface AioServerOpts {
+
+
+export interface AioServerOpts{
     port:number,
     identifier?:string,
     namespace?:string,
     sendHeader?:boolean,
     listenEvent?:boolean,
-    auth?( aioSocket: AioSocket<any>, args:any, accept:( ...args:any[])=>void, reject:( ...args:any[] )=>void )
+    auth?( aioSocket: AioSocket<any>, args:any, accept:( ...args:any[])=>true, reject:( ...args:any[] )=>false )
 }
 
 export class AioServer<M extends Meta> {
@@ -43,16 +45,18 @@ export class AioServer<M extends Meta> {
             opts.listenEvent = this.opts.listenEvent;
             let aioSocket = convertToAioSocket( socket, opts );
 
-            let _accept = ( ...data:any[] )=>{
+            let _accept = ( ...data:any[] ):true=>{
                 _isAuth = true;
                 if( this.opts.sendHeader ) aioSocket.send( "auth", aioSocket.id, ...data );
-                this.onAccept( aioSocket, ...data )
+                this.onAccept( aioSocket, ...data );
+                return true;
 
-            }, _reject = (...args:any[])=>{
+            }, _reject = (...args:any[]):false=>{
                 _isAuth = false;
                 if( this.opts.sendHeader ) aioSocket.send( "auth", null, ...args );
                 else aioSocket.close();
                 this.onReject( aioSocket, ...args );
+                return false;
             }
 
             if( typeof this.opts.auth === "function" ) {
@@ -65,7 +69,7 @@ export class AioServer<M extends Meta> {
 
             aioSocket.on( "close", hadError => {
                 if( !!this._aioSockets[  aioSocket.id ] ) delete this._aioSockets[ aioSocket.id ];
-                else this._aioSockets[ aioSocket.id ] = undefined;
+                else delete this._aioSockets[ aioSocket.id ];
             });
 
             this._aioSockets[ aioSocket.id ] = aioSocket;
@@ -143,11 +147,11 @@ export class AioServer<M extends Meta> {
         return socket.meta;
     }
 
-    filterSocketByMeta( callback:( meta:M )=>boolean|void):AioSocket<M>[]{
+    filterSocketByMeta( callback:( meta:M, socket:AioSocket<M> )=>boolean|void):AioSocket<M>[]{
         if( typeof callback !== "function" ) return null;
         return Object.keys( this._aioSockets ).filter( value => {
             if( !this._aioSockets[value].meta ) this._aioSockets[value].meta = {} as M;
-            callback(  this._aioSockets[value].meta )
+            callback(  this._aioSockets[value].meta, this._aioSockets[ value ] )
         }).map( value => this._aioSockets[ value ]);
     }
 
@@ -168,8 +172,7 @@ export class AioServer<M extends Meta> {
         this._aioSockets[ socket.id ] = socket;
         socket.on( "close", hadError =>  this.eject( socket ) );
     } eject( ... sockets: (AioSocket<M>|string)[] ) {
-        let _aio = sockets.map( this.of );
-        _aio.forEach( value => {
+        sockets.map( socket => this.of( socket ) ).forEach( value => {
             if( !value ) return;
             if( !this._aioSockets[ value.id ] ) return;
             delete this._aioSockets[ value.id ];

@@ -7,6 +7,7 @@ export enum Event {
     AIO_REJECTED="Event.AIO_REJECTED",
     AIO_ANCHORED="Event.AIO_ANCHORED",
     AIO_RESTORE="Event.AIO_RESTORE",
+    AIO_END_ERROR="Event.AIO_END_ERROR",
 
     SLOTS="Event.SLOTS",
     CHANEL_FREE="Event.CHANEL_FREE",
@@ -22,6 +23,11 @@ export interface RestoreOpts {
 }
 
 export const SIMPLE_HEADER = {
+    aioEndError: null as {
+        request:string,
+        replayTo:string,
+        origin:string,
+    },
     aio: null as {
         origin:string,
         request:string,
@@ -37,7 +43,12 @@ export const SIMPLE_HEADER = {
         message?:string
 
     }, auth: null as {
-        token:string, origin:string, server:string, level:"primary"|"secondary", referer?:string
+        token:string,
+        origin:string,
+        server:string,
+        level:"primary"|"secondary",
+        referer?:string,
+        instance:string
 
     }, slot: null as {
         aioType:AioType,

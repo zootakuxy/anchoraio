@@ -42,10 +42,16 @@ export module aio {
         dns: [ "8.8.8", "8.8.4.4" ]
     }
 
-    export interface GlobalOpts {
+    export interface BaseOpts {
         etc:string,
-        envFile:string
+        envFile:string,
     }
+
+    export type GlobalOpts = BaseOpts &{
+        maxSlots:number
+        minSlots:number
+    }
+
 }
 
 

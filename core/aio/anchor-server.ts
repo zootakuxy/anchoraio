@@ -2,7 +2,7 @@ import {Buffer} from "buffer";
 import {AioServer, AioServerOpts} from "./server";
 import {AioSocket} from "./socket";
 import {aio} from "./aio";
-import {RestoreOpts, SIMPLE_HEADER} from "./share";
+import {Event, HEADER, RestoreOpts, SIMPLE_HEADER} from "./share";
 import {nanoid} from "nanoid";
 import chalk from "chalk";
 import {lib} from "./lib";
@@ -76,7 +76,7 @@ export interface AnchorServerOpts<E> {
     maxSlots: number
     anchorPoint?: AnchorPoint,
     onNeedAnchor:OnNeedAnchor<E>,
-    chanelOf( server:string ):AioSocket<any>
+    emit( server:string, event:Event, ...data:any[] )
 }
 
 export interface AnchorAuthOption {
@@ -113,8 +113,8 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
         }));
 
         this._anchorOpts = opts as AnchorServerOpts<E>;
-        this._minSlots = opts.minSlots|| 1;
-        this._maxSlots = opts.maxSlots|| 1;
+        this._minSlots = opts.minSlots||0;
+        this._maxSlots = opts.maxSlots||0;
         this._anchorPoint = opts.anchorPoint;
     }
 
@@ -190,8 +190,13 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
 
             if( aioAnchor.meta.onError === "END" ) {
                 let other = this.of( aioAnchor.meta.anchorWith );
-                if( !other ) return;
-                other.close();
+                if( other ) other.close();
+                this.anchorOpts.emit( aioAnchor.meta.anchorWithOrigin, Event.AIO_END_ERROR, HEADER.aioEndError({
+                    request: aioAnchor.meta.anchorRequest,
+                    replayTo: aioAnchor.meta.anchorWithOrigin,
+                    origin: aioAnchor.meta.server
+                }));
+
                 console.log( "[ANCHORIO] Stop anchored par by error" );
                 return;
             }
@@ -318,13 +323,11 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
                 res.meta.anchorStatus = "busy";
                 _resolve( res );
                 let counts = this.counts( aioType, server );
-                //TODO descomentar aqui depois
                 if( counts < this._minSlots ) this.openAnchor( aioType, server ).catch( err => {});
              }
 
             let freeSlot:AioSocket<AnchorMeta<E>>;
             if( anchor ) return resolve( this.of( anchor ) );
-
             let array = this._aio[ aioType ][ server ];
 
             while ( !freeSlot && array.length ){
@@ -336,7 +339,7 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
 
             if( freeSlot ) return resolve( freeSlot);
 
-            this.openAnchor( aioType, server ).then( freeSlot => {
+            this.needAnchor( aioType, server ).then( freeSlot => {
                 if( !freeSlot ) return resolve( null );
                 resolve( freeSlot );
             });

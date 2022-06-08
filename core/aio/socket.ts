@@ -42,13 +42,16 @@ export interface AioSocket<M extends Meta> extends net.Socket, AioExtension<M>{
 
 }
 
+type AuthData = string|object|number|boolean;
+
+
 export interface AioSocketOpts<M> {
     id?:string,
     isConnected:boolean
     listenEvent?:boolean,
     autoReconnect?:AutoReconnect
     reconnectTimeout?:number,
-    auth?:any
+    auth?:AuthData|(()=>AuthData|Promise<AuthData>)
     meta?:M
     isAuth?():boolean
 }
@@ -216,9 +219,17 @@ export function convertToAioSocket<M extends Meta>( socket:net.Socket, opts?:str
 
     socket.on( "connect", () => {
         _aio.connected = true;
-        if( _opts.auth ){
-            aioSocket.send( JSON.stringify( _opts.auth ) );
+        let _authNow = ( data:AuthData )=>{
+            aioSocket.send( JSON.stringify( data ) );
         }
+
+        let _authData = _opts.auth;
+
+        if( typeof _authData === "undefined" || (typeof _authData === "object" && !_authData ) ) return;
+        if( typeof _authData !== "function" ) return _authNow( _authData );
+        _authData = _authData();
+        if( _authData instanceof Promise ) return _authData.then( value => _authNow( value ));
+        return _authNow( _authData );
     });
 
     let listenData = listenEventOnData( aioSocket );

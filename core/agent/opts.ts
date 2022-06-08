@@ -13,8 +13,6 @@ export type AgentOpts = aio.GlobalOpts & {
     noAPI: boolean
     dns:string[],
     reconnectTimeout:number
-    maxSlots:number
-    minSlots:number
     chanel:number
     selfServer:boolean
 };
@@ -104,20 +102,6 @@ export function agentOptsBuilder( yargs:Argv<AgentOpts> ){
     yargs.option( "selfServer",  {
         type: "boolean",
         description: "Start self server"
-    })
-
-    yargs.option( "maxSlots", {
-        type: "number",
-        default: aio.Defaults.maxSlots,
-        demandOption: true,
-        coerce: lib.typeParser.asInt
-    })
-
-    yargs.option( "minSlots", {
-        type: "number",
-        default: aio.Defaults.minSlots,
-        demandOption: true,
-        coerce: lib.typeParser.asInt
     })
 
     yargs.option( "chanel", {

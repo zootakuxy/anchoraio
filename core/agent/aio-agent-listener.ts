@@ -1,6 +1,6 @@
 import {AioAgentConnect} from "./aio-agent-connect";
 import {AioAgent} from "./aio-agent";
-import {Event,  SIMPLE_HEADER} from "../aio/share";
+import {Event, SIMPLE_HEADER} from "../aio/share";
 import chalk from "chalk"
 import {AioType} from "../aio/anchor-server";
 
@@ -23,6 +23,7 @@ export class AioAgentListener {
             this.onAioReject( args );
         });
         this.server.onListen( Event.AIO_ANCHORED, ( args) => this.onAioAnchored( args ) );
+        this.server.onListen( Event.AIO_END_ERROR, ( args) => this.onAioEndError( args ) );
 
         this.server.onListen( "*", (event, args) => {
             if( [Event.AIO_REJECTED, Event.AIO_ANCHORED, Event.AIO_CANCELLED ].includes( event as Event )){
@@ -42,8 +43,8 @@ export class AioAgentListener {
     private onAgentAuth( identifier, _private:typeof SIMPLE_HEADER.authResult) {
         if( identifier ){
             this.connect.createChanel();
-            this.connect.needAnchor( AioType.AIO_IN ).then()
-            this.connect.needAnchor( AioType.AIO_OUT ).then();
+            if( this.agent.anchorServer.counts( AioType.AIO_IN, this.agent.identifier ) < this.agent.opts.minSlots ) this.connect.needAnchor( AioType.AIO_IN ).then()
+            if( this.agent.anchorServer.counts( AioType.AIO_OUT, this.agent.identifier ) < this.agent.opts.minSlots ) this.connect.needAnchor( AioType.AIO_OUT ).then()
             console.log( "[ANCHORIO] Agent>", `Connected to server aio://${ this.agent.opts.serverHost }:${this.agent.opts.serverPort } with id ${chalk.blueBright(this.connect.id) } ${ chalk.greenBright(`\\AUTHENTICATED-IN-SERVER`)}` );
 
         } else {
@@ -92,7 +93,7 @@ export class AioAgentListener {
         let request = this.agent.anchorServer.of( args.request );
         if( !request ) return;
         request.meta.extras.result = "success";
-        console.log( `[ANCHORIO] Agent>`, `Anchor form local ${ args.origin } to remote application ${ args.application }@${ args.server } not found connection ${chalk.greenBright("\\CONNECTED")}!` );
+        console.log( `[ANCHORIO] Agent>`, `Anchor form local ${ args.origin } to remote application ${ args.application }@${ args.server } ${chalk.greenBright("\\CONNECTED")}!` );
 
     }
 
@@ -101,10 +102,15 @@ export class AioAgentListener {
         let anchor = this.agent.anchorServer.of( args.anchor_form );
         if( request ) request.meta.extras.status = "complete";
 
-        // this.agent.anchorServer.ejects( request, anchor );
         if( event !== Event.AIO_ANCHORED ){
             request?.close();
             anchor.close();
         }
+    }
+
+    private onAioEndError( args:typeof SIMPLE_HEADER.aioEndError ) {
+        this.agent.anchorServer.filterSocketByMeta( meta => meta.anchorRequest === args.request ).forEach( value => {
+            value.close();
+        })
     }
 }

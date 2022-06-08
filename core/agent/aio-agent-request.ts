@@ -6,6 +6,7 @@ import chalk from "chalk";
 
 export class AioAgentRequest {
     private readonly _agent:AioAgent;
+    private _pendentsRequest:AioSocket<AnchorMeta<AgentRequest>>[] = [];
 
     constructor( agent:AioAgent ) {
         this._agent = agent;
@@ -16,6 +17,12 @@ export class AioAgentRequest {
 
     get agent(): AioAgent {
         return this._agent;
+    }
+
+    public continue(){
+        this._pendentsRequest.splice(0, this._pendentsRequest.length ).forEach( value => {
+            this.startAnchor( value );
+        });
     }
 
     private startAnchor( req:AioSocket<AnchorMeta<AgentRequest>> ){
@@ -61,7 +68,8 @@ export class AioAgentRequest {
             if( ! this.agent.isConnected ) status = "disconnected";
             if( this.agent.connect.authStatus !== "accepted" ) status+= ` ${this.agent.connect.authStatus}`;
         }
-        req.on( "error", err =>{ console.log( "[ANCHORIO] Agent>", `Request ID ${ req.id } socket error ${err.message}` ); })
+        req.on( "error", err =>{ console.log( "[ANCHORIO] Agent>", `Request ID ${ req.id } socket error ${err.message}` ); });
+
         const remoteAddressParts = req.address()["address"].split( ":" );
         const address =  remoteAddressParts[ remoteAddressParts.length-1 ];
         let aioAnswerer = this.agent.aioResolve.serverName( address );
@@ -72,7 +80,8 @@ export class AioAgentRequest {
         req.meta.extras.aioAnswerer = aioAnswerer;
         req.meta.extras.agentServer = agentServer;
 
-        this.startAnchor( req );
+        if( this.agent.connect.authStatus === "accepted" ) this.startAnchor( req );
+        else this._pendentsRequest.push( req );
     }
 
 }

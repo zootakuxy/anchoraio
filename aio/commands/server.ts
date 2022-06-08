@@ -1,12 +1,12 @@
 import yargs, {BuilderCallback} from "yargs";
 import { ServerOptions, serverBuilderOptions} from "../../core/server/opts";
-import {globalOptsBuilder} from "../opts";
+import {aioOpts} from "../opts";
 
 export const command = "server";
 export const desc:string = "Start server service";
 
 export const builder:BuilderCallback<ServerOptions, any> = yargs => {
-    return globalOptsBuilder( serverBuilderOptions( yargs ), value => {
+    return aioOpts( serverBuilderOptions( yargs ), value => {
         return Object.assign({}, value?.server||{} );
     })
 };

@@ -3,11 +3,13 @@ import {loadConfigsFile} from "./load";
 import {AgentOpts} from "../core/agent/opts";
 import Path from "path";
 import {aio} from "../core/aio/aio";
+import {lib} from "../core/aio/lib";
+import BaseOpts = aio.BaseOpts;
 
 
 
 
-export function globalOptsBuilder( yargs:Argv<aio.GlobalOpts>, parse:( value:any )=>any){
+export function baseOpts(yargs:Argv<BaseOpts>, parse:(value:any )=>any):Argv<BaseOpts>{
     return yargs.env("AIO" )
         .options("envFile", {
             default: aio.Defaults.envFile,
@@ -27,4 +29,22 @@ export function globalOptsBuilder( yargs:Argv<aio.GlobalOpts>, parse:( value:any
         })
         .parserConfiguration({ "strip-aliased": true
         })
+}
+
+export function aioOpts(yargs:Argv<aio.GlobalOpts>, parse:(value:any )=>any){
+    yargs.option( "maxSlots", {
+        type: "number",
+        default: aio.Defaults.maxSlots,
+        demandOption: true,
+        coerce: lib.typeParser.asInt
+    })
+
+    yargs.option( "minSlots", {
+        type: "number",
+        default: aio.Defaults.minSlots,
+        demandOption: true,
+        coerce: lib.typeParser.asInt
+    })
+    return baseOpts( yargs, parse );
+
 }
