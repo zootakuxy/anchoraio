@@ -208,29 +208,25 @@ export class AioCentralListener{
             origin.send( Event.AIO_CANCELLED, Object.assign( args, { canselMessage:message}) );
         }
 
-        this.waitChanelOf( args.server ).then( destine => {
-            if( !destine ) return reject( `Agent Server not found!` );
+        let destine = this.chanelOf( args.server );
+        if( !destine ) return reject( `Agent Server not found!` );
 
-            destine.meta.channelStatus = "busy";
-            destine.meta.requests++;
+        destine.meta.channelStatus = "busy";
+        destine.meta.requests++;
 
-            let out = this.central.anchorServer.nextSlot( AioType.AIO_OUT, origin.meta.server, args.anchor_form  );
-            let _in = this.central.anchorServer.nextSlot( AioType.AIO_IN, destine.meta.server );
+        let out = this.central.anchorServer.nextSlot( AioType.AIO_OUT, origin.meta.server, args.anchor_form  );
+        let _in = this.central.anchorServer.nextSlot( AioType.AIO_IN, destine.meta.server );
 
-            // origin.resume();
-            Promise.all([ out, _in ]).then( value => {
-                const [ anchorOUT, anchorIN ] = value;
-                this.central.anchorServer.anchor( anchorOUT, anchorIN, args.request );
-                destine.send( Event.AIO, Object.assign( args, {
-                    anchor_to: anchorIN.id
-                }));
-                origin.send( Event.AIO_SEND, args );
-                console.log( "[ANCHORIO] Server>",  `Anchor of request ${ args.request } from ${ args.anchor_form } to ${ args.server } ${ chalk.greenBright( "AIO'K" )}`)
-            });
-        })
-
-
-
+        // origin.resume();
+        Promise.all([ out, _in ]).then( value => {
+            const [ anchorOUT, anchorIN ] = value;
+            this.central.anchorServer.anchor( anchorOUT, anchorIN, args.request );
+            destine.send( Event.AIO, Object.assign( args, {
+                anchor_to: anchorIN.id
+            }));
+            origin.send( Event.AIO_SEND, args );
+            console.log( "[ANCHORIO] Server>",  `Anchor of request ${ args.request } from ${ args.anchor_form } to ${ args.server } ${ chalk.greenBright( "AIO'K" )}`)
+        });
     }
 
     public chanelOf( server:string ): AioSocket<CentralMeta>{

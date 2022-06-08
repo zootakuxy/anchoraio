@@ -75,7 +75,7 @@ export class AioAgentListener {
             }
         })
     }
-    private onAioCansel( args:typeof SIMPLE_HEADER.aio) {
+    private onAioCansel( args:typeof SIMPLE_HEADER.aio ) {
         console.log( `[ANCHORIO] Agent>`, chalk.redBright( `Anchor form ${ args.origin} to application ${ args.application } not found connection \\REJECTED!` ));
 
     }
@@ -103,6 +103,7 @@ export class AioAgentListener {
         if( request ) request.meta.extras.status = "complete";
 
         if( event !== Event.AIO_ANCHORED ){
+            console.log( "[ANCHORIO] Agent>", chalk.redBright( `Request ${ args.request } end without success` ) );
             request?.close();
             anchor.close();
         }
