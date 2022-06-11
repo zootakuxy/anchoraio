@@ -31,5 +31,5 @@ if [ "$2" == "prod" ]; then mode="prod"; fi;
 #  echo "${app} is running... Stop first for continue";
 #  echo "srv/stop ${app}"
 #else
-  node aio "${_command}" ${selfMaster} ${noDNS} --app-label ${app} --mode ${mode} &
+  nohup node aio "${_command}" ${selfMaster} ${noDNS} --app-label ${app} --mode ${mode} &
 #fi;
