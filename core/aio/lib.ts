@@ -1,7 +1,10 @@
 export module lib {
     export const typeParser = {
         isInt ( any ){ return Number.isSafeInteger( Number( any ) ) },
+        isNumber ( any ){ return !Number.isNaN( Number( any )) && Number.isFinite( Number( any ) )  },
         asInt( any ){ return typeParser.isInt( any )? Number( any ): undefined; },
+        toInt( any ){ return this.asInt( Math.trunc( Number( any ) ))},
+        asNumber( any ){ return typeParser.isNumber( any )? Number( any ): undefined; },
         asString( any ){ return any?.toString?.() },
         asStringArray( any ){
             if( !Array.isArray( any ) ) any = [ any ];

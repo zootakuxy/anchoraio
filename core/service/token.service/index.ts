@@ -9,7 +9,8 @@ export interface Token {
     identifier:string,
     token:string,
     date:string,
-    status:"active"|"disable"
+    status:"active"|"disable",
+    mail:string
 }
 
 export class TokenService {
@@ -25,7 +26,7 @@ export class TokenService {
         return this._opts;
     }
 
-    start(){
+    start():number{
         if( this.opts.list ) return this.listAll();
         if( this.opts.identifier && this.opts.generate ) return  this.generateToken();
         if( this.opts.identifier && this.opts.update ) return  this.updateToken();
@@ -46,15 +47,12 @@ export class TokenService {
        return new RegExp( `((^)*.${_extension})$`)
     }
 
-    public listAll() {
+    public listAll():number{
         let _extension = this.extension;
-        let list: ({ identifier, date, filename, cfg, status:"active"|"disable"})[] = [];
-        console.log( "Token folder", this.folder );
+        let list: ({ identifier, date, filename, cfg, status:"active"|"disable", mail:string})[] = [];
         fs.readdirSync( this. folder ).filter( value => {
-            console.log( _extension, value, _extension.test( value ) )
             return _extension.test( value )
         } ).forEach(configName => {
-            console.log( configName );
             let _token = this.tokenOf( configName );
             if( !_token.token ) return;
             list.push({
@@ -62,13 +60,33 @@ export class TokenService {
                 date: _token.token.date,
                 filename: _token.filename,
                 cfg: _token.confName,
+                mail: _token.token.mail,
                 status: _token.token.status
             });
         });
-        console.log( "=========================== LIST OF TOKEN ===========================");
-        console.table(
-            list
-        );
+        if( this.opts.format === "table" ){
+            console.info( "=========================== LIST OF TOKEN ===========================");
+            console.table( list );
+        } else if( this.opts.format === "json" ) {
+            console.info( JSON.stringify( list ))
+        } else if( this.opts.format === "file" ) {
+            list.forEach( value => console.info( value.filename ) ) ;
+        } else if( this.opts.format === "cfg" ){
+            list.forEach( value => console.info( value.cfg ) )
+        } else if( this.opts.format === "label" ){
+            list.forEach( (token, index) => {
+                if( index > 0 ) console.info( "===============================================================")
+                console.info( "IDENTIFIER:", token.identifier );
+                console.info( "MAIL      :", token.mail );
+                console.info( "DATE      :", token.date );
+                console.info( "FILE      :", token.filename );
+                console.info( "CFG       :", token.cfg );
+                console.info( "STATUS    :", token.status );
+            })
+        } else if( this.opts.format === "ini" ){
+            console.info( ini.stringify( list ) )
+        }
+        return 0;
     }
 
 
@@ -115,61 +133,69 @@ export class TokenService {
         };
     }
 
-    private showToken() {
+    private showToken():number {
         let { token, raw, filename, json, confName } = this.tokenOf( this.opts.identifier )
 
         if( !token ){
-            console.log( chalk.redBright( `Token for identifier ${ this.opts.identifier } not found or invalid!` ) );
-            return;
+            console.error( chalk.redBright( `Token for identifier ${ this.opts.identifier } not found or invalid!` ) );
+            return -1;
         }
 
         let _self = this;
-        (({  table(){
-                console.log( `=========================== TOKEN OF ${_self.opts.identifier} ===========================`);
+        let formats = (({  table(){
+                console.info( `=========================== TOKEN OF ${_self.opts.identifier} ===========================`);
                 console.table( [token] )
                 ;}, ini(){
-                console.log( raw );
+                console.info( raw );
             }, label(){
-                console.log( "IDENTIFIER:", token.identifier );
-                console.log( "DATE      :", token.date );
-                console.log( "TOKEN     :", token.token );
+                console.info( "IDENTIFIER:", token.identifier );
+                console.info( "DATE      :", token.date );
+                console.info( "TOKEN     :", token.token );
             }, file(){
-                console.log(filename);
+                console.info( filename );
             }, cfg(){
-                console.log( confName )
+                console.info( confName )
             }, json(){
-                console.log( json )
+                console.info( json )
             }
-        }) as {[p in typeof _self.opts.format ]?:()=>void }) [ _self.opts.format ]();
-
+        }) as {[p in typeof _self.opts.format ]?:()=>void });
+        if( Object.keys( formats ).includes( _self.opts.format ) ){
+            console.error( chalk.redBright( `Invalid format ${ this.opts.format }` ));
+            return -1;
+        }
+        formats[ _self.opts.format ]();
+        return 0;
     }
 
-    private updateToken(){
-        console.log( "UODATE TOKEN")
+    private updateToken():number{
         let {confName} = this.confNameOf();
         if( !confName ){
-            return console.log( chalk.redBright( 'Missing identifier for generate token!') ) ;
+            console.error( chalk.redBright( 'Missing identifier for generate token!') ) ;
+            return -1
         }
         let currentToken = this.tokenOf( confName );
         if( !currentToken?.token  ){
-            return console.log( chalk.redBright( `Token for identifier ${ this.opts.identifier } not found or invalid`) ) ;
+            console.error( chalk.redBright( `Token for identifier ${ this.opts.identifier } not found or invalid`) ) ;
+            return -1;
         }
         this.writeToken( currentToken.token.token, confName );
     }
 
-    private generateToken() {
+    private generateToken():number {
         let {confName} = this.confNameOf();
         if( !confName ){
-            return console.log( chalk.redBright( 'Missing identifier for generate token!') ) ;
+            console.error( chalk.redBright( 'Missing identifier for generate token!') );
+            return -1;
         }
 
         let currentToken = this.tokenOf( confName );
         if( currentToken?.token && !this.opts.update ){
-            return console.log( chalk.redBright( `Already exists token to ${ confName }. use [--update] to force generate`) ) ;
+            console.error( chalk.redBright( `Already exists token to ${ confName }. use [--update] to force generate`) ) ;
+            return -1;
         }
         let check = Math.trunc( (Math.random()*(9999-1000))+1000 );
         let token = `${new Date().getTime()}:${nanoid( 128 )}|${check}`;
-        this.writeToken( token, confName );
+        return this.writeToken( token, confName );
     }
 
     private writeToken( _token:string, confName:string ){
@@ -177,10 +203,11 @@ export class TokenService {
             identifier: this.opts.identifier,
             date: new Date().toISOString(),
             token: _token,
-            status: this.opts.status
+            status: this.opts.status,
+            mail: this.opts.mail
         };
         let tokenData = ini.stringify( token );
         fs.writeFileSync( Path.join( this.folder, confName), tokenData );
-        this.showToken();
+        return this.showToken();
     }
 }

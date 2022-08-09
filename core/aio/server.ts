@@ -1,13 +1,19 @@
 import net from "net";
-import {nanoid} from "nanoid";
 import {AioSocket, AioSocketOpts, convertToAioSocket, Meta} from "./socket";
+import fs from "fs";
+import chalk from "chalk";
+import os from "os";
+import Path from "path";
 
 export type OnAioConnectionListener<M extends Meta> = (aioSocket:AioSocket<M> ) => void;
 
+function nanoid( len:number ){
+    return String( Math.random()*99999999999 );
+}
 
-
+type ServerListen = string|number;
 export interface AioServerOpts{
-    port:number,
+    listen:ServerListen|ServerListen[],
     identifier?:string,
     namespace?:string,
     sendHeader?:boolean,
@@ -17,7 +23,7 @@ export interface AioServerOpts{
 
 export class AioServer<M extends Meta> {
     private readonly _opts:AioServerOpts;
-    private readonly _server:net.Server;
+    private readonly _net:net.Server;
 
     protected _serial:{[p:string]:number} = new Proxy({},{
         get(target: {}, p: string | symbol, receiver: any): any {
@@ -26,21 +32,28 @@ export class AioServer<M extends Meta> {
         }
     });
 
+    public static pathFrom( ...ctrl :string[]):string{
+        let _ctrl = Path.join( ...ctrl )
+        if( os.platform() === "win32" ) return Path.join( "\\\\?\\pipe", _ctrl );
+        else return _ctrl;
+    }
+
     private _aioSockets:{ [p:string]:AioSocket<M> } = {}
-    private _listener:{ on?:OnAioConnectionListener<M>[], once?:OnAioConnectionListener<M>[] } = new Proxy({}, {
+    private _connectionListener:{ on?:OnAioConnectionListener<M>[], once?:OnAioConnectionListener<M>[] } = new Proxy({}, {
         get(target: {}, p: string | symbol, receiver: any): any {
             if( !target[p] ) target[p] =[];
             return target[p]
         }
     });
 
+
     constructor( opts:AioServerOpts ) {
         this._opts = opts;
-        this._server = net.createServer(( socket)=>{
+        this._net = net.createServer((socket)=>{
             let _isAuth:boolean;
             let opts:AioSocketOpts<M> = { id: this.nextId(), isConnected: true, isAuth(){
-                return _isAuth;
-            }};
+                    return _isAuth;
+                }};
 
             opts.listenEvent = this.opts.listenEvent;
             let aioSocket = convertToAioSocket( socket, opts );
@@ -90,18 +103,18 @@ export class AioServer<M extends Meta> {
     protected onAttach( aioSocket:AioSocket<M> ){ }
 
     protected notifyConnection( aioConnection:AioSocket<M>){
-        this._listener.once.splice(0, this._listener.on.length ).forEach( value => value( aioConnection ) )
-        this._listener.on.forEach( onListener => onListener( aioConnection ) );
+        this._connectionListener.once.splice(0, this._connectionListener.on.length ).forEach( value => value( aioConnection ) )
+        this._connectionListener.on.forEach( onListener => onListener( aioConnection ) );
     }
 
     private nextId(){
-        let id = `${this.opts.namespace }://${ this.opts.identifier }:${ this.opts.port }/${ nanoid( 16 )}?${ this._serial["id"] }`;
+        let id = `${this.opts.namespace }://${ this.opts.identifier }/${ nanoid( 16 )}?${ this._serial["id"] }`;
         if( !this._aioSockets[ id ] ) return id;
         else return this.nextId();
     }
 
-    onConnection( onConnection:OnAioConnectionListener<M> ){ this._listener.on.push( onConnection )}
-    onceConnection( onConnection:OnAioConnectionListener<M> ){ this._listener.once.push( onConnection)}
+    onConnection( onConnection:OnAioConnectionListener<M> ){ this._connectionListener.on.push( onConnection )}
+    onceConnection( onConnection:OnAioConnectionListener<M> ){ this._connectionListener.once.push( onConnection)}
 
     of( id:string|AioSocket<M> ){
         let socket:AioSocket<M>;
@@ -141,6 +154,14 @@ export class AioServer<M extends Meta> {
         return this._aioSockets[ id ];
     }
 
+    broadcast( str:string );
+    broadcast( event:string, ...data:any[]);
+    broadcast( event:string, ...data:any[]) {
+        // this.sockets.forEach( value => {
+        //     if( value.connected ) value.send(event, ...data );
+        // })
+    }
+
     metaOf( id:string):M{
         let socket = this.socketOf( id );
         if( !socket ) return null;
@@ -151,7 +172,7 @@ export class AioServer<M extends Meta> {
         if( typeof callback !== "function" ) return null;
         return Object.keys( this._aioSockets ).filter( value => {
             if( !this._aioSockets[value].meta ) this._aioSockets[value].meta = {} as M;
-            callback(  this._aioSockets[value].meta, this._aioSockets[ value ] )
+            return callback(  this._aioSockets[value].meta, this._aioSockets[ value ] )
         }).map( value => this._aioSockets[ value ]);
     }
 
@@ -179,7 +200,7 @@ export class AioServer<M extends Meta> {
         });
     }
 
-    get sockets(){
+    get sockets():AioSocket<M>[]{
         return Object.values( this._aioSockets );
     } get ids(){
         return Object.keys( this._aioSockets )
@@ -187,12 +208,53 @@ export class AioServer<M extends Meta> {
         return Object.entries( this._aioSockets ).map( (value)=> ({key:value[0], value:value[1]}))
     }
 
-    get server(): net.Server {
-        return this._server;
+    get net(): net.Server {
+        return this._net;
     }
 
-    start( callback?:()=>void){         this.server.listen( this.opts.port, callback ); }
-    stop( callback?:( err?:Error)=>void){  this.server.close( callback ); }
+    start( callback?:( listen:ServerListen, error?:Error )=>void){
+        let self = this;
+        let _listen:ServerListen[] = [];
+        if( Array.isArray( this.opts.listen ) ) _listen.push( ...this.opts.listen );
+        else _listen.push( this.opts.listen );
+
+        _listen.forEach( value => {
+            this.net.listen( value, () => {
+                if( typeof callback === "function" ) callback( value );
+            });
+        });
+
+        this.net.on( "error", err => {
+            console.log( "[launcher]", err );
+            let address:string = err["address" ];
+            if( os.platform() !== "linux" ) return;
+
+            if( err[ "code" ] === "EADDRINUSE" && !! address && fs.existsSync( address ) ){
+                console.log( "[launcher]", `Try restore address ${ address }...` );
+
+                let check = net.connect({ path: address });
+                check.on('error', function( e ) {
+                    console.log( "[launcher]", e );
+                    if ( e["code"] == 'ECONNREFUSED' ) {
+                        fs.unlinkSync( address );
+                        console.log( "[elevate]", `Removed ctrl ${ address }`, fs.existsSync( address ) );
+                        self.net.listen( address, function() {
+                            if( typeof callback === "function" ) callback( address );
+                        });
+                    }
+                });
+
+                check.on( "connect", () => check.end( () => {
+                    console.log( "[launcher]", `Try restore address ${ address }... ${ chalk.redBright("FAILED")}` );
+                    if( typeof callback === "function" ) callback( address, err );
+                }));
+            }
+        })
+    }
+    stop( callback?:( err?:Error)=>void){
+        this.net.close( callback );
+        this.sockets.forEach( value => value.close() );
+    }
 
     protected onAccept(aioSocket: AioSocket<any>, ...param2: any[]) {}
 

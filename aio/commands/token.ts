@@ -23,5 +23,7 @@ export const handler = function ( argv: yargs.Arguments<TokenOption> ) {
         });
     }
     const { TokenService } =  require( "../../core/service/token.service" );
-    new TokenService( argv ).start();
+    let ts = new TokenService( argv );
+    let resultCode = ts.start();
+    process.exit( resultCode );
 }

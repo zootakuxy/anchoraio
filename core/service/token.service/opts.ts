@@ -1,4 +1,4 @@
-import  {Argv} from "yargs";
+import {alias, Argv} from "yargs";
 import {aio} from "../../aio/aio";
 import {lib} from "../../aio/lib";
 
@@ -9,6 +9,7 @@ export type TokenOption = aio.GlobalOpts & {
     list?:boolean
     format?:"table"|"json"|"label"|"ini"|"file"|"cfg",
     status?:"active"|"disable"
+    mail?:string
 };
 
 export function tokenBuilderOptions(yargs:Argv<TokenOption> ){
@@ -20,12 +21,18 @@ export function tokenBuilderOptions(yargs:Argv<TokenOption> ){
         // demandOption: true
     });
 
-    yargs.option( "generate",  {
+    yargs.option( "mail", {
+        type: "string",
+        coerce: lib.typeParser.asString,
+        description: "Agent mail",
+    });
+
+    yargs.option( "generate",  { alias: [ "g" ],
         type: "boolean",
         description: "Generate or update token for identifier"
     });
 
-    yargs.option( "update",  {
+    yargs.option( "update",  { alias:[ "u", "force", "f" ],
         type: "boolean",
         description: "Update generate token"
     });
@@ -35,14 +42,14 @@ export function tokenBuilderOptions(yargs:Argv<TokenOption> ){
         description: "List all token"
     });
 
-    yargs.option( "format",  {
+    yargs.option( "format",  { alias: "F",
         type: "string",
         choices:[ "table", "ini", "label", "json", "file", "cfg" ],
         description: "Generate or update token for identifier",
         default: "table"
     });
 
-    yargs.option( "status",  {
+    yargs.option( "status",  { alias: "s",
         type: "string",
         choices: ["active", "disable" ],
         description: "Change token status",
