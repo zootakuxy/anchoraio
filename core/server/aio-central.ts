@@ -21,7 +21,7 @@ export class AioCentral {
         this._tokenService = new TokenService( opts as TokenOption );
         this._anchorServer = new AioAnchorServer<any>( {
             identifier: "@central",
-            port: this.opts.anchorPort,
+            listen: [ this.opts.anchorPort ],
             sendHeader: true,
             maxSlots: opts.maxSlots,
             minSlots: opts.minSlots,

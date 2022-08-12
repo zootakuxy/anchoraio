@@ -55,7 +55,7 @@ export class AioAgent {
 
 
         this._anchorServer = new AioAnchorServer<AgentRequest>( {
-            port: this.opts.agentPort,
+            listen:[ this.opts.agentPort ],
             sendHeader: false,
             identifier: this.identifier,
             minSlots: this.opts.minSlots,

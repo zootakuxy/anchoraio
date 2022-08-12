@@ -55,6 +55,8 @@ export class AioServer<M extends Meta> {
                     return _isAuth;
                 }};
 
+            console.log( "New Request Connection")
+
             opts.listenEvent = this.opts.listenEvent;
             let aioSocket = convertToAioSocket( socket, opts );
 
@@ -215,10 +217,12 @@ export class AioServer<M extends Meta> {
     start( callback?:( listen:ServerListen, error?:Error )=>void){
         let self = this;
         let _listen:ServerListen[] = [];
+        console.log( this.opts )
         if( Array.isArray( this.opts.listen ) ) _listen.push( ...this.opts.listen );
         else _listen.push( this.opts.listen );
 
         _listen.forEach( value => {
+            console.log( "ListemValue", value )
             this.net.listen( value, () => {
                 if( typeof callback === "function" ) callback( value );
             });

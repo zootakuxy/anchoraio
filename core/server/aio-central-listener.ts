@@ -37,7 +37,7 @@ export class AioCentralListener{
         this._central = central;
         let self = this;
         this._server = new AioServer<any>({
-            port: central.opts.serverPort,
+            listen:[ central.opts.serverPort ],
             identifier: "@central",
             sendHeader: true,
             namespace: "agents",
