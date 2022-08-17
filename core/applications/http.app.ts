@@ -20,12 +20,22 @@ export class HttpApp extends Application{
         if( meta.side !== "ConnectionSide::CLIENT_SIDE" ) return;
 
         let raw = data.toString();
-        let lines = raw.split( "\n" );
+        //1 -> Host: ${hostname}
+        //8 ->
+        let lines:string[] = raw.split( "\n" );
 
-        console.log( lines[1].split("Host: ")[1] )
-        if( meta.side === "ConnectionSide::CLIENT_SIDE" ) console.log( raw );
+        let host = ( line:string )=>{
+            let parts = line.split( "Host: ");
+            if( parts.length === 2 ) return `Host: localhost`;
+        }
 
-        return data;
+        raw = lines.map( value => {
+            let replace = host( value );
+            return replace || value;
+        }).join( "\n" );
+
+        console.log( data.toString() );
+        return null
     }
 }
 

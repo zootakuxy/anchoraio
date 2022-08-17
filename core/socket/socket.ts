@@ -272,10 +272,10 @@ export const SCAPE_TO = "\\\n";
 
 export function scapeRaw(str:string ):string{
     if( !str ) return null;
-    return str.replace( new RegExp(`/(${SCAPE_FORM})/g`), SCAPE_TO );
+    return str.replace( /(\n)/g, SCAPE_TO );
 }
 
 export function unescapeChunk(str:string ):string{
     if( !str ) return null;
-    return str.replace( `/(${SCAPE_TO})/g`, SCAPE_FORM )
+    return str.replace( /(\\\n)/g, SCAPE_FORM )
 }
