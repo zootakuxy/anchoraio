@@ -56,7 +56,7 @@ export interface AioSocketOpts<M> {
     isAuth?():boolean
 }
 
-
+export const END_CHUNK = ":END\\\n";
 
 export function errorOf( socket:net.Socket ){
     if( !socket?.["_readableState"]?.["errored"] ) return null;
@@ -264,18 +264,12 @@ export function listenEventOnData<M>( aioSocket:AioSocket<M>){
     };
 }
 
-//:END\n
-//:END\\\n
-export const END_CHUNK = ":END\n";
-export const SCAPE_FORM = "\n";
-export const SCAPE_TO = "\\\n";
-
 export function scapeRaw(str:string ):string{
     if( !str ) return null;
-    return str.replace( /(\n)/g, SCAPE_TO );
+    return str.replace( /(\n)/g, "\\\n" );
 }
 
 export function unescapeChunk(str:string ):string{
     if( !str ) return null;
-    return str.replace( /(\\\n)/g, SCAPE_FORM )
+    return str.replace( /(\\\n)/g, "\n" )
 }
