@@ -1,7 +1,7 @@
 import {Application} from "./Application";
 import {Buffer} from "buffer";
 import {AppConfig} from "../agent/aio-application-manager";
-import {TransactionDirection} from "../anchor/server";
+import {ConnectionSide, TransactionDirection} from "../anchor/server";
 
 export interface HttpProperties {
     rewriter?:{
@@ -17,12 +17,12 @@ export class HttpApp extends Application{
     }
 
     transform( meta, data:Buffer, config:AppConfig, direction:TransactionDirection ){
-        if( meta.side !== "ConnectionSide::CLIENT_SIDE" ) return;
+        if( meta.side !== ConnectionSide.CLIENT_SIDE ) return;
 
         let raw = data.toString();
         console.log( raw )
         //1 -> Host: ${hostname}
-        //8 ->
+        //8 -> Referer: ${}
         let lines:string[] = raw.split( "\n" );
         let _host;
 
