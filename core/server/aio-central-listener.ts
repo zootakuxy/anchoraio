@@ -221,7 +221,9 @@ export class AioCentralListener{
         Promise.all([ out, _in ]).then( value => {
             const [ anchorOUT, anchorIN ] = value;
             this.central.anchorServer.anchor( anchorOUT, anchorIN, args.request, args.application );
-            console.log( destine );
+            console.log( destine.id );
+            console.log( destine.connected );
+            console.log( destine.meta );
             destine.send( Event.AIO, Object.assign( args, {
                 anchor_to: anchorIN.id
             }));

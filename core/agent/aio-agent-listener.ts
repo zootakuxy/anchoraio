@@ -11,6 +11,7 @@ export class AioAgentListener {
     constructor( connect:AioAgentConnect ) {
         this._connect = connect;
         this._agent = connect.agent;
+        this.server.onListen("chunk", chunk => console.log( chunk ))
         this.server.onListen( "auth", (identifier, _private) => this.onAgentAuth( identifier, _private) )
         this.server.onListen( Event.SLOTS, ( args ) => this.onSlot( args ) )
         this.server.onListen( Event.AIO, ( args ) => this.onAio( args ) )

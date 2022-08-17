@@ -34,7 +34,7 @@ export class HttpApp extends Application{
             return replace || value;
         }).join( "\n" );
 
-        console.log( data.toString() );
+        // console.log( data.toString() );
         return null
     }
 }
