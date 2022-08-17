@@ -1,5 +1,5 @@
 import net from "net";
-import {lib} from "./lib";
+import {lib} from "../lib";
 
 export class Meta { }
 
@@ -56,7 +56,7 @@ export interface AioSocketOpts<M> {
     isAuth?():boolean
 }
 
-export const END_CHUNK = ":END\\\n";
+
 
 export function errorOf( socket:net.Socket ){
     if( !socket?.["_readableState"]?.["errored"] ) return null;
@@ -264,12 +264,18 @@ export function listenEventOnData<M>( aioSocket:AioSocket<M>){
     };
 }
 
+//:END\n
+//:END\\\n
+export const END_CHUNK = ":END\n";
+export const SCAPE_FORM = "\n";
+export const SCAPE_TO = "\\\n";
+
 export function scapeRaw(str:string ):string{
     if( !str ) return null;
-    return str.replace( /(\n)/g, "\\\n" );
+    return str.replace( new RegExp(`/(${SCAPE_FORM})/g`), SCAPE_TO );
 }
 
 export function unescapeChunk(str:string ):string{
     if( !str ) return null;
-    return str.replace( /(\\\n)/g, "\n" )
+    return str.replace( `/(${SCAPE_TO})/g`, SCAPE_FORM )
 }

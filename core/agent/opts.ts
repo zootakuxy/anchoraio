@@ -1,6 +1,6 @@
 import  {Argv} from "yargs";
-import {aio} from "../aio/aio";
-import {lib} from "../aio/lib";
+import {aio} from "../socket/aio";
+import {lib} from "../lib";
 
 export type AgentOpts = aio.GlobalOpts & {
     identifier:string,

@@ -1,4 +1,4 @@
-import {AioType, NeedAnchorOpts} from "./anchor-server";
+import {AioType, NeedAnchorOpts} from "./server";
 
 export enum Event {
     AIO="Event.AIO",

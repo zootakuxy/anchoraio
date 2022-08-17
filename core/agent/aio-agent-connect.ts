@@ -1,10 +1,10 @@
-import { AioSocket, ConnectionParams } from "../aio/socket";
+import { AioSocket, ConnectionParams } from "../socket/socket";
 import { AgentRequest, AioAgent} from "./aio-agent";
-import {Event, HEADER, SIMPLE_HEADER} from "../aio/share";
+import {Event, HEADER, SIMPLE_HEADER} from "../anchor/share";
 import { AioAgentListener } from "./aio-agent-listener";
-import { aio } from "../aio/aio";
+import { aio } from "../socket/aio";
 import chalk  from "chalk";
-import { AioType, AnchorMeta, NeedAnchorOpts } from "../aio/anchor-server";
+import { AioType, AnchorMeta, NeedAnchorOpts } from "../anchor/server";
 type AuthStatus = "unknown"|"accepted"|"rejected";
 
 export class AioAgentConnect {
@@ -47,7 +47,6 @@ export class AioAgentConnect {
             this._anchorPort = authResult.anchorPort;
             this._authStatus = "accepted";
             this.agent.request.continue();
-
         });
 
         this._listener = new AioAgentListener( this );

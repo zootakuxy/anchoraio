@@ -3,80 +3,110 @@ import * as path from "path";
 import ini from "ini";
 import {nanoid} from "nanoid";
 import {AgentRequest, AioAgent} from "./aio-agent";
-import {AioSocket} from "../aio/socket";
-import {aio} from "../aio/aio";
-import {AioType, AnchorMeta} from "../aio/anchor-server";
-import {SIMPLE_HEADER} from "../aio/share";
+import {AioSocket} from "../socket/socket";
+import {aio} from "../socket/aio";
+import {AioType, AnchorMeta, TransactionDirection} from "../anchor/server";
+import {SIMPLE_HEADER} from "../anchor/share";
+import {Buffer} from "buffer";
+import {Application, discoverApplications} from "../applications/Application";
+import Path from "path";
+import {FileUtil} from "zoo.util/lib/file-util";
 
-export type Application = {
+
+export type AppConfig = {
     port:number|string
-    address?:string
+    name:string|number,
+    address?:string,
+    reference?:string
+    transform?:any
+
 }
 
-export class AioAplicationManager {
-    apps:{ apps:{ [p:string]:string|number|Application } };
+export class AioApplicationManager {
+    appsConf:{ apps:{ [p:string]:string|number|AppConfig } };
     agent:AioAgent
     seq:number = 0;
+
+    private applications: Application[] = [];
 
     constructor( agent:AioAgent ) {
         this.agent = agent;
         let exists = fs.existsSync( path.join( agent.opts.etc, "apps.conf" ));
-        this.apps = exists ? ini.parse( fs.readFileSync( path.join( agent.opts.etc, "apps.conf" )).toString("utf8") ) as any: { apps: {} };
+        this.appsConf = exists ? ini.parse( fs.readFileSync( path.join( agent.opts.etc, "apps.conf" )).toString("utf8") ) as any: { apps: {} };
+        this.applications.push( ...discoverApplications() );
 
-    }  registerApplication (application, app:string|number|{ port:number, host?:string }):Application|string|number{
+
+    }  registerApplication (application, app:string|number|{ port:number, host?:string }):AppConfig|string|number{
         if( !application ) application = "default";
-        let _app:Application|string|number = this.apps.apps[ application ];
+        let _app:AppConfig|string|number = this.appsConf.apps[ application ];
         if( !_app && app ){
-            _app = app;
-            this.apps.apps[ application ] = _app;
-            fs.writeFile( path.join( this.agent.opts.etc, "apps.conf" ), ini.stringify( this.apps, {
+            // @ts-ignore
+            _app = app
+            this.appsConf.apps[ application ] = _app;
+            fs.writeFile( path.join( this.agent.opts.etc, "apps.conf" ), ini.stringify( this.appsConf, {
                 whitespace: true
             }), ()=>{})
         }
         return _app;
 
-    } connectApplication( args:typeof SIMPLE_HEADER.aio ):AioSocket<AnchorMeta<AgentRequest>>{
-        let application = this.getApplication( args.application );
-        let connection:AioSocket<AnchorMeta<AgentRequest>>;
+    } connectApplication( args:typeof SIMPLE_HEADER.aio ):AioSocket<AnchorMeta<AgentRequest>> {
+        let application = this.getApplication(args.application);
+        let connection: AioSocket<AnchorMeta<AgentRequest>>;
 
-        if( application ){
-            let resolverId = `resolver://${this.agent.identifier}/${nanoid( 16)}?${ this.seq++ }`;
+        if (application) {
+            let resolverId = `resolver://${this.agent.identifier}/${nanoid(16)}?${this.seq++}`;
             connection = aio.connect({
-                host: application.address||"127.0.0.1",
-                port: Number( application.port ),
+                host: application.address || "127.0.0.1",
+                port: Number(application.port),
                 listenEvent: false,
                 id: resolverId,
                 isConnected: false
             });
 
-            connection.on( "error", err => {
-                console.error( "[ANCHORIO] Agent>", `Application Connection error ${ err.message }` )
+            connection.on("error", err => {
+                console.error("[ANCHORIO] Agent>", `Application Connection error ${err.message}`)
             });
-            connection = this.agent.anchorServer.register( connection, { anchorPoint: "SERVER" } );
-            this.agent.anchorServer.auth( {
+            connection = this.agent.anchorServer.register(connection, {anchorPoint: "SERVER"});
+            this.agent.anchorServer.auth({
                 aioType: AioType.AIO_OUT,
-                anchors: [ connection.id ],
+                anchors: [connection.id],
                 busy: connection.id,
                 origin: this.agent.identifier,
-                needOpts:{}
-            }, this.agent.connect.id, { onError: "END", name: "SERVER"} )
+                needOpts: {}
+            }, this.agent.connect.id, {onError: "END", name: "SERVER"})
         }
         return connection;
 
-    } getApplication(application:string|number ){
+
+
+    } getApplication( application:string|number ){
         if( !application ) application = "default";
-        let app:Application|string|number = this.apps.apps[ application ];
-        let _app:Application;
+        let app:AppConfig|string|number = this.appsConf.apps[ application ];
+        let _app:AppConfig;
 
         if( app && typeof app === "object" && Number.isSafeInteger(Number( app.port )) ){
             _app = app;
         } else if( (typeof app === "string" || typeof app === "number" ) && Number.isSafeInteger( Number( app ))){
             _app = {
                 port: Number( app ),
-                address: "127.0.0.1"
+                address: "127.0.0.1",
+                name: application
             }
         } else if(  typeof app === "string" || typeof app === "number" ) _app = null;
         return _app;
+
+    } transform( meta:AnchorMeta<any>, data:Buffer, direction:TransactionDirection ):Buffer{
+        // if( direction === TransactionDirection.CLIENT_TO_SERVER ) console.log({meta, data, direction});
+
+        if( !meta?.appConf?.reference ) return data;
+        let application = this.applications.find( value => !!value.name
+            && value.name === meta.appConf.reference
+        );
+        if( !application ) return data;
+
+        let transform = application.transform( meta, data, meta.appConf, direction );
+        if( !!transform ) data = transform;
+        return data;
     }
 }
 

@@ -1,9 +1,9 @@
 import {ServerOptions} from "./opts";
-import {AioSocket} from "../aio/socket";
+import {AioSocket} from "../socket/socket";
 import chalk from "chalk";
 import {AioCentralListener, CentralMeta} from "./aio-central-listener";
-import {Event, HEADER} from "../aio/share";
-import {AioType, AnchorMeta, AioAnchorServer, NeedAnchorOpts} from "../aio/anchor-server";
+import {Event, HEADER} from "../anchor/share";
+import {AioType, AnchorMeta, AioAnchorServer, NeedAnchorOpts} from "../anchor/server";
 import {TokenService} from "../service/token.service";
 import {TokenOption} from "../service/token.service/opts";
 
@@ -19,7 +19,7 @@ export class AioCentral {
         let self = this;
         this._opts = opts;
         this._tokenService = new TokenService( opts as TokenOption );
-        this._anchorServer = new AioAnchorServer<any>( {
+        this._anchorServer = new AioAnchorServer<any>( null,{
             identifier: "@central",
             listen: [ this.opts.anchorPort ],
             sendHeader: true,

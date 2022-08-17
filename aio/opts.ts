@@ -2,8 +2,8 @@ import {Argv} from "yargs";
 import {loadConfigsFile} from "./load";
 import {AgentOpts} from "../core/agent/opts";
 import Path from "path";
-import {aio} from "../core/aio/aio";
-import {lib} from "../core/aio/lib";
+import {aio} from "../core/socket/aio";
+import {lib} from "../core/lib";
 import BaseOpts = aio.BaseOpts;
 
 

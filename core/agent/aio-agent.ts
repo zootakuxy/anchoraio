@@ -1,11 +1,11 @@
 import { AgentOpts} from "./opts";
-import { AioSocket} from "../aio/socket";
+import { AioSocket} from "../socket/socket";
 import { AioAgentConnect} from "./aio-agent-connect";
 import { AgentServer, AioAnswerer, AioResolver} from "../dns/aio.resolve";
 import chalk from "chalk";
 import { AgentContext} from "../service/agent.service";
-import { AioAnchorServer } from "../aio/anchor-server";
-import { AioAplicationManager} from "./aio-application-manager";
+import { AioAnchorServer } from "../anchor/server";
+import { AioApplicationManager} from "./aio-application-manager";
 import { AioAgentRequest} from "./aio-agent-request";
 import { nanoid } from "nanoid";
 import {Token, TokenService} from "../service/token.service";
@@ -16,7 +16,8 @@ export interface AgentRequest {
     status?:"pendent"|"income"|"complete",
     result?: "success"|"cancelled"|"rejected"
     aioAnswerer?: AioAnswerer
-    agentServer?:  AgentServer
+    agentServer?:  AgentServer,
+    pack?:number
 
 }
 
@@ -27,12 +28,13 @@ export class AioAgent {
     private readonly _opts:AgentOpts;
     private readonly _server: AioSocket<any>;
     private readonly _connect:AioAgentConnect;
-    private readonly _appManager:AioAplicationManager;
+    private readonly _appManager:AioApplicationManager;
     private readonly _aioResolve:AioResolver;
     private readonly _context:AgentContext;
     private readonly _request:AioAgentRequest;
     private readonly _instance:string;
     private readonly _token:Token
+
 
 
     constructor( opts:AgentOpts, context:AgentContext ) {
@@ -51,10 +53,7 @@ export class AioAgent {
 
         this._connect = new AioAgentConnect( this );
 
-
-
-
-        this._anchorServer = new AioAnchorServer<AgentRequest>( {
+        this._anchorServer = new AioAnchorServer<AgentRequest>(  this, {
             listen:[ this.opts.agentPort ],
             sendHeader: false,
             identifier: this.identifier,
@@ -67,13 +66,12 @@ export class AioAgent {
                 self.connect.server.emit( event, opts );
             }
         });
-        this._appManager = new AioAplicationManager( this );
+        this._appManager = new AioApplicationManager( this );
 
         this._aioResolve = new AioResolver( this );
         this._request = new AioAgentRequest( this );
 
     }
-
 
     get isConnected(){
         return this.connect.server.connected;
@@ -93,7 +91,7 @@ export class AioAgent {
         return this._anchorServer;
     } get agent(){
         return this
-    } get appManager(): AioAplicationManager {
+    } get appManager(): AioApplicationManager {
         return this._appManager;
     } get request(): AioAgentRequest {
         return this._request;

@@ -1,3 +1,4 @@
+// @ts-ignore
 import {FileUtil} from "zoo.util/lib/file-util";
 import path from "path";
 import fs from "fs";

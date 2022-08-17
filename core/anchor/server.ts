@@ -1,11 +1,24 @@
 import {Buffer} from "buffer";
-import {AioServer, AioServerOpts} from "./server";
-import {AioSocket} from "./socket";
-import {aio} from "./aio";
+import {AioServer, AioServerOpts} from "../socket/server";
+import {AioSocket} from "../socket/socket";
+import {aio} from "../socket/aio";
 import {Event, HEADER, RestoreOpts, SIMPLE_HEADER} from "./share";
 import {nanoid} from "nanoid";
 import chalk from "chalk";
-import {lib} from "./lib";
+import {lib} from "../lib";
+import {AioAgent} from "../agent/aio-agent";
+import {AppConfig} from "../agent/aio-application-manager";
+
+export enum TransactionDirection {
+    CLIENT_TO_SERVER = "TransactionDirection::CLIENT_TO_SERVER",
+    SERVER_TO_CLIENT = "TransactionDirection::SERVER_TO_CLIENT",
+}
+
+export enum ConnectionSide {
+    CLIENT_SIDE = "ConnectionSide::CLIENT_SIDE",
+    SERVER_SIDE = "ConnectionSide::SERVER_SIDE",
+}
+
 
 type ListenEvent = "data"|"ready"|"end"
 interface Chunk {
@@ -42,7 +55,11 @@ export interface AnchorMeta<E> {
     anchorWith?:string,
     anchorWithOrigin?:string,
     anchorRequest?:string,
+    appConf?:AppConfig
+    application?:string|number
+    side?:ConnectionSide,
     anchorConnection:"connected"|"lost"
+    packCount:number,
 
     auth?: boolean
     status?: "authenticated"|"unknown",
@@ -61,6 +78,7 @@ export interface NeedAnchorOpts {
     busy?:boolean,
     key?:string,
     restoreRequest?:string,
+    // application:string|number,
     // request?:string,
     // connect?:AioType,
     // connectServer:string
@@ -91,6 +109,7 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
     private readonly _maxSlots:number
     private readonly _anchorPoint:AnchorPoint;
     private readonly _anchorOpts:AnchorServerOpts<E>;
+    private readonly _agent:AioAgent;
 
     private _needAnchors:{ [p in AioType ]: {[p:string]:({ opts:NeedAnchorOpts, callback:( anchor:AioSocket<AnchorMeta<E>>)=>void})[]}} = {
         [ AioType.AIO_IN ]: lib.proxyOfArray<{ opts:NeedAnchorOpts, callback:( anchor:AioSocket<AnchorMeta<E>>)=>void}>(),
@@ -107,7 +126,7 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
         [AioType.AIO_OUT]: lib.proxyOfArray<string>(),
     }
 
-    constructor( opts:AioServerOpts&AnchorServerOpts<E> ) {
+    constructor( agent:AioAgent, opts:AioServerOpts&AnchorServerOpts<E> ) {
         super( Object.assign(opts, {
             namespace: opts.namespace||"aio"
         }));
@@ -116,6 +135,7 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
         this._minSlots = opts.minSlots||0;
         this._maxSlots = opts.maxSlots||0;
         this._anchorPoint = opts.anchorPoint;
+        this._agent = agent;
     }
 
 
@@ -127,9 +147,11 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
         return this._maxSlots;
     } get anchorPoint(): AnchorPoint {
         return this._anchorPoint;
+    } get agent(): AioAgent {
+        return this._agent;
 
     } protected onAttach(aioSocket: AioSocket<AnchorMeta<E>>) {
-        this.mergeMeta( aioSocket, { auth: false, status: "unknown", pendents: [],anchorConnection: "lost" })
+        this.mergeMeta( aioSocket, { auth: false, status: "unknown", pendents: [],anchorConnection: "lost", packCount: 0 })
         this._register( aioSocket, { anchorPoint: this.anchorPoint } );
     }
 
@@ -298,8 +320,8 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
     }
 
     restoreNow( restore:AioSocket<AnchorMeta<E>>, other:AioSocket<AnchorMeta<E>>, request:string){
-        if( other.meta.aioType === AioType.AIO_IN ) this.anchor( other, restore, request );
-        else this.anchor( restore, other, request );
+        if( other.meta.aioType === AioType.AIO_IN ) this.anchor( other, restore, request, restore.meta.application );
+        else this.anchor( restore, other, request, restore.meta.application );
         console.log( "[ANCHORIO]", `Restore connection for request ${ restore.meta.anchorRequest } ... ${ chalk.greenBright("CONNECTION RESTORED!")}` );
     }
 
@@ -351,28 +373,49 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
         return this._aio[ type ][ server ].filter( value => !!value).length;
     }
 
-    anchor( from:AioSocket<AnchorMeta<E>>, to:AioSocket<AnchorMeta<E>>, anchorRequest:string ){
-        if( from.meta.isAnchored && to.meta.isAnchored ) {
-            throw new Error( `Connection ${ from.id } already preview anchored!`)
+    anchor( fromClient:AioSocket<AnchorMeta<E>>, toServer:AioSocket<AnchorMeta<E>>, anchorRequest:string, application:string|number ){
+        if( fromClient.meta.isAnchored && toServer.meta.isAnchored ) {
+            throw new Error( `Connection ${ fromClient.id } already preview anchored!`)
         }
 
-        from.meta.isAnchored = true;
-        to.meta.isAnchored = true;
+        fromClient.meta.isAnchored = true;
+        toServer.meta.isAnchored = true;
+
+        fromClient.meta.application = application;
+        fromClient.meta.side = ConnectionSide.CLIENT_SIDE;
+        if( !!this.agent ) fromClient.meta.appConf = this.agent.appManager.getApplication( application );
+
+        toServer.meta.application = application;
+        toServer.meta.side = ConnectionSide.SERVER_SIDE;
+        if( !!this.agent ) toServer.meta.appConf = this.agent.appManager.getApplication( application );
 
 
-        let fromPendent:Chunk[] = from.meta.pendents || [];
-        let toPendent:Chunk[] = to.meta.pendents || [];
+        let fromPendent:Chunk[] = fromClient.meta.pendents || [];
+        let toPendent:Chunk[] = toServer.meta.pendents || [];
 
-        this.pipe( from, to, anchorRequest );
+        this.pipe( fromClient, toServer, anchorRequest, application );
 
-        let reverse = { [from.id]: to, [ to.id]: from };
+        let reverse = { [fromClient.id]: toServer, [ toServer.id]: fromClient };
+        let direction:TransactionDirection;
         while ( toPendent.length > 0 || fromPendent.length > 0 ){
             let next:Chunk;
-            if( !toPendent.length ) next = fromPendent.shift();
-            else if( !fromPendent.length ) next = toPendent.shift();
-            else if( toPendent[0].sequence < fromPendent[0].sequence ) next = toPendent.shift();
-            else next = fromPendent.shift();
+            if( !toPendent.length ) {
+                next = fromPendent.shift();
+                direction = TransactionDirection.CLIENT_TO_SERVER;
+            } else if( !fromPendent.length ) {
+                next = toPendent.shift();
+                direction = TransactionDirection.SERVER_TO_CLIENT;
+
+            }  else if( toPendent[0].sequence < fromPendent[0].sequence ){
+                next = toPendent.shift();
+                direction = TransactionDirection.SERVER_TO_CLIENT;
+            } else {
+                next = fromPendent.shift();
+                direction = TransactionDirection.CLIENT_TO_SERVER;
+            }
             if( !next ) break;
+
+            if( !!this.agent ) next.buffer = this.agent.appManager.transform( fromClient.meta, next.buffer, direction );
 
             if ( next.event === "data" ) reverse[ next.connection ].write( next.buffer );
             else if( next.event === "ready" ) reverse[ next.connection ].emit( "ready" );
@@ -380,13 +423,17 @@ export class AioAnchorServer<E> extends AioServer<AnchorMeta<E>>{
         }
     }
 
-    private pipe( from:AioSocket<AnchorMeta<E>>, to:AioSocket<AnchorMeta<E>>, anchorRequest:string ){
-        [ { _from:from, _to:to }, { _from:to, _to: from }].forEach( value => {
-            let { _from, _to } = value;
+    private pipe( fromClient:AioSocket<AnchorMeta<E>>, toServer:AioSocket<AnchorMeta<E>>, anchorRequest:string, application:string|number ){
+
+        [ { _from:fromClient, _to:toServer, direction:TransactionDirection.CLIENT_TO_SERVER}, { _from:toServer, _to: fromClient, direction: TransactionDirection.SERVER_TO_CLIENT }].forEach(value => {
+            let { _from, _to, direction } = value;
+
 
             _from.meta.dataRedirect = data => {
                 if( _from.meta.pendents.length ) return;
+                if( this.agent ) data = this.agent.appManager.transform( _from.meta, data, direction );
                 _to.write( data );
+                _from.meta.packCount++;
             }
 
             _from.meta.endRedirect = () =>{
