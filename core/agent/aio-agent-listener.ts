@@ -3,6 +3,7 @@ import {AioAgent} from "./aio-agent";
 import {Event, SIMPLE_HEADER} from "../anchor/share";
 import chalk from "chalk"
 import {AioType} from "../anchor/server";
+import {AioSocket} from "../socket/socket";
 
 export class AioAgentListener {
     private readonly _connect:AioAgentConnect;
@@ -11,27 +12,31 @@ export class AioAgentListener {
     constructor( connect:AioAgentConnect ) {
         this._connect = connect;
         this._agent = connect.agent;
-        this.server.onListen("chunk", chunk => console.log( chunk ))
-        this.server.onListen( "auth", (identifier, _private) => this.onAgentAuth( identifier, _private) )
-        this.server.onListen( Event.SLOTS, ( args ) => this.onSlot( args ) )
-        this.server.onListen( Event.AIO, ( args ) => this.onAio( args ) )
-        this.server.onListen( Event.AIO_CANCELLED, ( args ) => this.onAioCansel( args ) )
+        this.listen( this.server )
+    }
 
-        this.server.onListen( Event.AIO_SEND,  ( args) => {
+    listen( connection: AioSocket<any> ){
+        connection.onListen( "auth", (identifier, _private) => this.onAgentAuth( identifier, _private) )
+        connection.onListen( Event.SLOTS, ( args ) => this.onSlot( args ) )
+        connection.onListen( Event.AIO, ( args ) => this.onAio( args ) )
+        connection.onListen( Event.AIO_CANCELLED, ( args ) => this.onAioCansel( args ) )
+
+        connection.onListen( Event.AIO_SEND,  ( args) => {
             this.onAioSend( args );
         } )
-        this.server.onListen( Event.AIO_REJECTED, ( args) => {
+        connection.onListen( Event.AIO_REJECTED, ( args) => {
             this.onAioReject( args );
         });
-        this.server.onListen( Event.AIO_ANCHORED, ( args) => this.onAioAnchored( args ) );
-        this.server.onListen( Event.AIO_END_ERROR, ( args) => this.onAioEndError( args ) );
+        connection.onListen( Event.AIO_ANCHORED, ( args) => this.onAioAnchored( args ) );
+        connection.onListen( Event.AIO_END_ERROR, ( args) => this.onAioEndError( args ) );
 
-        this.server.onListen( "*", (event, args) => {
+        connection.onListen( "*", (event, args) => {
             if( [Event.AIO_REJECTED, Event.AIO_ANCHORED, Event.AIO_CANCELLED ].includes( event as Event )){
                 this.onAioEnd( event as Event, args );
             }
         });
     }
+
 
     get server(){ return this._connect.server }
 
