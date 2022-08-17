@@ -10,13 +10,13 @@ import {AioAgent} from "../agent/aio-agent";
 import {AppConfig} from "../agent/aio-application-manager";
 
 export enum TransactionDirection {
-    CLIENT_TO_SERVER = "TransactionDirection::CLIENT_TO_SERVER",
-    SERVER_TO_CLIENT = "TransactionDirection::SERVER_TO_CLIENT",
+    CLIENT_TO_SERVER = "TransactionDirection.CLIENT_TO_SERVER",
+    SERVER_TO_CLIENT = "TransactionDirection.SERVER_TO_CLIENT",
 }
 
 export enum ConnectionSide {
-    CLIENT_SIDE = "ConnectionSide::CLIENT_SIDE",
-    SERVER_SIDE = "ConnectionSide::SERVER_SIDE",
+    CLIENT_SIDE = "ConnectionSide.CLIENT_SIDE",
+    SERVER_SIDE = "ConnectionSide.SERVER_SIDE",
 }
 
 
