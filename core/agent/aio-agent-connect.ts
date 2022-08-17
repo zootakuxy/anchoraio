@@ -174,7 +174,6 @@ export class AioAgentConnect {
             });
 
             connection.onListen( "auth", (identifier, auth:typeof SIMPLE_HEADER.authResult ) => {
-                connection.onListen("chunk", chunk => console.log( "OnListenChunk", chunk ))
                 if( !identifier ){
                     console.log( "[ANCHORIO] Agent>", chalk.redBright( `Create new chanel rejected by server with ${ auth?.message }!` )  );
                     return;

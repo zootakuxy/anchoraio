@@ -56,11 +56,12 @@ export class AioApplicationManager {
         if (application) {
             let resolverId = `resolver://${this.agent.identifier}/${nanoid(16)}?${this.seq++}`;
             connection = aio.connect({
-                host: application.address || "127.0.0.1",
-                port: Number(application.port),
+                host: application.address,
+                port: Number( application.port),
                 listenEvent: false,
                 id: resolverId,
-                isConnected: false
+                isConnected: false,
+                autoReconnect: null
             });
 
             connection.on("error", err => {
