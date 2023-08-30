@@ -5,7 +5,7 @@
   "main": "service/index.js",
   "scripts": {
     "start": "node test/server.js",
-    "tsc-watch": "tsc-watch"
+    "tsc-w": "tsc -w"
   },
   "author": "",
   "license": "ISC",
