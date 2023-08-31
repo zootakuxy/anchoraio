@@ -98,9 +98,8 @@ export class AioResolver {
         if( !resolve ) resolve = {};
         resolve.domains = resolve.domains || {};
 
-        console.log( resolve );
-
         Object.entries( resolve.domains ).forEach( ([ server, remotes]) => {
+            console.log( server, remotes )
             let identifier = `${server}.aio`;
             this.servers[ server ] = {
                 name: server,
@@ -110,6 +109,7 @@ export class AioResolver {
             };
 
             Object.entries( remotes ).forEach( ( [ application, address ])=>{
+                console.log( server, application, address  );
                 let domainName = `${ application}.${identifier}`;
 
                 let resolved:Resolved = {
@@ -126,6 +126,10 @@ export class AioResolver {
             });
 
         });
+
+        console.log( "SERVER-CONFS", this.servers );
+        console.log( "DOMAINS-CONFS", this.domains );
+        console.log( "ADDRESS-CONFS", this.address );
     }
 
     detachResolveFile( filename:string ){
