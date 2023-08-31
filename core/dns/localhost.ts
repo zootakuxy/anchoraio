@@ -4,7 +4,7 @@ import * as ini from "ini";
 import { Addr } from 'netaddr';
 import {AioAgent} from "../agent/aio-agent";
 
-
+export const FIRST_ADDRESS = "127.255.0.1";
 
 export class Localhost {
     _next:Addr;
@@ -19,7 +19,7 @@ export class Localhost {
 
         let next;
         if( !this._status.localhost ) this._status.localhost = {};
-        if( !this._status.localhost.init ) this._status.localhost.init = "127.100.0.1";
+        if( !this._status.localhost.init ) this._status.localhost.init = FIRST_ADDRESS;
         if( !this._status.localhost.last ){
             next = this._status.localhost.init;
             this._status.localhost.last = this._status.localhost.init;

@@ -157,20 +157,21 @@ export class AioAgentConnect {
         this.chanel.length  = 0;
 
         for (let i = 0; i < ( this.agent.opts.chanel||2); i++) {
+            let auth = HEADER.auth( {
+                level: "secondary",
+                origin: this.agent.identifier,
+                server: this.agent.identifier,
+                referer: this.id,
+                token: this.agent.token.token,
+                instance: this.agent.instance
+            });
 
             let connection = aio.connect({
                 host: this.agent.opts.serverHost,
                 port: this.agent.opts.serverPort,
                 listenEvent: true,
                 isConnected: false,
-                auth: HEADER.auth( {
-                    level: "secondary",
-                    origin: this.agent.identifier,
-                    server: this.agent.identifier,
-                    referer: this.id,
-                    token: this.agent.token.token,
-                    instance: this.agent.instance
-                })
+                auth: auth
             });
 
             connection.onListen( "auth", (identifier, auth:typeof SIMPLE_HEADER.authResult ) => {

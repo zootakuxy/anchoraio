@@ -103,7 +103,7 @@ export class AioAgentListener {
 
     }
 
-    private onAioEnd(event: Event, args:typeof SIMPLE_HEADER.aio ) {
+    private onAioEnd( event: Event, args:typeof SIMPLE_HEADER.aio ) {
         let request = this.agent.anchorServer.of( args.request );
         let anchor = this.agent.anchorServer.of( args.anchor_form );
         if( request ) request.meta.extras.status = "complete";

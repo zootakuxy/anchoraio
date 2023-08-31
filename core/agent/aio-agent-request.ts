@@ -4,7 +4,7 @@ import {AioType, AnchorMeta} from "../anchor/server";
 import {Event, HEADER, SIMPLE_HEADER} from "../anchor/share";
 import chalk from "chalk";
 import {message} from "memfs/lib/internal/errors";
-import {AgentServer, AioAnswerer} from "../dns/aio.resolve";
+import {AgentServer, AioAnswerer, Resolved} from "../dns/aio.resolve";
 
 export class AioAgentRequest {
     private readonly _agent:AioAgent;
@@ -39,21 +39,20 @@ export class AioAgentRequest {
 
 
         console.log( "[ANCHORIO] Agent>", `Anchor request ${ req.id} started!`);
-        let aioAnswerer = req.meta.extras.aioAnswerer;
-        let agentServer = req.meta.extras.agentServer;
+        let resolved = req.meta.extras.resolved;
         this.agent.anchorServer.nextSlot( AioType.AIO_OUT, this.agent.identifier ).then( connection => {
             if( !connection ){
-                console.log( "[ANCHORIO] Request>", this.agent.identifier, aioAnswerer.application, "\\", chalk.redBright("rejected"));
+                console.log( "[ANCHORIO] Request>", this.agent.identifier, resolved.application, "\\", chalk.redBright("rejected"));
                 return req.close();
             }
 
             let pack:typeof SIMPLE_HEADER.aio;
             this.agent.connect.server.send( Event.AIO, pack = HEADER.aio({
                 origin: this.agent.identifier,
-                server: agentServer.identifier,
+                server: resolved.serverIdentifier,
                 request: req.id,
-                application: aioAnswerer.application,
-                domainName: aioAnswerer.domainName,
+                application: resolved.application,
+                domainName: resolved.domainName,
                 anchor_form: connection.id
             }) );
             this.agent.anchorServer.anchor( req, connection, pack.request, pack.application );
@@ -70,10 +69,9 @@ export class AioAgentRequest {
             req.end( () => { });
         }
 
-        let acceptConnection = ( aioAnswerer: AioAnswerer, agentServer: AgentServer )=>{
+        let acceptConnection = ( resolved:Resolved )=>{
             console.log( "[ANCHORIO] Agent>", `${chalk.greenBright("Accepted new request connection")}` );
-            req.meta.extras.aioAnswerer = aioAnswerer;
-            req.meta.extras.agentServer = agentServer;
+            req.meta.extras.resolved = resolved;
             if( this.agent.connect.authStatus === "accepted" ) this.startAnchor( req );
             else this._pendentsRequest.push( req );
         }
@@ -89,14 +87,12 @@ export class AioAgentRequest {
         const remoteAddressParts = req.address()["address"].split( ":" );
         const address =  remoteAddressParts[ remoteAddressParts.length-1 ];
 
-        let aioAnswerer: AioAnswerer, agentServer: AgentServer;
 
-        aioAnswerer = this.agent.aioResolve.serverName( address );
-        if( aioAnswerer ) agentServer = this.agent.aioResolve.agents.agents[ aioAnswerer.agent ];
+        let resolved = this.agent.aioResolve.resolved( address );
 
-        if( !aioAnswerer ) return rejectConnection( `no answerer domain found from address ${ address }! ` );
-        if( !agentServer ) return rejectConnection( "no agent server found!" );
-        acceptConnection( aioAnswerer, agentServer );
+
+        if( !resolved ) return rejectConnection( `no resolved answerer domain found from address ${ address }! ` );
+        acceptConnection( resolved );
     }
 
 }

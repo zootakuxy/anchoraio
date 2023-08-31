@@ -1,22 +1,21 @@
 import { AgentOpts} from "./opts";
 import { AioSocket} from "../socket/socket";
 import { AioAgentConnect} from "./aio-agent-connect";
-import { AgentServer, AioAnswerer, AioResolver} from "../dns/aio.resolve";
+import { AioResolver, Resolved} from "../dns/aio.resolve";
 import chalk from "chalk";
-import { AgentContext} from "../service/agent.service";
 import { AioAnchorServer } from "../anchor/server";
 import { AioApplicationManager} from "./aio-application-manager";
 import { AioAgentRequest} from "./aio-agent-request";
 import { nanoid } from "nanoid";
 import {Token, TokenService} from "../service/token.service";
 import {TokenOption} from "../service/token.service/opts";
+import {AgentContext} from "./agent-context";
 
 export interface AgentRequest {
     type?: "local-request"|"remote-request"
     status?:"pendent"|"income"|"complete",
     result?: "success"|"cancelled"|"rejected"
-    aioAnswerer?: AioAnswerer
-    agentServer?:  AgentServer,
+    resolved?:Resolved
     pack?:number
 
 }
@@ -35,16 +34,14 @@ export class AioAgent {
     private readonly _instance:string;
     private readonly _token:Token
 
-
-
-    constructor( opts:AgentOpts, context:AgentContext ) {
+    constructor( context:AgentContext ) {
         let self = this;
-        this._opts = opts;
-        this._identifier = opts.identifier;
+        this._opts = context.options;
+        this._identifier = context.options.identifier;
         this._context = context;
         this._instance = `${nanoid(32)}::${ new Date().getTime() }@${this.opts.identifier}`;
 
-        let tokenService = new TokenService( opts as TokenOption );
+        let tokenService = new TokenService( context.options as TokenOption );
         this._token = tokenService.token;
         if( !this.token ) {
             console.log( chalk.redBright( `Token for ${ this.opts.identifier } not found or is invalid!` ));
@@ -71,6 +68,11 @@ export class AioAgent {
         this._aioResolve = new AioResolver( this );
         this._request = new AioAgentRequest( this );
 
+        this._context.listener.on( "context.start:sync", any => {
+            return this.anchorServer.start(() => {
+                console.log("[ANCHORIO] Agent>", `Running Agent Proxy ${this.identifier} on port ${chalk.greenBright(String(this.opts.agentPort))}`);
+            });
+        })
     }
 
     get isConnected(){
@@ -100,11 +102,6 @@ export class AioAgent {
 
     } get aioResolve(): AioResolver {
         return this._aioResolve;
-
-    } start(){
-        this.anchorServer.start( () => {
-            console.log( "[ANCHORIO] Agent>", `Running Agent Proxy ${ this.identifier } on port ${ chalk.greenBright(String( this.opts.agentPort)) }`) ;
-        });
     }
 
 }

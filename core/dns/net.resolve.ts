@@ -1,18 +1,19 @@
 import {DnsAnswer} from "dns2";
 import moment from "moment";
 import {AioAgent} from "../agent/aio-agent";
+import {AgentContext} from "../service/agent.service";
 // import {Agent} from "../agent";
 
 const { TCPClient } = require('dns2');
 
 export class NetResolver {
-    agent:AioAgent
+    context:AgentContext
     dnsResolves:{resolve, name}[];
     resolves:{ [domain:string]:DnsAnswer[] } = {};
 
-    constructor( agent:AioAgent ) {
-        this.agent = agent;
-        this.dnsResolves = this.agent.opts.dns.map( name => {
+    constructor( context:AgentContext ) {
+        this.context = context;
+        this.dnsResolves = this.context.options.dns.map( name => {
             return { resolve: TCPClient( name ), name }
         });
     }

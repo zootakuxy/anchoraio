@@ -3,18 +3,18 @@ import chalk from "chalk";
 const dns2 = require('dns2');
 import  { DnsServer } from "dns2/server";
 import {NetResolver} from "./net.resolve";
-import {AioAgent} from "../agent/aio-agent";
+import {AgentContext} from "../agent/agent-context";
 
 const { Packet } = dns2;
 
 export class AgentDNS {
-    agent:AioAgent
+    context:AgentContext
     server: DnsServer
     netResolver:NetResolver
 
-    constructor (agent:AioAgent ){
-        this.agent = agent;
-        this.netResolver = new NetResolver( this.agent );
+    constructor ( context:AgentContext ){
+        this.context = context;
+        this.netResolver = new NetResolver( this.context );
 
         this.server  = dns2.createServer({
             udp: true,
@@ -23,7 +23,7 @@ export class AgentDNS {
                 const response = Packet.createResponseFromRequest(request);
                 const [ question ] = request.questions;
                 const { name } = question;
-                let aioResponse = agent.aioResolve.aioResolve( name );
+                let aioResponse = context.agent.aioResolve.aioResolve( name );
                 if( aioResponse && aioResponse.length > 0 ){
                     console.log( "[dns resolve]", name, "\\", "127.0.0.1" )
                     response.answers.push( ...aioResponse )
@@ -45,11 +45,14 @@ export class AgentDNS {
             console.log('[ANCHORIO] DNS>', "OFF");
         });
 
+    }
+
+    start(){
         this.server.listen({
-            udp: this.agent.opts.dnsPort,
-            tcp: this.agent.opts.dnsPort
+            udp: this.context.options.dnsPort,
+            tcp: this.context.options.dnsPort
         }).then( value => {
-            console.log( "[ANCHORIO] Agent>", chalk.greenBright(`Running Agent DNS SERVER ${ agent.identifier } on port ${ this.agent.opts.dnsPort }`) );
+            console.log( "[ANCHORIO] Agent>", chalk.greenBright(`Running Agent DNS SERVER ${ this.context.options.identifier } on port ${ this.context.options.dnsPort }`) );
         })
     }
 }
