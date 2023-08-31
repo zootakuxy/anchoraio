@@ -29,6 +29,7 @@ export module aio {
     export const Defaults = {
         //language=file-reference
         envFile: path.join(__dirname, "../../etc/anchorio.conf" ),
+        etc: path.join(__dirname, "../../etc/entry" ),
         agentPort:  36900,
         agentAPI :  36901,
         serverPort: 36902,
