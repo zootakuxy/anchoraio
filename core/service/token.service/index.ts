@@ -208,6 +208,10 @@ export class TokenService {
         };
         let tokenData = ini.stringify( token );
         fs.writeFileSync( Path.join( this.folder, confName), tokenData );
-        return this.showToken();
+        let t = this.opts.format;
+        this.opts.format = "ini";
+        let response =  this.showToken();
+        this.opts.format = t;
+        return response;
     }
 }
