@@ -159,7 +159,7 @@ export class TokenService {
                 console.info( json )
             }
         }) as {[p in typeof _self.opts.format ]?:()=>void });
-        if( Object.keys( formats ).includes( _self.opts.format ) ){
+        if( !Object.keys( formats ).includes( _self.opts.format ) ){
             console.error( chalk.redBright( `Invalid format ${ this.opts.format }` ));
             return -1;
         }
