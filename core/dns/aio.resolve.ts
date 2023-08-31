@@ -98,6 +98,9 @@ export class AioResolver {
         if( !resolve ) resolve = {};
         resolve.domains = resolve.domains || {};
 
+        console.log( resolve );
+        console.log( resolve.domains );
+
         Object.entries( resolve.domains ).forEach( ([ server, remotes]) => {
             console.log( server, remotes )
             let identifier = `${server}.aio`;
