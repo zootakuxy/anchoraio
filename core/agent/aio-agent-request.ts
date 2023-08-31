@@ -91,7 +91,7 @@ export class AioAgentRequest {
         let resolved = this.agent.aioResolve.resolved( address );
 
 
-        if( !resolved ) return rejectConnection( `no resolved answerer domain found from address ${ address }! ` );
+        if( !resolved ) return rejectConnection( `no resolved answerer domain found from address ${ address }` );
         acceptConnection( resolved );
     }
 

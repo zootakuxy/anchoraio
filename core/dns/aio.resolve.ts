@@ -95,7 +95,6 @@ export class AioResolver {
         if( detect?.event === "delete" || !fs.existsSync( filename) ) return;
 
         let resolve:{domains?:{ [p:string]:{ [p:string]:string}}} = ini.parse( fs.readFileSync( filename ).toString() );
-        console.log({filename}, resolve );
         if( !resolve ) resolve = {};
         resolve.domains = resolve.domains || {};
         Object.entries( resolve.domains ).forEach( ([ server, remotes]) => {
@@ -205,6 +204,7 @@ export class AioResolver {
     }
 
     resolved(address:string ){
+        console.log( this.address )
         return this.address[ address ];
     }
 }
