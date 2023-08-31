@@ -97,6 +97,9 @@ export class AioResolver {
         let resolve:{domains?:{ [p:string]:{ [p:string]:string}}} = ini.parse( fs.readFileSync( filename ).toString() );
         if( !resolve ) resolve = {};
         resolve.domains = resolve.domains || {};
+
+        console.log( resolve );
+
         Object.entries( resolve.domains ).forEach( ([ server, remotes]) => {
             let identifier = `${server}.aio`;
             this.servers[ server ] = {
@@ -204,7 +207,6 @@ export class AioResolver {
     }
 
     resolved(address:string ){
-        console.log( this.address )
         return this.address[ address ];
     }
 }
