@@ -1,9 +1,17 @@
 import * as fs from "fs";
 import * as Path from "path";
 import ini from "ini";
+import {aio} from "../core/socket/aio";
+import Defaults = aio.Defaults;
 
-export function loadConfigsFile<T extends { [p:string|number|symbol]:any }>( path:string, encoding?: BufferEncoding ):T{
-    if( !fs.existsSync( path ) ) return {} as T;
+type Result = {
+    [p:string|number|symbol]:any;
+}
+export function loadConfigsFile<T extends Result>( path:string, encoding?: BufferEncoding ):T{
+    let result:Result = {
+        etc: Defaults.etc
+    };
+    if( !fs.existsSync( path ) ) return result as T;
     let basetype = Path.extname( path );
     let data = fs.readFileSync( path ).toString( encoding ?? "utf8" );
 
