@@ -76,6 +76,7 @@ export function agentOptsBuilder( yargs:Argv<AgentOpts> ){
     yargs.option( "dns", {
         type: "string",
         array: true,
+        default: aio.Defaults.dns,
         coerce: lib.typeParser.asStringArray
     })
 
