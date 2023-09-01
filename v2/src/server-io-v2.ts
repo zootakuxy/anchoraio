@@ -97,30 +97,51 @@ export function server( opts:ServerOptions){
     let clientOrigin = net.createServer( socket => {
         console.log( "NEW CLIENT REQUEST ON SERVER", opts.requestPort );
         socket.once( "data", (data) => {
-            // socket.pause();
-            console.log( "ON SERVER REDIRECT", data.toString() );
             let str = data.toString();
-            let end = str.indexOf("}");
-            let authPart = str.substring( 0, end+1 );
-            let headPart = str.substring( end+1, str.length );
 
-            let redirect:Redirect = JSON.parse( authPart );
+            // console.log( "ON SERVER REDIRECT", str );
+            // let end = str.indexOf("}");
+            // let authPart = str.substring( 0, end+1 );
+            // let headPart = str.substring( end+1, str.length );
+            //
+            // let redirect:Redirect = JSON.parse( authPart );
+            // let datas = [];
+            // // let listen = data =>{
+            // //     datas.push( data );
+            // // }
+            // // socket.on( "data", listen );
+            //
+            // connect( redirect.server, redirect.app, slot => {
+            //     // while ( datas.length ){
+            //     //     slot.connect.write(  datas.shift() );
+            //     // }
+            //     if( headPart.length>0 ) slot.connect.write(Buffer.from(headPart))
+            //     slot.connect.pipe( socket );
+            //     socket.pipe( slot.connect );
+            //     // socket.off( "data", listen );
+            //
+            //     if( headPart.length > 0 )
+            //     console.log( "SERVER REDIRECT READY")
+            // });
+
+
+            console.log( "ON SERVER REDIRECT", data.toString() );
+
+            let redirect:Redirect = JSON.parse( str );
             let datas = [];
-            // let listen = data =>{
-            //     datas.push( data );
-            // }
-            // socket.on( "data", listen );
+            let listen = data =>{
+                datas.push( data );
+            }
+            socket.on( "data", listen );
 
             connect( redirect.server, redirect.app, slot => {
-                // while ( datas.length ){
-                //     slot.connect.write(  datas.shift() );
-                // }
-                if( headPart.length>0 ) slot.connect.write(Buffer.from(headPart))
+                while ( datas.length ){
+                    slot.connect.write(  datas.shift() );
+                }
                 slot.connect.pipe( socket );
                 socket.pipe( slot.connect );
-                // socket.off( "data", listen );
-
-                if( headPart.length > 0 )
+                socket.off( "data", listen );
+                socket.write("ready" );
                 console.log( "SERVER REDIRECT READY")
             });
         });
