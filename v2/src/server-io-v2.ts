@@ -99,7 +99,7 @@ export function server( opts:ServerOptions){
         console.log( "NEW CLIENT REQUEST ON SERVER", opts.requestPort );
         socket.on("data", data => console.log( "DDDDDDDD", data.toString()))
         socket.once( "data", (data) => {
-            socket.pause();
+            // socket.pause();
             console.log( "ON SERVER REDIRECT", data.toString() );
             let str = data.toString();
             let end = str.indexOf("}");

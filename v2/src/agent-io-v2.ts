@@ -28,14 +28,10 @@ export function agent( opts:AgentOptions ){
 
         //get server and app by address
         let requestData = [];
-        request.pause();
         let listen = data =>{
             requestData.push( data );
         }
         request.on("data", listen );
-        // request.on("data", data => {
-        //     console.log(  `REGISTER-DATA:\n ${ data.toString()}` )
-        // })
 
         let requestToAnchor = net.connect( {
             host: opts.serverHost,
