@@ -23,7 +23,8 @@ export function agent( opts:AgentOptions ){
         console.log( "NEW REQUEST ON AGENT IN ADDRESS", request.remoteAddress );
         console.log( request );
         const remoteAddressParts = request.address()["address"].split( ":" );
-        const address =  remoteAddressParts[ remoteAddressParts.length-1 ];        let { app, server } = domainsMap[ address ];
+        const address =  remoteAddressParts[ remoteAddressParts.length-1 ];
+        let { app, server } = domainsMap[ address ];
 
         //get server and app by address
         let requestData = [];
