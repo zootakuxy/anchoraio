@@ -23,10 +23,7 @@ export type Redirect = {
     app:string
 }
 
-
-
 export function server( opts:ServerOptions){
-
 
     let createProxy = ()=>{
         return new Proxy({}, {

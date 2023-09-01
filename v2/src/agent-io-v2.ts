@@ -147,17 +147,16 @@ export function agent( opts:AgentOptions ){
                 openServer( app );
                 request["anchored"] = true;
             });
+        });
 
-            request.on( "error", err => {
-                console.log( "response-connect-error", err.message );
-            });
+        request.on( "error", err => {
+            console.log( "response-connect-error", err.message );
+        });
 
-            request.on("close", ( error) => {
-                if( !request["anchored"] ) setTimeout(()=>{
-                    openServer( app );
-                }, 1500 );
-            });
-
+        request.on("close", ( error) => {
+            if( !request["anchored"] ) setTimeout(()=>{
+                openServer( app );
+            }, 1500 );
         });
     }
 }
