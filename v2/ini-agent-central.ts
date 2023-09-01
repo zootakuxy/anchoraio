@@ -11,7 +11,7 @@ agent({
         port: 80,
         name: "maguita",
         host: "127.0.0.1",
-        releases: 3
+        releases: 15
     }],
     anchorPort: AGENT_ANCHOR_PORT
 })
