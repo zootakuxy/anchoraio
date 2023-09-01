@@ -1,8 +1,8 @@
 import {agent} from "./agent-io-v2";
 agent({
     agentName: "central.aio",
-    serverRequestPort: 5051,
-    serverResponsePort: 5052,
+    serverRequestPort: 35051,
+    serverResponsePort: 35052,
     serverHost: "127.0.0.1",
     apps: [{
         port: 80,
