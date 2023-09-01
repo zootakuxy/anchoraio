@@ -1,4 +1,5 @@
 import net from "net";
+import {Buffer} from "buffer";
 
 export type ServerOptions = {
     responsePort:number,
@@ -94,26 +95,34 @@ export function server( opts:ServerOptions){
     }
 
     let clientOrigin = net.createServer( socket => {
+        console.log( socket )
         console.log( "NEW CLIENT REQUEST ON SERVER", opts.requestPort );
         socket.on("data", data => console.log( "DDDDDDDD", data.toString()))
-        socket.once( "data", data => {
+        socket.once( "data", (data) => {
+            socket.pause();
             console.log( "ON SERVER REDIRECT", data.toString() );
-            let redirect:Redirect = JSON.parse( data.toString() );
+            let str = data.toString();
+            let end = str.indexOf("}");
+            let authPart = str.substring( 0, end+1 );
+            let headPart = str.substring( end+1, str.length );
+
+            let redirect:Redirect = JSON.parse( authPart );
             let datas = [];
-            let listen = data =>{
-                datas.push( data );
-            }
-            socket.on( "data", listen );
+            // let listen = data =>{
+            //     datas.push( data );
+            // }
+            // socket.on( "data", listen );
 
             connect( redirect.server, redirect.app, slot => {
-                while ( datas.length ){
-                    console.log("dsds dsd sd sdsdsds");
-                    slot.connect.write(  datas.shift() );
-                }
+                // while ( datas.length ){
+                //     slot.connect.write(  datas.shift() );
+                // }
+                if( headPart.length>0 ) slot.connect.write(Buffer.from(headPart))
                 slot.connect.pipe( socket );
                 socket.pipe( slot.connect );
-                socket.off( "data", listen );
-                socket.write( "ready" );
+                // socket.off( "data", listen );
+
+                if( headPart.length > 0 )
                 console.log( "SERVER REDIRECT READY")
             });
         });

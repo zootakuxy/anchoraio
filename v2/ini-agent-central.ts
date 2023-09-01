@@ -1,7 +1,7 @@
 require("source-map-support").install();
 
-import {agent} from "./agent-io-v2";
-import {AGENT_ANCHOR_PORT, SERVER_REQUEST_PORT, SERVER_RESPONSE_PORT} from "./ini-server";
+import {agent} from "./src/agent-io-v2";
+import {AGENT_ANCHOR_PORT, SERVER_REQUEST_PORT, SERVER_RESPONSE_PORT} from "./PORTS";
 agent({
     agentName: "central.aio",
     serverRequestPort: SERVER_REQUEST_PORT,

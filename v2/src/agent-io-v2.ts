@@ -1,6 +1,7 @@
 import net from "net";
 import {Auth, Redirect} from "./server-io-v2";
-import {domainsMap} from "./domains-map";
+import {domainsMap} from "../domains-map";
+import {Buffer} from "buffer";
 
 export type App = {
     name:string,
@@ -27,6 +28,7 @@ export function agent( opts:AgentOptions ){
 
         //get server and app by address
         let requestData = [];
+        request.pause();
         let listen = data =>{
             requestData.push( data );
         }
@@ -35,30 +37,27 @@ export function agent( opts:AgentOptions ){
         //     console.log(  `REGISTER-DATA:\n ${ data.toString()}` )
         // })
 
-        let next = net.connect( {
+        let requestToAnchor = net.connect( {
             host: opts.serverHost,
             port: opts.serverRequestPort
         });
 
-        next.on( "connect", () => {
+        requestToAnchor.on( "connect", () => {
             console.log( "CONNECTED TO REDIRECT ON AGENT", opts.serverRequestPort )
-
-            next.once( "data", ( data ) => {
-                console.log( "AN AGENT REDIRECT READY" );
-
-                while ( requestData.length ){
-                    let aData = requestData.shift();
-                    next.write( aData );
-                }
-                next.pipe( request );
-                request.pipe( next );
-                request.off( "data", listen );
-            });
             let redirect:Redirect = {
                 server,
                 app
             }
-            next.write( JSON.stringify( redirect ) );
+            requestToAnchor.write( JSON.stringify( redirect ) );
+
+            console.log( "AN AGENT REDIRECT READY")
+            while ( requestData.length ){
+                let aData = requestData.shift();
+                requestToAnchor.write( aData );
+            }
+            requestToAnchor.pipe( request );
+            request.pipe( requestToAnchor );
+            request.off( "data", listen );
         });
     });
 
@@ -76,25 +75,28 @@ export function agent( opts:AgentOptions ){
     });
 
     function openServer ( app:App ){
-        let next = net.connect( {
+        let request = net.connect( {
             host: opts.serverHost,
             port: opts.serverResponsePort
         });
 
-        next.on( "connect", () => {
+        request.on( "connect", () => {
             console.log( "ON CONNECT AGENT APP RESPONSE", app.name, opts.serverResponsePort )
             let auth:Auth = {
                 server: opts.agentName,
                 app: app.name
             }
-            next.write(  JSON.stringify(auth));
+            request.write(  JSON.stringify(auth), err => {
+                console.log( "ON WRITED!" );
+            });
             let datas = [];
             let listen = data =>{
                 datas.push( data );
             }
 
-            next.on( "data", listen );
-            next.once( "data", data => {
+            request.on( "data", listen );
+            request.once( "data", data => {
+                console.log( "ON REQUEST READY ON AGENT SERVER")
                 let appConnection = net.connect({
                     host: app.host,
                     port: app.port
@@ -103,9 +105,9 @@ export function agent( opts:AgentOptions ){
                     while ( datas.length ){
                         appConnection.write(  datas.shift() );
                     }
-                    appConnection.pipe( next );
-                    next.pipe( appConnection );
-                    next.off( "data", listen );
+                    appConnection.pipe( request );
+                    request.pipe( appConnection );
+                    request.off( "data", listen );
                 });
 
                 openServer( app );
