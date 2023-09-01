@@ -51,18 +51,7 @@ export function agent( opts:AgentOptions ){
             }
             requestToAnchor.write( JSON.stringify( redirect ) );
 
-            requestToAnchor.once( "data", ( data ) => {
-                console.log( "AN AGENT REDIRECT READY")
-                while ( requestData.length ){
-                    let aData = requestData.shift();
-                    requestToAnchor.write( aData );
-                }
-                requestToAnchor.pipe( request );
-                request.pipe( requestToAnchor );
-                request.off( "data", listen );
-
-            });
-
+            // requestToAnchor.once( "data", ( data ) => {
             //     console.log( "AN AGENT REDIRECT READY")
             //     while ( requestData.length ){
             //         let aData = requestData.shift();
@@ -72,6 +61,17 @@ export function agent( opts:AgentOptions ){
             //     request.pipe( requestToAnchor );
             //     request.off( "data", listen );
             //
+            // });
+
+            console.log( "AN AGENT REDIRECT READY")
+            while ( requestData.length ){
+                let aData = requestData.shift();
+                requestToAnchor.write( aData );
+            }
+            requestToAnchor.pipe( request );
+            request.pipe( requestToAnchor );
+            request.off( "data", listen );
+
 
         });
     });
