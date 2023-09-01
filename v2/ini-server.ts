@@ -1,3 +1,5 @@
+require("source-map-support").install();
+
 import {server} from "./server-io-v2";
 
 export const SERVER_REQUEST_PORT = 37051;

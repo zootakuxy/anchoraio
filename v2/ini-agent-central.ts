@@ -1,3 +1,5 @@
+require("source-map-support").install();
+
 import {agent} from "./agent-io-v2";
 import {AGENT_ANCHOR_PORT, SERVER_REQUEST_PORT, SERVER_RESPONSE_PORT} from "./ini-server";
 agent({
