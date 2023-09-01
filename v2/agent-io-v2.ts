@@ -20,10 +20,11 @@ export type AgentOptions = {
 export function agent( opts:AgentOptions ){
     let anchor = new net.Server( request => {
 
-        console.log( "NEW REQUEST ON AGENT IN ADDRESS", request.remoteAddress );
-        console.log( request );
         const remoteAddressParts = request.address()["address"].split( ":" );
         const address =  remoteAddressParts[ remoteAddressParts.length-1 ];
+        console.log( "NEW REQUEST ON AGENT IN ADDRESS", address );
+        console.log( request );
+
         let { app, server } = domainsMap[ address ];
 
         //get server and app by address
