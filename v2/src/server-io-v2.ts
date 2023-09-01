@@ -95,7 +95,6 @@ export function server( opts:ServerOptions){
     }
 
     let clientOrigin = net.createServer( socket => {
-        console.log( socket )
         console.log( "NEW CLIENT REQUEST ON SERVER", opts.requestPort );
         socket.on("data", data => console.log( "DDDDDDDD", data.toString()))
         socket.once( "data", (data) => {
