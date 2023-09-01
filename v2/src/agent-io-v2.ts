@@ -32,9 +32,6 @@ export function agent( opts:AgentOptions ){
             requestData.push( data );
         }
         request.on("data", listen );
-        // request.on("data", data => {
-        //     console.log(  `REGISTER-DATA:\n ${ data.toString()}` )
-        // })
 
         let requestToAnchor = net.connect( {
             host: opts.serverHost,
@@ -42,35 +39,35 @@ export function agent( opts:AgentOptions ){
         });
 
         requestToAnchor.on( "connect", () => {
+
+            //MODO wait response SERVSER
             console.log( "CONNECTED TO REDIRECT ON AGENT", opts.serverRequestPort )
-
-
             let redirect:Redirect = {
                 server,
                 app
             }
             requestToAnchor.write( JSON.stringify( redirect ) );
+            requestToAnchor.once( "data", ( data ) => {
+                console.log( "AN AGENT REDIRECT READY")
+                while ( requestData.length ){
+                    let aData = requestData.shift();
+                    requestToAnchor.write( aData );
+                }
+                requestToAnchor.pipe( request );
+                request.pipe( requestToAnchor );
+                request.off( "data", listen );
 
-            // requestToAnchor.once( "data", ( data ) => {
-            //     console.log( "AN AGENT REDIRECT READY")
-            //     while ( requestData.length ){
-            //         let aData = requestData.shift();
-            //         requestToAnchor.write( aData );
-            //     }
-            //     requestToAnchor.pipe( request );
-            //     request.pipe( requestToAnchor );
-            //     request.off( "data", listen );
-            //
-            // });
+            });
 
-            console.log( "AN AGENT REDIRECT READY")
-            while ( requestData.length ){
-                let aData = requestData.shift();
-                requestToAnchor.write( aData );
-            }
-            requestToAnchor.pipe( request );
-            request.pipe( requestToAnchor );
-            request.off( "data", listen );
+            //MODO noWait response server
+            // console.log( "AN AGENT REDIRECT READY")
+            // while ( requestData.length ){
+            //     let aData = requestData.shift();
+            //     requestToAnchor.write( aData );
+            // }
+            // requestToAnchor.pipe( request );
+            // request.pipe( requestToAnchor );
+            // request.off( "data", listen );
 
 
         });
