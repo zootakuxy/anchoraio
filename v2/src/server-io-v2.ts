@@ -1,6 +1,4 @@
 import net from "net";
-import {Buffer} from "buffer";
-
 export type ServerOptions = {
     responsePort:number,
     requestPort:number
@@ -113,8 +111,6 @@ export function server( opts:ServerOptions){
             //     console.log( "SERVER REDIRECT READY")
             // });
 
-
-
             //Modo waitResponse server
             console.log( "ON SERVER REDIRECT", data.toString() );
             let redirect:Redirect = JSON.parse( str );
@@ -135,6 +131,10 @@ export function server( opts:ServerOptions){
                 console.log( "SERVER REDIRECT READY")
             });
         });
+
+        socket.on( "error", err => {
+            console.log( "clientOrigin-error", err.message )
+        })
     });
 
     let serverDestine = net.createServer( socket => {
@@ -149,6 +149,10 @@ export function server( opts:ServerOptions){
             });
             console.log( "ON SERVER AGENT READY", data.toString())
         });
+
+        socket.on( "error", err => {
+            console.log( "serverDestine-error", err.message )
+        })
     });
 
     serverDestine.listen( opts.responsePort );
