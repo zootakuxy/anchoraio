@@ -129,10 +129,6 @@ export class AioResolver {
             });
 
         });
-
-        console.log( "SERVER-CONFS", this.servers );
-        console.log( "DOMAINS-CONFS", this.domains );
-        console.log( "ADDRESS-CONFS", this.address );
     }
 
     detachResolveFile( filename:string ){
