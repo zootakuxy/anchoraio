@@ -1,4 +1,5 @@
 import net from "net";
+import {nanoid} from "nanoid";
 export type ServerOptions = {
     responsePort:number,
     requestPort:number
@@ -8,6 +9,7 @@ type ServerSlot = {
     server:string,
     app:string,
     busy:boolean,
+    id:string
     connect:net.Socket
 };
 
@@ -30,17 +32,21 @@ export function server( opts:ServerOptions){
             get(target: {}, p: string | symbol, receiver: any): any {
                 if( !target[p]) target[p] = new Proxy({}, {
                     get(target: {}, p: string | symbol, receiver: any): any {
-                        if( !target[p]) target[p] = new Proxy([], {
-                            get(target: any[], p: string | symbol, receiver: any): any {
-                                if( p === "push" ){
-                                    return ( ... args )=>{
-                                        if( !args[0] ) throw new Error("sdsdsdsdsd");
-                                        return target.push( ...args );
-                                    }
-                                }
-                                return target[p];
-                            }
-                        });
+                        if( !target[p]) target[p] = [];
+                        return target[p];
+                    }
+                })
+                return target[p];
+            }
+        })
+    }
+
+    let createProxyObject = ()=>{
+        return new Proxy({}, {
+            get(target: {}, p: string | symbol, receiver: any): any {
+                if( !target[p]) target[p] = new Proxy({}, {
+                    get(target: {}, p: string | symbol, receiver: any): any {
+                        if( !target[p]) target[p] = {};
                         return target[p];
                     }
                 })
@@ -51,9 +57,9 @@ export function server( opts:ServerOptions){
 
     let serverSlots:{
         [server:string]:{
-            [app:string]:ServerSlot[]
+            [app:string]:{[id:string]:ServerSlot}
         }
-    } = createProxy();
+    } = createProxyObject();
 
     let waitConnections:{
         [server:string]:{
@@ -67,22 +73,25 @@ export function server( opts:ServerOptions){
             next( slot );
             return;
         }
-        serverSlots[ slot.server ][ slot.app ].push( slot );
+        slot.connect.on( "close", hadError => {
+            delete serverSlots[ slot.server ][ slot.app ][ slot.id ];
+        });
+        serverSlots[ slot.server ][ slot.app ][ slot.id ] = slot;
     }
 
     let connect = ( server:string, app:string, callback:WaitConnection )=>{
         if( !serverSlots[server][app] ) throw new Error("sdsdsds")
-        let next = serverSlots[server][app].find( value => {
+        let entry = Object.entries( serverSlots[server][app] ).find( ([ key, value]) => {
             if( !value ) return false;
             return value.server === server
                 && value.app === app
                 && !value.busy
         });
 
-        if( next ){
+        if( entry && entry[1] ){
+            let next = entry[1];
             next.busy = true;
-            let index = serverSlots[server][app].indexOf( next );
-            delete serverSlots[server][app][index];
+            delete serverSlots[server][app][ next.id ];
             callback( next );
             return;
         }
@@ -142,7 +151,8 @@ export function server( opts:ServerOptions){
                 app: pack.app,
                 server: pack.server,
                 busy: false,
-                connect: socket
+                connect: socket,
+                id: nanoid(32 )
             });
             console.log( "ON SERVER AGENT READY", data.toString())
         });
