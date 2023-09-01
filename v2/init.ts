@@ -1,3 +1,3 @@
 
 import "./ini-server";
-import "ini-agent";
+import "v2/ini-agent-central";

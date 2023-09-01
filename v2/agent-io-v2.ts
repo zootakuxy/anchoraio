@@ -1,5 +1,6 @@
 import net from "net";
 import {Auth, Redirect} from "./server-io-v2";
+import {domainsMap} from "./domains-map";
 
 export type App = {
     name:string,
@@ -15,17 +16,18 @@ export type AgentOptions = {
     anchorPort:number,
     agentName:string
 }
+
 export function agent( opts:AgentOptions ){
     let anchor = new net.Server( request => {
 
         console.log( "NEW REQUEST ON AGENT IN ADDRESS", request.remoteAddress );
-        //get server and app by address
-        let app = "maguita";
-        let server = "zootakuxy.aio";
+        let address = request.remoteAddress.split(":")[ 1 ];
+        let { app, server } = domainsMap[ address ];
 
-        let requestDatas = [];
+        //get server and app by address
+        let requestData = [];
         let listen = data =>{
-            requestDatas.push( data );
+            requestData.push( data );
         }
         request.on("data", listen );
         // request.on("data", data => {
@@ -43,8 +45,8 @@ export function agent( opts:AgentOptions ){
             next.once( "data", ( data ) => {
                 console.log( "AN AGENT REDIRECT READY" );
 
-                while ( requestDatas.length ){
-                    let aData = requestDatas.shift();
+                while ( requestData.length ){
+                    let aData = requestData.shift();
                     next.write( aData );
                 }
                 next.pipe( request );
