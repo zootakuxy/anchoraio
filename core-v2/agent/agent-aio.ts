@@ -34,7 +34,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
         this.opts = opts;
         this.token = new TokenService( opts );
         this.agentProxy = new AgentProxy( this, opts );
-        this.aioResolve = new AioResolver( this );
+        this.aioResolve = new AioResolver( this.opts );
         this.apps = new ApplicationAIO( this );
         this.init();
 
