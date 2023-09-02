@@ -1,4 +1,4 @@
-# [domains.zootakuxy]
-#     maguita=127.10.10.150
-#     #pg=127.10.10.151
-#     #la=127.343.4.34
+[domains.zootakuxy]
+    maguita=127.10.10.150
+    #pg=127.10.10.151
+    #la=127.343.4.34

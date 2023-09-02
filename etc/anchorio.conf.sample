@@ -1,18 +1,17 @@
-# etc     = ./entry
-#
-# [agent]
-#     identifier              = zootakuxy.aio
-#     name                    = zootakuxy
-#     server-host             = 127.0.0.1
-#     request-port            = 36920
-#     response-port           = 36930
-#     auth-port               = 36910
-#     anchor-port             = 36900
-#     restore-timeout         = 1000
-#     releases                = 2
-#
-# [server]
-#     request-port            = 36920
-#     response-port           = 36930
-#     auth-port               = 36910
-#
+etc     = ./entry
+
+[agent]
+    identifier              = zootakuxy.aio
+    name                    = zootakuxy
+    server-host             = 127.0.0.1
+    request-port            = 36920
+    response-port           = 36930
+    auth-port               = 36910
+    anchor-port             = 36900
+    restore-timeout         = 1000
+    releases                = 2
+
+[server]
+    request-port            = 36920
+    response-port           = 36930
+    auth-port               = 36910

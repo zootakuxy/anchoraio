@@ -1,10 +1,9 @@
-# [apps.maguita]
-#     port = 80
-#     address = 127.0.0.1
-#     release = 7
-# 
-# [apps.postgres]
-#     port=5432
-#     address = 127.0.0.1
-#     release = 2
-# 
+[apps.maguita]
+    port = 80
+    address = 127.0.0.1
+    release = 7
+
+[apps.postgres]
+    port=5432
+    address = 127.0.0.1
+    release = 2
