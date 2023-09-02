@@ -246,7 +246,7 @@ export function server( opts:ServerOptions){
             if( !token.token ) return end( "Token invalid" );
             if( token.token.token !== auth.token ) return  end( "1012","Invalid token math" );
             if( token.token.status !== "active" ) return end("1013",`Invalid token status ${ token.token.status }`);
-            if( agents[auth.agent ] ) return end( "1014","Another agent instance is connected!" );
+            if( agents[ auth.agent ] ) return end( "1014","Another agent instance is connected!" );
 
             let id = nanoid(16 );
             let referer = `${nanoid(16 )}`;
