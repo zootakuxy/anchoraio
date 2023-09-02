@@ -1,9 +1,9 @@
 [apps.web]
     port = 80
     address = 127.0.0.1
-    release = 7
+    releases = 7
 
 [apps.pg]
     port=5432
     address = 127.0.0.1
-    release = 2
+    releases = 2
