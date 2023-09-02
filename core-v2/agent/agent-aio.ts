@@ -6,6 +6,7 @@ import {AuthAgent, AuthResult} from "../server/server-proxy";
 import {BaseEventEmitter} from "kitres/src/core/util";
 import {AioResolver} from "../dns/aio.resolve";
 import {ApplicationAIO} from "../applications";
+import {Defaults} from "../../aio/opts/opts";
 
 export type AgentAioOptions = AgentProxyOptions& TokenOption& {
     authPort:number
@@ -99,7 +100,11 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
             this.status = "started";
             this.apps.applications().forEach( application => {
                 console.log( "open-application", application.name, application.address, application.port )
-               this.agentProxy.openApplication( application )
+                let releases =application.releases;
+                if( !releases ) releases = Defaults.releases;
+                for ( let i = 0 ; i< releases; i++ ){
+                   this.agentProxy.openApplication( application )
+                }
             });
         });
 

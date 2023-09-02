@@ -9,7 +9,7 @@ export type App = {
     name:string|number,
     address?:string,
     reference?:string
-    release?:any
+    releases?:any
 
 }
 
