@@ -143,9 +143,6 @@ export class AioResolver {
         domainName = parts.join( "." );
 
         let agentServerName = Object.keys( this.servers ).find(next => { return this.servers[next].match.test( domainName ); })
-        let agentServer = this.servers[ agentServerName ];
-        if( agentServer ) return this.aioResolve( domainName );
-
 
         if( parts.length !== 3 || parts[parts.length-1] !== "aio" ) return null;
         if( parts.filter( value => !value || !value.length).length ) return  null;
@@ -201,6 +198,8 @@ export class AioResolver {
             return [ {"name": domainName,"type":1,"class":1,"ttl":300,"address":domain.address } ]
         }
 
+        else return null;
+
 
         let address;
         while ( !address ){
@@ -247,9 +246,9 @@ export class AioResolver {
         });
 
 
-        fs.writeFile( Path.join( this.opts.etc, "resolve", "dynamic.resolve.conf" ), ini.stringify( configs, {
+        fs.writeFileSync( Path.join( this.opts.etc, "resolve", "dynamic.resolve.conf" ), ini.stringify( configs, {
             whitespace: true
-        }), ()=>{})
+        }))
 
         return answer;
     }
