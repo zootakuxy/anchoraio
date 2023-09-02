@@ -60,6 +60,7 @@ export class ResolveService {
                         name: this.opts.aioApplicationDomain,
                         description: `Aio entry domain for ${ this.opts.aioApplicationDomain }`,
                         address: resolve[0].address,
+                        port: this.opts.anchorPort,
                         protocol: "http",
                         disable: false,
                         opts: {
