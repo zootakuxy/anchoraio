@@ -269,6 +269,18 @@ export function server( opts:ServerOptions){
                 args:[ authResponse ]
             }))
         });
+
+        socket.on( "error", err => {
+            console.log( "server-auth-error", err.message )
+        });
+    });
+
+    [{serverAuth}, {serverDestine}, {clientOrigin} ].forEach( (entry, index) => {
+        Object.entries( entry ).forEach( ([key, server]) => {
+            server.on("error", err => {
+               console.log( key, "error", err.message );
+           });
+        });
     });
 
     serverAuth.listen( opts.authPort );
