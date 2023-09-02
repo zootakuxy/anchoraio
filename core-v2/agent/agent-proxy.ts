@@ -108,7 +108,7 @@ export class AgentProxy {
 
         requestToAnchor.on( "connect", () => {
 
-            //MODO wait response SERVSER
+
             console.log( "CONNECTED TO REDIRECT ON AGENT", opts.serverRequestPort )
             let redirect:AuthIO = {
                 server: identifierOf( opts.server ),
@@ -117,18 +117,6 @@ export class AgentProxy {
                 agent: identifierOf( this.opts.identifier )
             }
             requestToAnchor.write( JSON.stringify( redirect ) );
-            requestToAnchor.once( "data", ( data ) => {
-                console.log( "AN AGENT REDIRECT READY")
-                while ( opts.requestData.length ){
-                    let aData = opts.requestData.shift();
-                    requestToAnchor.write( aData );
-                }
-                requestToAnchor.pipe( request );
-                request.pipe( requestToAnchor );
-                request.off( "data", opts.dataListen );
-                requestToAnchor["anchored"] = true;
-                request["anchored"] = true;
-            });
 
             requestToAnchor.on( "close", hadError => {
                 if( !requestToAnchor["anchored"] && request["connected"]) {
@@ -142,15 +130,30 @@ export class AgentProxy {
                 console.log( "request-to-anchor-error", err.message );
             });
 
-            // // MODO noWait response server
-            // console.log( "AN AGENT REDIRECT READY")
-            // while ( requestData.length ){
-            //     let aData = requestData.shift();
-            //     requestToAnchor.write( aData );
-            // }
-            // requestToAnchor.pipe( request );
-            // request.pipe( requestToAnchor );
-            // request.off( "data", listen );
+            // // MODO wait response SERVSER
+            // requestToAnchor.once( "data", ( data ) => {
+            //     console.log( "AN AGENT REDIRECT READY")
+            //     while ( opts.requestData.length ){
+            //         let aData = opts.requestData.shift();
+            //         requestToAnchor.write( aData );
+            //     }
+            //     requestToAnchor.pipe( request );
+            //     request.pipe( requestToAnchor );
+            //     request.off( "data", opts.dataListen );
+            //     requestToAnchor["anchored"] = true;
+            //     request["anchored"] = true;
+            // });
+
+
+            // MODO noWait response server
+            console.log( "AN AGENT REDIRECT READY")
+            while ( opts.requestData.length ){
+                let aData = opts.requestData.shift();
+                requestToAnchor.write( aData );
+            }
+            requestToAnchor.pipe( request );
+            request.pipe( requestToAnchor );
+            request.off( "data", opts.dataListen );
         });
     }
 
