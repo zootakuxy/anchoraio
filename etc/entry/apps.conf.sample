@@ -1,9 +1,9 @@
-[apps.maguita]
+[apps.web]
     port = 80
     address = 127.0.0.1
     release = 7
 
-[apps.postgres]
+[apps.pg]
     port=5432
     address = 127.0.0.1
     release = 2
