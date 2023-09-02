@@ -1,4 +1,4 @@
-import {ResolveOptions} from "../../../aio/opts/remote-app";
+import {ResolveOptions} from "../../../aio/opts/opts-resolve";
 import {AioResolver} from "../../dns/aio.resolve";
 import fs from "fs";
 import Path from "path";
@@ -51,8 +51,6 @@ export class ResolveService {
 
         let agentServer = this.resolver.serverOf( this.opts.aioApplicationDomain );
 
-        console.table( this.opts )
-
         if( this.opts.noPortDomain && this.opts.noPortEntry ){
             let entry = {
                 entry:{
@@ -76,7 +74,14 @@ export class ResolveService {
             if( !fs.existsSync( Path.dirname( entryFileName ) ) ) fs.mkdirSync( Path.dirname( entryFileName ), {
                 recursive: true
             } );
-            fs.writeFileSync(entryFileName, ini.stringify( entry ))
+            fs.writeFileSync(entryFileName, ini.stringify( entry ));
+
+            console.log("DOMAIN ENTRY SETS");
+            console.log( "FILE:         ", entryFileName );
+            console.log( "APPLICATION:  ", this.opts.noPortDomain );
+            console.log( "APPLICATION:  ", this.opts.aioApplicationDomain );
+            console.log( "ADDRESS:      ", resolve[0].address );
+            console.log( "PORT:         ", this.opts.anchorPort );
         }
 
         return 0;
