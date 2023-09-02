@@ -22,7 +22,7 @@ export const handler = function ( argv: yargs.Arguments<ResolveOptions> ) {
             // console.error(error)
         });
     }
-    const { ResolveService } =  require( "../../core-v2/services/remote.service" );
+    const { ResolveService } =  require( "../../core-v2/services/resolve.service" );
     let ts = new ResolveService( argv );
     let resultCode = ts.start();
     process.exit( resultCode );

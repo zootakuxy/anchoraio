@@ -16,6 +16,7 @@ export class Localhost {
 
     constructor( opts:LocalhostOptions ) {
         this.opts = opts;
+        console.log([ this.opts, "localhost.conf" ])
         let existsLocalhost =  fs.existsSync( path.join( this.opts.etc, "localhost.conf" ));
         this._status = existsLocalhost? ini.parse( fs.readFileSync( path.join( this.opts.etc, "localhost.conf" ) ).toString() ): { localhost:{} };
 
