@@ -149,7 +149,6 @@ export function server( opts:ServerOptions){
                 if( headPart.length>0 ) slot.connect.write(Buffer.from(headPart))
                 slot.connect.pipe( socket );
                 socket.pipe( slot.connect );
-                if( headPart.length > 0 )
                 console.log( "SERVER REDIRECT READY", socket["id"], new Date() )
             });
             //Modo NoWait response Server | END
