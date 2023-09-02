@@ -130,36 +130,13 @@ export function server( opts:ServerOptions){
 
 
             let str = data.toString();
-            //Modo NoWait response Server
-            console.log( "ON SERVER REDIRECT", socket["id"], str );
-            let endPart = str.indexOf("}");
-            let authPart = str.substring( 0, endPart+1 );
-            let headPart = str.substring( endPart+1, str.length );
-
-            let redirect:AuthIO = JSON.parse( authPart );
-
-            let auth = Object.entries( agents ).find( ([agent, agentAuth], index) => {
-                return agentAuth.referer === redirect.authReferer
-                    && agentAuth.agent === redirect.agent;
-            });
-            if(!auth ) return end();
-
-            console.log( "ON SERVER REDIRECT AUTH", socket["id"], new Date());
-            connect( redirect.server, redirect.app, socket["id"], slot => {
-                if( headPart.length>0 ) slot.connect.write(Buffer.from(headPart))
-                slot.connect.pipe( socket );
-                socket.pipe( slot.connect );
-                console.log( "SERVER REDIRECT READY", socket["id"], new Date() )
-            });
-            //Modo NoWait response Server | END
-
-
-
-
-            // //Modo waitResponse server
-            // console.log( "ON SERVER REDIRECT", data.toString() );
-            // let redirect:AuthIO = JSON.parse( str );
+            // //Modo NoWait response Server
+            // console.log( "ON SERVER REDIRECT", socket["id"], str );
+            // let endPart = str.indexOf("}");
+            // let authPart = str.substring( 0, endPart+1 );
+            // let headPart = str.substring( endPart+1, str.length );
             //
+            // let redirect:AuthIO = JSON.parse( authPart );
             //
             // let auth = Object.entries( agents ).find( ([agent, agentAuth], index) => {
             //     return agentAuth.referer === redirect.authReferer
@@ -167,24 +144,47 @@ export function server( opts:ServerOptions){
             // });
             // if(!auth ) return end();
             //
-            // let datas = [];
-            // let listen = data =>{
-            //     datas.push( data );
-            // }
-            // socket.on( "data", listen );
-            //
-            // console.log( "ON SERVER REDIRECT AUTH" );
-            // connect( redirect.server, redirect.app, slot => {
-            //     while ( datas.length ){
-            //         slot.connect.write(  datas.shift() );
-            //     }
+            // console.log( "ON SERVER REDIRECT AUTH", socket["id"], new Date());
+            // connect( redirect.server, redirect.app, socket["id"], slot => {
+            //     if( headPart.length>0 ) slot.connect.write(Buffer.from(headPart))
             //     slot.connect.pipe( socket );
             //     socket.pipe( slot.connect );
-            //     socket.off( "data", listen );
-            //     socket.write("ready" );
-            //     console.log( "SERVER REDIRECT READY")
+            //     console.log( "SERVER REDIRECT READY", socket["id"], new Date() )
             // });
-            // //Modo waitResponse server | END
+            // //Modo NoWait response Server | END
+
+
+
+
+            //Modo waitResponse server
+            console.log( "ON SERVER REDIRECT", data.toString() );
+            let redirect:AuthIO = JSON.parse( str );
+
+
+            let auth = Object.entries( agents ).find( ([agent, agentAuth], index) => {
+                return agentAuth.referer === redirect.authReferer
+                    && agentAuth.agent === redirect.agent;
+            });
+            if(!auth ) return end();
+
+            let datas = [];
+            let listen = data =>{
+                datas.push( data );
+            }
+            socket.on( "data", listen );
+
+            console.log( "ON SERVER REDIRECT AUTH", socket["id"], new Date() );
+            connect( redirect.server, redirect.app, socket["id"],slot => {
+                while ( datas.length ){
+                    slot.connect.write(  datas.shift() );
+                }
+                slot.connect.pipe( socket );
+                socket.pipe( slot.connect );
+                socket.off( "data", listen );
+                socket.write("ready" );
+                console.log( "SERVER REDIRECT READY", socket["id"], new Date())
+            });
+            //Modo waitResponse server | END
         });
 
         socket.on( "error", err => {
