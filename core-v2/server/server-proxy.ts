@@ -95,8 +95,7 @@ export function server( opts:ServerOptions){
         serverSlots[ slot.server ][ slot.app ][ slot.id ] = slot;
     }
 
-    let connect = ( server:string, app:string|number, callback:WaitConnection )=>{
-
+    let connect = ( server:string, app:string|number, waitFor:string, callback:WaitConnection )=>{
 
         let entry = Object.entries( serverSlots[server][app] ).find( ([ key, value]) => {
             if( !value ) return false;
@@ -110,9 +109,11 @@ export function server( opts:ServerOptions){
             next.busy = true;
             delete serverSlots[server][app][ next.id ];
             callback( next );
+            console.log( "CALLBACK APPLIED!")
             return;
         }
         waitConnections[server][app].push( callback );
+        console.log( "CALLBACK REGISTRED!" );
     }
 
     let agents : {
@@ -120,6 +121,7 @@ export function server( opts:ServerOptions){
     } = {}
 
     let clientOrigin = net.createServer( socket => {
+        socket["id"] = nanoid(16 );
         console.log( "NEW CLIENT REQUEST ON SERVER", opts.requestPort );
         socket.once( "data", (data) => {
             let end = ()=>{
@@ -129,7 +131,7 @@ export function server( opts:ServerOptions){
 
             let str = data.toString();
             //Modo NoWait response Server
-            console.log( "ON SERVER REDIRECT", str );
+            console.log( "ON SERVER REDIRECT", socket["id"], str );
             let endPart = str.indexOf("}");
             let authPart = str.substring( 0, endPart+1 );
             let headPart = str.substring( endPart+1, str.length );
@@ -142,13 +144,13 @@ export function server( opts:ServerOptions){
             });
             if(!auth ) return end();
 
-            console.log( "ON SERVER REDIRECT AUTH" );
-            connect( redirect.server, redirect.app, slot => {
+            console.log( "ON SERVER REDIRECT AUTH", socket["id"] );
+            connect( redirect.server, redirect.app, socket["id"], slot => {
                 if( headPart.length>0 ) slot.connect.write(Buffer.from(headPart))
                 slot.connect.pipe( socket );
                 socket.pipe( slot.connect );
                 if( headPart.length > 0 )
-                console.log( "SERVER REDIRECT READY")
+                console.log( "SERVER REDIRECT READY", socket["id"])
             });
             //Modo NoWait response Server | END
 

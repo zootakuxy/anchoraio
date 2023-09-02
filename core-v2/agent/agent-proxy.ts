@@ -239,12 +239,18 @@ export class AgentProxy {
                     appConnection.pipe( request );
                     request.pipe( appConnection );
                     request.off( "data", listenData );
+                    request["anchorPiped"] = true;
                 });
                 appConnection.on( "error", err => {
-                    console.log("app-server-error", err.message )
+                    console.log("app-server-error", err.message );
+                    if( !request["anchorPiped"] ){
+                        request.end();
+                    }
                 });
                 this.openApplication( app );
                 request["anchored"] = true;
+                request["anchorPiped"] = false;
+
             });
         });
 
