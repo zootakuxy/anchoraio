@@ -3,7 +3,7 @@ mode="dev";
 
 if [ "$1" == "AGENT" ]; then
     app="ANCHOR-AIO-AGENT"
-    _command="agent"
+    _command="agentProxy"
 
 elif [ "$1" == "SERVER" ]; then
     app="ANCHOR-AIO-SERVER"
@@ -12,7 +12,7 @@ elif [ "$1" == "SERVER" ]; then
 
 elif [ "$1" == "AGENT-SERVER" ]; then
     app="ANCHOR-AIO-AGENT-SERVER"
-    _command="agent"
+    _command="agentProxy"
 else
   exit;
 fi;
@@ -22,6 +22,6 @@ if [ "$2" == "prod" ]; then mode="prod"; fi;
 
 #sock_file="$(pwd)/${mode}.sock"
 kill $(ps aux | grep "${app}" | awk '{print $2}')
-#kill $(ps aux | grep "anchoraio-agent:${app}" | awk '{print $2}')
+#kill $(ps aux | grep "anchoraio-agentProxy:${app}" | awk '{print $2}')
 #rm -rf "${sock_file}"
 

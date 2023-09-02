@@ -5,11 +5,11 @@ selfMaster=""
 
 if [ "$1" == "AGENT" ]; then
     app="ANCHOR-AIO-AGENT"
-    _command="agent"
+    _command="agentProxy"
     noDNS="--noDNS"
 
 elif [ "$1" == "AGENT-SERVER" ]; then
-    _command="agent"
+    _command="agentProxy"
     app="ANCHOR-AIO-AGENT-SERVER"
     noDNS="--noDNS"
     selfMaster="--self-server"

@@ -1,8 +1,7 @@
 import * as fs from "fs";
 import * as Path from "path";
 import ini from "ini";
-import {aio} from "../core/socket/aio";
-import Defaults = aio.Defaults;
+import {Defaults} from "./opts/opts";
 
 type Result = {
     [p:string|number|symbol]:any;

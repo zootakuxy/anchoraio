@@ -1,6 +1,7 @@
 import yargs, {BuilderCallback} from "yargs";
-import { ServerOptions, serverBuilderOptions} from "../../core/server/opts";
-import {aioOpts} from "../opts";
+import { ServerOptions} from "../../core-v2/server/server-proxy";
+import {aioOpts} from "../opts/opts";
+import {serverBuilderOptions} from "../opts/opts-server";
 
 export const command = "server";
 export const desc:string = "Start server service";
@@ -23,6 +24,6 @@ export const handler = function ( argv: yargs.Arguments<ServerOptions> ) {
         });
     }
     console.log( "[ANCHORIO] Server>", "Init...");
-    const { ServerContext } =  require( "../../core/service/server.service" );
-    new ServerContext( argv ).start();
+    const { server, ServerOptions } =  require( "../../core-v2/server/server-proxy" );
+    server( argv );
 }

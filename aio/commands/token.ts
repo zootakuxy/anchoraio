@@ -1,6 +1,6 @@
 import yargs, {BuilderCallback} from "yargs";
-import {baseOpts} from "../opts";
-import {tokenBuilderOptions, TokenOption} from "../../core/service/token.service/opts";
+import {baseOpts} from "../opts/opts";
+import {tokenBuilderOptions, TokenOption} from "../opts/opts-token";
 
 export const command = "token";
 export const desc:string = "Manage server token";
@@ -22,7 +22,7 @@ export const handler = function ( argv: yargs.Arguments<TokenOption> ) {
             // console.error(error)
         });
     }
-    const { TokenService } =  require( "../../core/service/token.service" );
+    const { TokenService } =  require( "../../core-v2/services/token.service" );
     let ts = new TokenService( argv );
     let resultCode = ts.start();
     process.exit( resultCode );

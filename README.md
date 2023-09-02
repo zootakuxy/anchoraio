@@ -1,2 +1,2 @@
 # anchoraio
-anchoraio agent connection
+anchoraio agentProxy connection
