@@ -1,8 +1,8 @@
 import yargs, {BuilderCallback} from "yargs";
 import {baseOpts} from "../opts/opts";
-import {resolveBuilderOptions, ResolveOptions} from "../opts/remote-app";
+import {resolveBuilderOptions, ResolveOptions} from "../opts/opts-resolve";
 
-export const command = "remote";
+export const command = "resolve";
 export const desc:string = "Manage remote connections";
 
 export const builder:BuilderCallback<ResolveOptions, any> = yargs => {
