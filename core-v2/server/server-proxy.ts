@@ -105,10 +105,6 @@ export function server( opts:ServerOptions){
                 && !value.busy
         });
 
-        console.log( {
-            server, app, entry, serverSlots
-        })
-
         if( entry && entry[1] ){
             let next = entry[1];
             next.busy = true;
