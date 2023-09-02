@@ -1,4 +1,6 @@
 etc     = ./entry
+noPortEntry = ../noport/entry
+
 
 [agent]
     identifier              = zootakuxy.aio
