@@ -16,7 +16,6 @@ export class Localhost {
 
     constructor( opts:LocalhostOptions ) {
         this.opts = opts;
-        console.log([ this.opts, "localhost.conf" ])
         let existsLocalhost =  fs.existsSync( path.join( this.opts.etc, "localhost.conf" ));
         this._status = existsLocalhost? ini.parse( fs.readFileSync( path.join( this.opts.etc, "localhost.conf" ) ).toString() ): { localhost:{} };
 
@@ -35,7 +34,6 @@ export class Localhost {
         this._next = this._next.increment();
         this._status.localhost.last = _next;
 
-        console.info( this._status )
         fs.writeFileSync( path.join( this.opts.etc, "localhost.conf" ), ini.stringify( this._status ));
         return _next;
     }
