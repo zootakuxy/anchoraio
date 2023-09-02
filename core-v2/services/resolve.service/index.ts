@@ -17,39 +17,9 @@ export class ResolveService {
 
         let resolve = this.resolver.aioResolve( this.opts.aioApplicationDomain );
         if( !resolve ) resolve = this.resolver.aioRegisterServer( this.opts.aioApplicationDomain );
-        /*
-        [entry.aioV2Maguita]
-            #required | Port number
-            port = 37050
-
-            #required | domain name
-            host[] = maguita.zotakuxy.aio-v2.brainsoftstp.com
-        #    host[] = *.maguita.test.brainsoftstp.com
-
-            #requerid | code name
-            name = maguita.zootakuxy.aio-v2
-
-            #optional description
-            description = Admintracao de desenvolvimento luma
-
-            #optional address (default using localhost address)
-            address = 127.10.10.1
-
-            #option protocol http|https (default using request protocol to replay)
-            protocol = http
-
-            #optional | Entry active status  (default true)
-            disable = false
-        [entry.aioV2Maguita.opts]
-            # setion for option of http-proxy-middleware
-            # declaration  [entry.<<you-entry-name>>.opts]
-            # read docummentation in https://www.npmjs.com/package/http-proxy-middleware
-            # changeOrigin =  true`~4`~4`~4`~4`~4
-
-
-         */
-
         let agentServer = this.resolver.serverOf( this.opts.aioApplicationDomain );
+
+        console.log( agentServer )
 
         if( this.opts.noPortDomain && this.opts.noPortEntry ){
             let entry = {
