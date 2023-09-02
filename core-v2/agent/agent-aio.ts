@@ -1,6 +1,6 @@
 import {AgentProxy,AgentProxyOptions} from "./agent-proxy";
 import {TokenService} from "../services/token.service";
-import {TokenOption} from "../../aio/opts/opts-token";
+import {TokenOptions} from "../../aio/opts/opts-token";
 import net from "net";
 import {AuthAgent, AuthResult} from "../server/server-proxy";
 import {BaseEventEmitter} from "kitres/src/core/util";
@@ -8,7 +8,7 @@ import {AioResolver} from "../dns/aio.resolve";
 import {ApplicationAIO} from "../applications";
 import {Defaults} from "../../aio/opts/opts";
 
-export type AgentAioOptions = AgentProxyOptions& TokenOption& {
+export type AgentAioOptions = AgentProxyOptions& TokenOptions& {
     authPort:number
 }
 

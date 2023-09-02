@@ -1,16 +1,16 @@
 import yargs, {BuilderCallback} from "yargs";
 import {baseOpts} from "../opts/opts";
-import {tokenBuilderOptions, TokenOption} from "../opts/opts-token";
+import {tokenBuilderOptions, TokenOptions} from "../opts/opts-token";
 
 export const command = "token";
 export const desc:string = "Manage server token";
 
-export const builder:BuilderCallback<TokenOption, any> = yargs => {
+export const builder:BuilderCallback<TokenOptions, any> = yargs => {
     return baseOpts( tokenBuilderOptions( yargs ), value => {
         return Object.assign({}, value?.server||{} );
     })
 };
-export const handler = function ( argv: yargs.Arguments<TokenOption> ) {
+export const handler = function ( argv: yargs.Arguments<TokenOptions> ) {
     if( argv.mode === "prod" ){
         process.on( "uncaughtExceptionMonitor", error => {
             // console.error(error.message)

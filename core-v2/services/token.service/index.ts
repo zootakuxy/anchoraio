@@ -1,4 +1,4 @@
-import {TokenOption} from "../../../aio/opts/opts-token";
+import {TokenOptions} from "../../../aio/opts/opts-token";
 import fs from "fs";
 import chalk from "chalk";
 import Path from "path";
@@ -14,14 +14,14 @@ export interface Token {
 }
 
 export class TokenService {
-    private readonly _opts:TokenOption;
+    private readonly _opts:TokenOptions;
     private _folder:string;
 
-    constructor( options:TokenOption ) {
+    constructor( options:TokenOptions ) {
         this._opts = options;
     }
 
-    get opts(): TokenOption {
+    get opts(): TokenOptions {
         return this._opts;
     }
 

@@ -30,15 +30,21 @@ export function baseOpts(yargs:Argv<BaseOptions>, parse:(value:any )=>any):Argv<
             default: Defaults.envFile,
         })
         .config("envFile", "Camoinho para ficheiro das variaveis", configPath => {
-            const values =  loadConfigsFile<{ agent?:AgentLauncherOptions, etc?:string }>( configPath, "utf8" );
+            const values =  loadConfigsFile<{ agent?:AgentLauncherOptions, etc?:string, noPortEntry?:string  }>( configPath, "utf8" );
             let etc = values?.etc;
+            let noPortEntry = values?.noPortEntry;
             if( etc && !Path.isAbsolute( etc ) ) {
                 etc = Path.join( Path.dirname( configPath ), etc )
             }
 
+            if( noPortEntry && !Path.isAbsolute( noPortEntry ) ){
+                noPortEntry = Path.join( Path.dirname( configPath ), noPortEntry );
+            }
+
             let result = { };
             if( typeof parse === "function" ) Object.assign(result, parse( values ),{
-                etc
+                etc,
+                noPortEntry
             });
             return result;
         })

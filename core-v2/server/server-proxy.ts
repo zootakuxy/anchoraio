@@ -1,8 +1,8 @@
 import net from "net";
 import {nanoid} from "nanoid";
 import {TokenService} from "../services/token.service";
-import {TokenOption} from "../../aio/opts/opts-token";
-export type ServerOptions = TokenOption & {
+import {TokenOptions} from "../../aio/opts/opts-token";
+export type ServerOptions = TokenOptions & {
     responsePort:number,
     requestPort:number
     authPort:number

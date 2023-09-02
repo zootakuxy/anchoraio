@@ -2,17 +2,17 @@ import {Argv} from "yargs";
 import {lib} from "../../core-v2/lib";
 import {BaseOptions} from "./opts";
 
-export type TokenOption = BaseOptions & {
+export type TokenOptions = BaseOptions & {
     identifier?:string
     generate?:boolean
     update?:boolean
     list?:boolean
     format?:"table"|"json"|"label"|"ini"|"file"|"cfg",
-    status?:"active"|"disable"
+    status?:"active"|"disable",
     mail?:string
 };
 
-export function tokenBuilderOptions(yargs:Argv<TokenOption> ){
+export function tokenBuilderOptions(yargs:Argv<TokenOptions> ){
 
     yargs.option( "identifier", { alias: [ "id", "i" ],
         type: "string",

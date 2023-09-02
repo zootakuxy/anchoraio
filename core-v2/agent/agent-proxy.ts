@@ -3,7 +3,6 @@ import {AuthIO, identifierOf} from "../server/server-proxy";
 import {nanoid} from "nanoid";
 import {AgentAio} from "./agent-aio";
 import {App} from "../applications";
-import {identifier} from "kitres";
 
 export type AgentProxyOptions = {
     requestPort:number,

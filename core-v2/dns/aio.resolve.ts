@@ -3,7 +3,6 @@ import * as fs from "fs";
 import ini from "ini";
 import {Localhost} from "./localhost";
 import Path from "path";
-import {AgentAio} from "../agent/agent-aio";
 import {Detect, DirWatch} from "../utils/dir-watch";
 
 export type AgentServer = { name:string, identifier:string, match:RegExp, reference?:string }
@@ -16,7 +15,7 @@ export type AioAnswerer = {
 };
 
 export function domainMath( domainName ):RegExp{
-    return new RegExp(`((^)*.${domainName})|((^)${domainName})$`);
+    return new RegExp(`((^)*.${domainName})$|((^)${domainName})$`);
 }
 
 export function asAio( name:string ):AgentServer{
@@ -43,9 +42,15 @@ export interface Resolved {
 }
 
 
+export interface AioResolverOptions {
+    etc:string
+}
+
+const extension = "resolve.conf";
+export const RESOLVE_REGEXP = RegExp( `((^)*.${extension})$|((^)${extension})$` );
 
 export class AioResolver {
-    agents:AgentAio
+    opts:AioResolverOptions;
     localhost:Localhost;
     dirWatch:DirWatch;
 
@@ -54,12 +59,12 @@ export class AioResolver {
     address:{[p:string]:Resolved}
 
 
-    constructor( agent:AgentAio ) {
-        this.agents = agent;
+    constructor( opts:AioResolverOptions ) {
+        this.opts = opts;
         this.domains = { };
         this.address = { };
         this.servers = { };
-        this.localhost = new Localhost( agent );
+        this.localhost = new Localhost( opts );
         this.dirWatch = new DirWatch();
 
         let bases = [
@@ -67,20 +72,19 @@ export class AioResolver {
         ];
 
         bases.forEach( value => {
-            this.dirWatch.acceptor( Path.join( this.agents.opts.etc, value.base), RegExp( `((^)*.${value.extension})|((^)${value.extension})$` ));
+            this.dirWatch.acceptor( Path.join( this.opts.etc, value.base), RegExp( `((^)*.${value.extension})|((^)${value.extension})$` ));
         })
 
-        let extension = "resolve.conf";
-        let resolveRegexp = RegExp( `((^)*.${extension})|((^)${extension})$` )
+
 
         this.dirWatch.listener.on( "reader", (list:string[]) => {
             list.forEach( filename => {
-                if( resolveRegexp.test( filename ))  this.onResolveFile( filename, { filename, basename: Path.basename(filename), event: "write", dirname: Path.dirname( filename )});
+                if( RESOLVE_REGEXP.test( filename ))  this.onResolveFile( filename, { filename, basename: Path.basename(filename), event: "write", dirname: Path.dirname( filename )});
             });
         });
 
         this.dirWatch.listener.on( "write", (filename, details:Detect) => {
-            if( resolveRegexp.test( filename ) ) this.onResolveFile( filename, details );
+            if( RESOLVE_REGEXP.test( filename ) ) this.onResolveFile( filename, details );
         });
         this.dirWatch.start();
     }
@@ -129,16 +133,66 @@ export class AioResolver {
         Object.entries( this.address ).forEach( ([ key, value])=>{
             if( value.reference === filename ) delete this.address[ key ];
         })
-        Object.entries( this.agents ).forEach( ([ key, value])=>{
-            if( value.reference === filename ) delete this.agents[ key ];
+        Object.entries( this.servers ).forEach( ([ key, value])=>{
+            if( value.reference === filename ) delete this.servers[ key ];
         })
     }
 
-    aioResolve( domainName:string ):DnsAnswer[]{
-        let key = Object.keys( this.agents ).find(next => { return this.agents[next].match.test( domainName ); })
-        let server = this.servers[ key ];
+    aioRegisterServer( domainName:string ):DnsAnswer[]{
+        let parts = domainName.split("." ).map( value => value.trim().toLowerCase() );
+        domainName = parts.join( "." );
 
-        if( !server ) return null;
+        let agentServerName = Object.keys( this.servers ).find(next => { return this.servers[next].match.test( domainName ); })
+        let agentServer = this.servers[ agentServerName ];
+        if( agentServer ) return this.aioResolve( domainName );
+
+
+        if( parts.length !== 3 || parts[parts.length-1] !== "aio" ) return null;
+        if( parts.filter( value => !value || !value.length).length ) return  null;
+        agentServerName = parts[ 1 ];
+        let identifier = [ agentServerName, "aio" ].join(".");
+        let appName = parts[ 0 ];
+        let address:string = this.localhost.next();
+
+        let entry = {
+            domains : {
+                [ agentServerName ] : {
+                    [ appName ]: address
+                }
+            }
+        }
+
+        let filename = Path.join( this.opts.etc, "resolve", `${address}-${domainName}.resolve.conf` );
+
+        this.servers[ agentServerName ] = {
+            name: agentServerName,
+            identifier: identifier,
+            match: domainMath( identifier ),
+            reference: filename
+        }
+
+        fs.writeFileSync( filename, ini.stringify( entry ) );
+
+        return [
+            {"name": domainName,"type":1,"class":1,"ttl":300,"address":address }
+        ]
+    }
+
+    serverOf( domainName:string ){
+        let parts = domainName.split("." ).map( value => value.trim().toLowerCase() );
+        domainName = parts.join( "." );
+        let agentServerName = Object.keys( this.servers ).find(next => { return this.servers[next].match.test( domainName ); })
+        return this.servers[ agentServerName ];
+    }
+
+    aioResolve( domainName:string ):DnsAnswer[]{
+        let parts = domainName.split("." ).map( value => value.trim().toLowerCase() );
+        domainName = parts.join( "." );
+
+        let agentServerName = Object.keys( this.servers ).find(next => { return this.servers[next].match.test( domainName ); })
+        let agentServer = this.servers[ agentServerName ];
+
+        if( !agentServer ) return null;
 
 
         let domain = this.domains[ domainName ];
@@ -156,7 +210,7 @@ export class AioResolver {
 
         let application;
         let _domainParts = domainName.split( "." );
-        let _serverParts = server.identifier.split( "." );
+        let _serverParts = agentServer.identifier.split( "." );
         if( _domainParts.length > _serverParts.length )  application = _domainParts.shift()
 
         let answer = [{
@@ -170,12 +224,12 @@ export class AioResolver {
         if( !application ) return [];
 
         let resolved =  {
-            reference: Path.join( this.agents.opts.etc, "resolve", "dynamic.resolve.conf" ),
+            reference: Path.join( this.opts.etc, "resolve", "dynamic.resolve.conf" ),
             domainName: domainName,
             address: address,
             application,
-            server: server.name,
-            serverIdentifier: server.identifier
+            server: agentServer.name,
+            serverIdentifier: agentServer.identifier
         };
 
         this.domains[ domainName ] = resolved;
@@ -186,14 +240,14 @@ export class AioResolver {
         Object.entries( this.servers ).forEach( ( [ key, _server ])=>{
             configs[ _server.name ] = { };
             Object.entries( this.domains ).filter( ([key, value ])=>{
-                return value.reference === Path.join( this.agents.opts.etc, "resolve", "dynamic.resolve.conf" );
+                return value.reference === Path.join( this.opts.etc, "resolve", "dynamic.resolve.conf" );
             }).forEach( ([application, value ])=>{
                 configs[ _server.name ][ value.application ] = value.address;
             });
         });
 
 
-        fs.writeFile( Path.join( this.agents.opts.etc, "resolve", "dynamic.resolve.conf" ), ini.stringify( configs, {
+        fs.writeFile( Path.join( this.opts.etc, "resolve", "dynamic.resolve.conf" ), ini.stringify( configs, {
             whitespace: true
         }), ()=>{})
 
