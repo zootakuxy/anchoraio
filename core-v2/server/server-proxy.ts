@@ -144,13 +144,13 @@ export function server( opts:ServerOptions){
             });
             if(!auth ) return end();
 
-            console.log( "ON SERVER REDIRECT AUTH", socket["id"] );
+            console.log( "ON SERVER REDIRECT AUTH", socket["id"], new Date());
             connect( redirect.server, redirect.app, socket["id"], slot => {
                 if( headPart.length>0 ) slot.connect.write(Buffer.from(headPart))
                 slot.connect.pipe( socket );
                 socket.pipe( slot.connect );
                 if( headPart.length > 0 )
-                console.log( "SERVER REDIRECT READY", socket["id"])
+                console.log( "SERVER REDIRECT READY", socket["id"], new Date() )
             });
             //Modo NoWait response Server | END
 
