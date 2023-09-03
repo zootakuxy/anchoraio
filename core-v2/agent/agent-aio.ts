@@ -124,6 +124,18 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
             });
         }
 
+        this.on("serverOpen", server => {
+            console.log( "ServerOpen", server );
+            openGetaways( [ server ] );
+        });
+
+        this.on( "serverClose", server => {
+            console.log( "serverClose", server );
+            let index = this.openedServes.indexOf( server );
+            if( index === -1 ) return;
+            this.openedServes.splice( index, 1 );
+        });
+
         this.on("auth", auth => {
             this.result = "authenticated";
             this.authReferer = auth.referer;
@@ -141,16 +153,6 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
             });
 
             openGetaways( this.openedServes );
-        });
-
-        this.on("serverOpen", server => {
-            openGetaways( [ server ] );
-        });
-
-        this.on( "serverClose", server => {
-            let index = this.openedServes.indexOf( server );
-            if( index === -1 ) return;
-            this.openedServes.splice( index, 1 );
         });
 
         this.on( "authFailed", (code, message) => {
