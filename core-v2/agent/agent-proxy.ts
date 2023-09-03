@@ -224,12 +224,7 @@ export class AgentProxy {
     private connect ( request, opts:ConnectionOptions ){
         this.onGetAway( opts.server, opts.application, getAway => {
             // console.log( "AN AGENT REDIRECT READY")
-            while ( opts.requestData.length ){
-                let aData = opts.requestData.shift();
-                getAway.connection.write( aData );
-            }
-
-            anchor( getAway.connection, request );
+            anchor( request, getAway.connection, opts.requestData, []);
             request.off( "data", opts.dataListen );
             getAway.connection[ "anchored" ] = true;
             request[ "anchored" ] = true;
@@ -315,10 +310,7 @@ export class AgentProxy {
                     port: app.port
                 });
                 appConnection.on( "connect", () => {
-                    while ( datas.length ){
-                        appConnection.write(  datas.shift() );
-                    }
-                    anchor( appConnection, request );
+                    anchor( request, appConnection, datas, [] );
                     request.off( "data", listenData );
                     request["anchorPiped"] = true;
                     console.log( `new connection with ${ app.name } established` );

@@ -67,18 +67,28 @@ export function statusOf  ( socket:net.Socket ):StatusOf{
     }
 }
 
-export function anchor( left:net.Socket, right:net.Socket ){
-    let __anchor = ( _left:net.Socket, _right:net.Socket ) => {
+export function anchor( requestSide:net.Socket, responseSide:net.Socket, requestData:any[], responseData){
+    if( !requestData ) requestData = [];
+    if( !responseData ) responseData = [];
+
+    let __anchor = ( _left:net.Socket, _right:net.Socket, data:any[] ) => {
         _left.pipe( _right );
         _left.on( "close", hadError => {
             if( hadError ) _right.end();
         });
         _left[ "anchored" ] = true;
-
     }
 
-    __anchor( left, right );
-    __anchor( right, left );
+    let __switchData = ( side:net.Socket, data:any[])=>{
+        while ( data.length ){
+            side.write( requestData.shift() );
+        }
+    }
+
+    __anchor( requestSide, responseSide, requestData );
+    __anchor( responseSide, requestSide, responseData );
+    __switchData( responseSide, requestData );
+    __switchData( requestSide, responseData );
 
 }
 
@@ -214,10 +224,7 @@ export function server( opts:ServerOptions){
                 id: status.id,
                 connection: socket,
                 resolve( slot ){
-                    while ( datas.length ){
-                        slot.connect.write(  datas.shift() );
-                    }
-                    anchor( slot.connect, socket );
+                    anchor( socket, slot.connect, datas, [ ] );
                     socket.off( "data", listen );
                     socket.write("ready" );
                 }
