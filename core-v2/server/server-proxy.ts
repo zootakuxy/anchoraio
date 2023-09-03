@@ -171,7 +171,7 @@ export function server( opts:ServerOptions){
         // console.log( "NEW SERVER RELEASE ON CONNECTION" );
         socket.once( "data", data => {
             let str = data.toString();
-            console.log( "ON RELEASE IN SERVER", str );
+            // console.log( "ON RELEASE IN SERVER", str );
             let pack:AuthIO = JSON.parse( str );
 
             let end = ()=>{

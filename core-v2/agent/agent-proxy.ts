@@ -206,7 +206,7 @@ export class AgentProxy {
 
             connection.write( JSON.stringify( redirect ) );
             connection.once( "data", ( data ) => {
-                console.log( "AN AGENT REDIRECT READY" );
+                // console.log( "AN AGENT REDIRECT READY" );
                 this.registerGetAway( opts, connection );
             });
         });
