@@ -15,6 +15,7 @@ export type AgentAioOptions = AgentProxyOptions& TokenOptions& {
 interface AgentAioListener {
     auth( auth:AuthResult )
     authFailed( code:string, message:string )
+    isAlive( code:string, referer )
 }
 export class AgentAio extends BaseEventEmitter<AgentAioListener> {
     private agentProxy:AgentProxy;
@@ -26,6 +27,8 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
     private agentDNS;
     public readonly aioResolve:AioResolver;
     public apps:ApplicationAIO;
+    public authReferer:string;
+    public authId:string;
 
 
     constructor( opts:AgentAioOptions) {
@@ -87,6 +90,13 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
             this.agentProxy.openApplication( app );
         });
 
+        this.on("isAlive", ( code ) => {
+            if( this.serverAuthConnection ) this.serverAuthConnection.write( JSON.stringify({
+                event:"isAlive",
+                args:[ code, this.authReferer ]
+            }))
+        });
+
         this.init = ()=>{};
     }
 
@@ -94,7 +104,9 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
         this.result = "pendent";
         this.createAuthConnection();
         this.once("auth", auth => {
-            this.result = "authenticated"
+            this.result = "authenticated";
+            this.authReferer = auth.referer;
+            this.authId = auth.id;
             this.agentProxy.onAuth( auth.referer );
             this.agentProxy.start();
             this.status = "started";

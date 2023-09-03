@@ -143,18 +143,6 @@ export class AgentProxy {
                 request["anchored"] = true;
             });
 
-
-            // // MODO noWait response server
-            // console.log( "AN AGENT REDIRECT READY")
-            // while ( opts.requestData.length ){
-            //     let aData = opts.requestData.shift();
-            //     requestToAnchor.write( aData );
-            // }
-            // requestToAnchor.pipe( request );
-            // request.pipe( requestToAnchor );
-            // request.off( "data", opts.dataListen );
-            // requestToAnchor["anchored"] = true;
-            // request["anchored"] = true;
         });
     }
 

@@ -2,6 +2,7 @@ import net from "net";
 import {nanoid} from "nanoid";
 import {TokenService} from "../services/token.service";
 import {TokenOptions} from "../../aio/opts/opts-token";
+import * as buffer from "buffer";
 export type ServerOptions = TokenOptions & {
     responsePort:number,
     requestPort:number
@@ -128,33 +129,7 @@ export function server( opts:ServerOptions){
                 socket.end();
             }
 
-
             let str = data.toString();
-            // //Modo NoWait response Server
-            // console.log( "ON SERVER REDIRECT", socket["id"], str );
-            // let endPart = str.indexOf("}");
-            // let authPart = str.substring( 0, endPart+1 );
-            // let headPart = str.substring( endPart+1, str.length );
-            //
-            // let redirect:AuthIO = JSON.parse( authPart );
-            //
-            // let auth = Object.entries( agents ).find( ([agent, agentAuth], index) => {
-            //     return agentAuth.referer === redirect.authReferer
-            //         && agentAuth.agent === redirect.agent;
-            // });
-            // if(!auth ) return end();
-            //
-            // console.log( "ON SERVER REDIRECT AUTH", socket["id"], new Date());
-            // connect( redirect.server, redirect.app, socket["id"], slot => {
-            //     if( headPart.length>0 ) slot.connect.write(Buffer.from(headPart))
-            //     slot.connect.pipe( socket );
-            //     socket.pipe( slot.connect );
-            //     console.log( "SERVER REDIRECT READY", socket["id"], new Date() )
-            // });
-            // //Modo NoWait response Server | END
-
-
-
 
             //Modo waitResponse server
             console.log( "ON SERVER REDIRECT", data.toString() );
@@ -227,6 +202,13 @@ export function server( opts:ServerOptions){
     let tokenService = new TokenService( opts );
 
     let serverAuth = net.createServer( socket => {
+        let id = nanoid(16 );
+        socket[ "id" ] = id;
+        socket["connectionStatus"] = "connected";
+        socket.on( "close", hadError => {
+            socket["connectionStatus"] = "disconnected";
+        })
+
         socket.once( "data", data => {
             let str = data.toString();
             let auth:AuthAgent = JSON.parse( str );
@@ -245,32 +227,74 @@ export function server( opts:ServerOptions){
             if( !token.token ) return end( "Token invalid" );
             if( token.token.token !== auth.token ) return  end( "1012","Invalid token math" );
             if( token.token.status !== "active" ) return end("1013",`Invalid token status ${ token.token.status }`);
-            if( agents[ auth.agent ] ) return end( "1014","Another agent instance is connected!" );
 
-            let id = nanoid(16 );
-            let referer = `${nanoid(16 )}`;
-            socket["id"] = id;
-            agents[ auth.agent ]  = {
-                id: id,
-                referer: referer,
-                connection: socket,
-                agent: auth.agent
-            };
+            let register = ()=>{
+                let referer = `${nanoid(16 )}`;
+                socket[ "referer" ] = referer;
+                socket[ "agentServer" ] = auth.agent;
+                agents[ auth.agent ]  = {
+                    id: id,
+                    referer: referer,
+                    connection: socket,
+                    agent: auth.agent
+                };
+                let authResponse:AuthResult = {
+                    id: id,
+                    referer: referer
+                };
+                socket.write( JSON.stringify({
+                    event:"auth",
+                    args:[ authResponse ]
+                }))
+            }
 
-            socket.on( "close", hadError => {
-                let agent = agents[auth.agent];
-                if( !!agent && agent.id === id ) delete agents[ auth.agent ];
-            });
+            let current = agents[ auth.agent ];
+            if( !current ) return register();
+            if( current.connection.closed ) return register();
+            if( current.connection["connectionStatus"] !== "connected" ) return register();
 
-            let authResponse:AuthResult = {
-                id: id,
-                referer: referer
-            };
-            socket.write( JSON.stringify({
-                event:"auth",
-                args:[ authResponse ]
-            }))
+            //Check if is alive
+            let checkAliveCode = nanoid(32 );
+            let checkAlive = JSON.stringify({
+                event:"isAlive",
+                args:[ checkAliveCode ]
+            })
+
+            let timeoutCode = setTimeout(()=>{
+                timeoutCheck();
+            }, 5000 );
+            let listenResponse = ( data:Buffer ) =>{
+                let str  = data.toString();
+                try {
+                    let pack = JSON.parse( str );
+                    if( pack.event === "isAlive" && pack?.args?.[0]===checkAliveCode && pack?.[1] === current.referer ) {
+                        timeoutCheck = ()=>{};
+                        clearTimeout( timeoutCode );
+                        return end( "1014","Another agent instance is connected!" );
+                    }
+                } catch (e) { }
+            }
+            let timeoutCheck = ()=>{
+                current.connection.off( "data", listenResponse );
+                try { current.connection.destroy( new Error( "zombie socket" ) );
+                } catch (e){ }
+                register();
+            }
+
+            current.connection.on( "data", listenResponse );
+            current.connection.write( JSON.stringify( checkAlive ) );
         });
+
+        socket.on( "close", hadError => {
+            let agentServer = socket[ "agentServer" ];
+            let referer = socket[ "referer" ];
+            let id = socket[ "id" ];
+
+            let agent = agents[ agentServer ];
+            if( !agent ) return;
+            if( agent.connection["id"] === socket[ "id" ] ) delete agents[ agentServer ]
+        });
+
 
         socket.on( "error", err => {
             console.log( "server-auth-error", err.message )
