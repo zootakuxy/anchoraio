@@ -104,12 +104,12 @@ export class AgentProxy {
             this.connections[ request["id"] ] = request;
             const remoteAddressParts = request.address()["address"].split( ":" );
             const address =  remoteAddressParts[ remoteAddressParts.length-1 ];
-            console.log( "NEW REQUEST ON AGENT IN ADDRESS", address );
+            // console.log( "NEW REQUEST ON AGENT IN ADDRESS", address );
 
             let resolved = this.resolve( address );
 
             if( !resolved ){
-                console.log( `Address ${ address } not resolved!` );
+                // console.log( `Address ${ address } not resolved!` );
                 request.end();
                 return;
             }
@@ -177,7 +177,6 @@ export class AgentProxy {
         if( !!next ){
             let [ key, getAway ] = next;
             getAway.busy = true;
-            console.log( getAway )
             delete this.getAways[server][application][ key ];
             callback( getAway );
             return;
@@ -193,7 +192,7 @@ export class AgentProxy {
         });
         connection.on( "connect", () => {
             //MODO wait response SERVSER
-            console.log( "CONNECTED TO REDIRECT ON AGENT", this.opts.requestPort )
+            // console.log( "CONNECTED TO REDIRECT ON AGENT", this.opts.requestPort )
             let redirect:AuthIO = {
                 server: identifierOf( opts.server ),
                 app: opts.application,
@@ -223,7 +222,7 @@ export class AgentProxy {
 
     private connect ( request, opts:ConnectionOptions ){
         this.onGetAway( opts.server, opts.application, getAway => {
-            console.log( "AN AGENT REDIRECT READY")
+            // console.log( "AN AGENT REDIRECT READY")
             while ( opts.requestData.length ){
                 let aData = opts.requestData.shift();
                 getAway.connection.write( aData );
@@ -293,7 +292,7 @@ export class AgentProxy {
         this.appsConnections[ request["id"] ] = request;
 
         request.on( "connect", () => {
-            console.log( "ON CONNECT AGENT APP RESPONSE", app.name, this.opts.responsePort )
+            // console.log( "ON CONNECT AGENT APP RESPONSE", app.name, this.opts.responsePort )
             let auth:AuthIO = {
                 server: identifierOf( this.opts.identifier ),
                 app: app.name,
@@ -301,7 +300,7 @@ export class AgentProxy {
                 agent: identifierOf( this.opts.identifier )
             }
             request.write(  JSON.stringify(auth), err => {
-                console.log( "ON WRITED!" );
+                // console.log( "ON WRITED!" );
             });
             let datas = [];
             let listenData = data =>{
@@ -310,7 +309,7 @@ export class AgentProxy {
 
             request.on( "data", listenData );
             request.once( "data", data => {
-                console.log( "ON REQUEST READY ON AGENT SERVER")
+                // console.log( "ON REQUEST READY ON AGENT SERVER")
                 let appConnection = net.connect({
                     host: app.address,
                     port: app.port
