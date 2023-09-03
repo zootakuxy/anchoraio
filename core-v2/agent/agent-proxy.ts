@@ -170,7 +170,9 @@ export class AgentProxy {
 
     private onGetAway( server:string, application:string, callback:( getAway:GetAway )=>void ){
         let next = Object.entries( this.getAways[server][application]).find( ([key, getAway], index) => {
-            return !getAway.busy;
+            return !getAway.busy
+                && !!getAway.connection["readyToAnchor"];
+
         });
 
         if( !!next ){
@@ -226,8 +228,6 @@ export class AgentProxy {
             // console.log( "AN AGENT REDIRECT READY")
             anchor( request, getAway.connection, opts.requestData, []);
             request.off( "data", opts.dataListen );
-            getAway.connection[ "anchored" ] = true;
-            request[ "anchored" ] = true;
             this.openGetAway( {
                 server: opts.server,
                 application: opts.application
@@ -322,12 +322,11 @@ export class AgentProxy {
                             response.end();
                         }
                     });
-                })
+                });
+                response[ "readyToAnchor" ] = true;
                 // console.log( "ON REQUEST READY ON AGENT SERVER")
                 console.log( `busy ${ app.name } established` );
                 this.openApplication( app );
-                response["anchored"] = true;
-                response["anchorPiped"] = false;
 
             });
         });
