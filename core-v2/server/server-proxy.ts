@@ -227,6 +227,7 @@ export function server( opts:ServerOptions){
                     anchor( socket, slot.connect, datas, [ ] );
                     socket.off( "data", listen );
                     socket.write("ready" );
+                    slot.connect.write( "busy" );
                 }
             })
         });

@@ -199,15 +199,15 @@ export class AgentProxy {
                 agent: identifierOf( this.opts.identifier )
             }
 
-            connection.on("error", err => {
-                console.log( "request-to-anchor-error", err.message );
-            });
-
             connection.write( JSON.stringify( redirect ) );
             connection.once( "data", ( data ) => {
                 // console.log( "AN AGENT REDIRECT READY" );
                 this.registerGetAway( opts, connection );
             });
+        });
+
+        connection.on("error", err => {
+            console.log( "request-to-anchor-error", err.message );
         });
 
         connection.on( "close", hadError => {
@@ -273,20 +273,20 @@ export class AgentProxy {
     }
 
     openApplication (app:App ){
-        let request = net.connect( {
+        let response = net.connect( {
             host: this.opts.serverHost,
             port: this.opts.responsePort
         });
 
-        request[ "id" ] = nanoid(32 );
-        request[ "appName" ] = app.name;
-        request[ "appAddress" ] = app.address;
-        request[ "appPort" ] = app.port;
-        request[ "appStatus" ] = "started";
+        response[ "id" ] = nanoid(32 );
+        response[ "appName" ] = app.name;
+        response[ "appAddress" ] = app.address;
+        response[ "appPort" ] = app.port;
+        response[ "appStatus" ] = "started";
 
-        this.appsConnections[ request["id"] ] = request;
+        this.appsConnections[ response["id"] ] = response;
 
-        request.on( "connect", () => {
+        response.on( "connect", () => {
             // console.log( "ON CONNECT AGENT APP RESPONSE", app.name, this.opts.responsePort )
             let auth:AuthIO = {
                 server: identifierOf( this.opts.identifier ),
@@ -294,47 +294,51 @@ export class AgentProxy {
                 authReferer: this.authKey,
                 agent: identifierOf( this.opts.identifier )
             }
-            request.write(  JSON.stringify(auth), err => {
+            response.write(  JSON.stringify(auth), err => {
                 // console.log( "ON WRITED!" );
             });
-            let datas = [];
-            let listenData = data =>{
-                datas.push( data );
-            }
 
-            request.on( "data", listenData );
-            request.once( "data", data => {
+            response.once( "data", busy => {
+                let str = busy.toString();
+                let datas = [];
+                let listenData = data =>{
+                    datas.push( data );
+                }
+                response.on( "data", listenData );
+                response.once( "data", () => {
+                    let appConnection = net.connect({
+                        host: app.address,
+                        port: app.port
+                    });
+                    appConnection.on( "connect", () => {
+                        anchor( response, appConnection, datas, [] );
+                        response.off( "data", listenData );
+                        response["anchorPiped"] = true;
+                        console.log( `new connection with ${ app.name } established` );
+                    });
+                    appConnection.on( "error", err => {
+                        console.log("app-server-error", err.message );
+                        if( !response["anchorPiped"] ){
+                            response.end();
+                        }
+                    });
+                })
                 // console.log( "ON REQUEST READY ON AGENT SERVER")
-                let appConnection = net.connect({
-                    host: app.address,
-                    port: app.port
-                });
-                appConnection.on( "connect", () => {
-                    anchor( request, appConnection, datas, [] );
-                    request.off( "data", listenData );
-                    request["anchorPiped"] = true;
-                    console.log( `new connection with ${ app.name } established` );
-                });
-                appConnection.on( "error", err => {
-                    console.log("app-server-error", err.message );
-                    if( !request["anchorPiped"] ){
-                        request.end();
-                    }
-                });
+                console.log( `busy ${ app.name } established` );
                 this.openApplication( app );
-                request["anchored"] = true;
-                request["anchorPiped"] = false;
+                response["anchored"] = true;
+                response["anchorPiped"] = false;
 
             });
         });
 
-        request.on( "error", err => {
+        response.on( "error", err => {
             console.log( "response-connect-error", err.message );
         });
 
-        request.on("close", ( error) => {
-            delete this.appsConnections[ request["id"] ];
-            if( error && !request["anchored"] && this.status === "started" && request["appStatus"] === "started" ){
+        response.on("close", ( error) => {
+            delete this.appsConnections[ response["id"] ];
+            if( error && !response["anchored"] && this.status === "started" && response["appStatus"] === "started" ){
                 setTimeout(()=>{
                     this.openApplication( app );
                 }, this.opts.restoreTimeout)
