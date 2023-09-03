@@ -69,12 +69,13 @@ export function statusOf  ( socket:net.Socket ):StatusOf{
 
 export function anchor( left:net.Socket, right:net.Socket ){
     let __anchor = ( _left:net.Socket, _right:net.Socket ) => {
-        left.pipe( right );
-        left.on( "close", hadError => {
+        _left.pipe( _right );
+        _left.on( "close", hadError => {
             console.log( "ANCHOR CLOSED!" );
-            if( hadError ) right.end();
+            if( hadError ) _right.end();
         });
-        left[ "anchored" ] = true;
+        _left[ "anchored" ] = true;
+
     }
 
     __anchor( left, right );
