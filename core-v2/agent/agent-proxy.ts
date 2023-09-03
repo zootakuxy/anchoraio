@@ -165,6 +165,9 @@ export class AgentProxy {
             busy: false
         }
 
+        connection.on( "close", hadError => {
+            delete this.getAways[ opts.server ][ opts.application ][ id ];
+        });
         console.log( `A connection for ${opts.application}.${opts.server} is ready for use` );
     }
 
@@ -289,6 +292,9 @@ export class AgentProxy {
         response[ "appStatus" ] = "started";
 
         this.appsConnections[ response["id"] ] = response;
+        response.on( "close", hadError => {
+            delete this.appsConnections[ response["id"] ];
+        });
 
         response.on( "connect", () => {
             // console.log( "ON CONNECT AGENT APP RESPONSE", app.name, this.opts.responsePort )
@@ -330,7 +336,6 @@ export class AgentProxy {
                 // console.log( "ON REQUEST READY ON AGENT SERVER")
                 console.log( `busy ${ app.name } established` );
                 this.openApplication( app );
-
             });
         });
 
