@@ -126,6 +126,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
 
         this.on("serverOpen", server => {
             console.log( "ServerOpen", server );
+            this.openedServes.push( server );
             openGetaways( [ server ] );
         });
 
