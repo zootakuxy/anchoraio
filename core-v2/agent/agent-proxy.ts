@@ -192,6 +192,7 @@ export class AgentProxy {
 
 
     public openGetAway ( opts:GetAwayOptions ){
+        if(!this.aio.openedServes.includes( opts.server ) ) return;
         let connection = net.connect( {
             host: this.opts.serverHost,
             port: this.opts.requestPort
@@ -224,7 +225,6 @@ export class AgentProxy {
                 console.log( "Need getAway for ", opts.server, opts.application )
                 setTimeout ( ()=>{
                     this.openGetAway( opts );
-
                 }, this.opts.restoreTimeout  );
             }
         });

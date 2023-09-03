@@ -32,11 +32,13 @@ export type AuthIO = {
 
 export type AuthAgent = {
     agent:string,
-    token:string
+    token:string,
+    servers:string[]
 }
 export type AuthResult = {
     id:string,
     referer:string
+    availableServers:string[]
 }
 
 type AgentAutheicated = {
@@ -44,6 +46,7 @@ type AgentAutheicated = {
     id:string,
     referer:string,
     agent:string,
+    servers:string[],
 }
 
 export function prepareSocket ( socket:net.Socket ){
@@ -296,20 +299,45 @@ export function server( opts:ServerOptions){
                 let referer = `${nanoid(16 )}`;
                 socket[ "referer" ] = referer;
                 socket[ "agentServer" ] = auth.agent;
+                if( !auth.servers ) auth.servers = [];
+
                 agents[ auth.agent ]  = {
                     id: socketStatus.id,
                     referer: referer,
                     connection: socket,
-                    agent: auth.agent
+                    agent: auth.agent,
+                    servers: auth.servers
                 };
+
+                let servers = Object.keys( agents ).filter( value => auth.servers.includes( value ));
                 let authResponse:AuthResult = {
                     id: socketStatus.id,
-                    referer: referer
+                    referer: referer,
+                    availableServers: servers
                 };
+
                 socket.write( JSON.stringify({
                     event:"auth",
                     args:[ authResponse ]
-                }))
+                }));
+
+                Object.entries( agents ).forEach( ([ keyId, agent], index) => {
+                    if( !agent.servers.includes( auth.agent ) ) return;
+                    agent.connection.write( JSON.stringify({
+                        event:"serverOpen",
+                        args:[ auth.agent ]
+                    }));
+                });
+
+                socket.on( "close", hadError => {
+                    Object.entries( agents ).forEach( ([ keyId, agent], index) => {
+                        if( !agent.servers.includes( auth.agent ) ) return;
+                        agent.connection.write( JSON.stringify({
+                            event:"serverClose",
+                            args:[ auth.agent ]
+                        }));
+                    });
+                })
             }
 
             let current = agents[ auth.agent ];

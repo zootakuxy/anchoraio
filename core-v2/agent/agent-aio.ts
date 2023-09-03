@@ -15,7 +15,9 @@ export type AgentAioOptions = AgentProxyOptions& TokenOptions& {
 interface AgentAioListener {
     auth( auth:AuthResult )
     authFailed( code:string, message:string )
-    isAlive( code:string, referer )
+    isAlive( code:string, referer ),
+    serverOpen( server:string ),
+    serverClose( server:string )
 }
 export class AgentAio extends BaseEventEmitter<AgentAioListener> {
     private agentProxy:AgentProxy;
@@ -29,6 +31,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
     public apps:ApplicationAIO;
     public authReferer:string;
     public authId:string;
+    public openedServes:string[] = []
 
 
     constructor( opts:AgentAioOptions) {
@@ -41,6 +44,14 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
         this.apps = new ApplicationAIO( this );
         this.init();
 
+    }
+
+
+    get servers():string[]{
+        let servers =  Object.entries( this.aioResolve.address ).map( ([key, server], index) => {
+            return server.serverIdentifier
+        });
+        return [ ... new Set( servers )];
     }
 
     private createAuthConnection(){
@@ -64,7 +75,8 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
             let token = this.token.tokenOf( this.opts.identifier );
             let auth:AuthAgent = {
                 agent: this.opts.identifier,
-                token: token.token.token
+                token: token.token.token,
+                servers: this.servers
             }
             connection.write(JSON.stringify( auth ));
         });
@@ -98,12 +110,26 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
             }))
         });
 
+        let openGetaways = ( availableServers:string[])=>{
+            Object.entries( this.aioResolve.address ).filter( ([address, resolved]) => {
+                return availableServers.includes( resolved.serverIdentifier );
+            }).forEach( ([address, resolved], index) => {
+                for (let i = 0; i < 10; i++) {
+                    this.agentProxy.openGetAway( {
+                        server: resolved.serverIdentifier,
+                        application: resolved.application
+                    })
+                }
+            });
+        }
+
         this.on("auth", auth => {
             this.result = "authenticated";
             this.authReferer = auth.referer;
             this.authId = auth.id;
-            this.agentProxy.onAuth( auth.referer );
+            this.openedServes = auth.availableServers;
             this.status = "started";
+            this.agentProxy.onAuth( auth.referer );
             this.apps.applications().forEach( application => {
                 console.log( "open-application", application.name, application.address, application.port )
                 let releases =application.releases;
@@ -113,14 +139,17 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
                 }
             });
 
-            Object.entries( this.aioResolve.address ).forEach( ([address, resolved], index) => {
-                for (let i = 0; i < 10; i++) {
-                    this.agentProxy.openGetAway( {
-                        server: resolved.serverIdentifier,
-                        application: resolved.application
-                    })
-                }
-            });
+            openGetaways( this.openedServes );
+        });
+
+        this.on("serverOpen", server => {
+            openGetaways( [ server ] );
+        });
+
+        this.on( "serverClose", server => {
+            let index = this.openedServes.indexOf( server );
+            if( index === -1 ) return;
+            this.openedServes.splice( index, 1 );
         });
 
         this.on( "authFailed", (code, message) => {
