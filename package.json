@@ -5,6 +5,7 @@
   "main": "service/index.js",
   "scripts": {
     "agent": "node aio agent",
+    "server": "node aio agent --selfServer",
     "start": "node test/server.js",
     "tsc-w": "tsc -w"
   },

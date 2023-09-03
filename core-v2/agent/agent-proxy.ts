@@ -145,7 +145,7 @@ export class AgentProxy {
     }
 
 
-    private registerGetAway( opts:GetAwayOptions, connection ){
+    private registerGetAway( opts:GetAwayOptions, connection:net.Socket ){
         let next = this.waitGetAway[opts.server][ opts.application ].shift();
         let id = nanoid( 16 );
         connection[ id ] = id;
@@ -171,9 +171,11 @@ export class AgentProxy {
         let next = Object.entries( this.getAways[server][application]).find( ([key, getAway], index) => {
             return !getAway.busy;
         });
+
         if( !!next ){
             let [ key, getAway ] = next;
             getAway.busy = true;
+            console.log( getAway )
             delete this.getAways[server][application][ key ];
             callback( getAway );
             return;
@@ -204,7 +206,7 @@ export class AgentProxy {
             connection.write( JSON.stringify( redirect ) );
             connection.once( "data", ( data ) => {
                 console.log( "AN AGENT REDIRECT READY" );
-                this.registerGetAway( opts, this.connections );
+                this.registerGetAway( opts, connection );
             });
         });
 
@@ -224,6 +226,7 @@ export class AgentProxy {
                 let aData = opts.requestData.shift();
                 getAway.connection.write( aData );
             }
+
             getAway.connection.pipe( request );
             request.pipe( getAway.connection );
             request.off( "data", opts.dataListen );

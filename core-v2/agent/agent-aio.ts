@@ -116,7 +116,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
             Object.entries( this.aioResolve.address ).forEach( ([address, resolved], index) => {
                 for (let i = 0; i < 3; i++) {
                     this.agentProxy.openGetAway( {
-                        server: resolved.server,
+                        server: resolved.serverIdentifier,
                         application: resolved.application
                     })
                 }
