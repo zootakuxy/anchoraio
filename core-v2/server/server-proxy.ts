@@ -110,11 +110,11 @@ export function server( opts:ServerOptions){
             next.busy = true;
             delete serverSlots[server][app][ next.id ];
             callback( next );
-            console.log( "CALLBACK APPLIED!")
+            // console.log( "CALLBACK APPLIED!")
             return;
         }
         waitConnections[server][app].push( callback );
-        console.log( "CALLBACK REGISTRED!" );
+        // console.log( "CALLBACK REGISTRED!" );
     }
 
     let agents : {
@@ -123,7 +123,7 @@ export function server( opts:ServerOptions){
 
     let clientOrigin = net.createServer( socket => {
         socket["id"] = nanoid(16 );
-        console.log( "NEW CLIENT REQUEST ON SERVER", opts.requestPort );
+        // console.log( "NEW CLIENT REQUEST ON SERVER", opts.requestPort );
         socket.once( "data", (data) => {
             let end = ()=>{
                 socket.end();
@@ -132,7 +132,7 @@ export function server( opts:ServerOptions){
             let str = data.toString();
 
             //Modo waitResponse server
-            console.log( "ON SERVER REDIRECT", data.toString() );
+            // console.log( "ON SERVER REDIRECT", data.toString() );
             let redirect:AuthIO = JSON.parse( str );
 
 
@@ -148,7 +148,7 @@ export function server( opts:ServerOptions){
             }
             socket.on( "data", listen );
 
-            console.log( "ON SERVER REDIRECT AUTH", socket["id"], new Date() );
+            // console.log( "ON SERVER REDIRECT AUTH", socket["id"], new Date() );
             connect( redirect.server, redirect.app, socket["id"],slot => {
                 while ( datas.length ){
                     slot.connect.write(  datas.shift() );
@@ -157,7 +157,7 @@ export function server( opts:ServerOptions){
                 socket.pipe( slot.connect );
                 socket.off( "data", listen );
                 socket.write("ready" );
-                console.log( "SERVER REDIRECT READY", socket["id"], new Date())
+                // console.log( "SERVER REDIRECT READY", socket["id"], new Date())
             });
             //Modo waitResponse server | END
         });
@@ -168,7 +168,7 @@ export function server( opts:ServerOptions){
     });
 
     let serverDestine = net.createServer( socket => {
-        console.log( "NEW SERVER RELEASE ON CONNECTION" );
+        // console.log( "NEW SERVER RELEASE ON CONNECTION" );
         socket.once( "data", data => {
             let str = data.toString();
             console.log( "ON RELEASE IN SERVER", str );
@@ -183,7 +183,7 @@ export function server( opts:ServerOptions){
             });
             if(!auth ) return end();
 
-            console.log( "NEW SERVER RELEASE AUTH" );
+            // console.log( "NEW SERVER RELEASE AUTH" );
             release( {
                 app: pack.app,
                 server: pack.server,
@@ -191,7 +191,7 @@ export function server( opts:ServerOptions){
                 connect: socket,
                 id: nanoid(32 )
             });
-            console.log( "ON SERVER AGENT READY")
+            // console.log( "ON SERVER AGENT READY")
         });
 
         socket.on( "error", err => {
