@@ -16,7 +16,12 @@ type ServerSlot = {
     connect:net.Socket
 };
 
-type WaitConnection = ( slot:ServerSlot )=>void;
+type WaitConnection = {
+    resolve:( slot:ServerSlot )=>void;
+    connection:net.Socket
+    resolved?: boolean,
+    id?:string
+}
 
 export type AuthIO = {
     server:string
@@ -79,23 +84,58 @@ export function server( opts:ServerOptions){
 
     let waitConnections:{
         [server:string]:{
-            [app:string]:WaitConnection[]
+            [app:string]: {
+                [ connection:string ]:WaitConnection
+            }
         }
-    } = createProxy()
+    } = createProxy();
+
+    let prepareSocket = ( socket:net.Socket )=>{
+        socket["id"] = nanoid( 16 );
+        socket[ "status" ] = "connected";
+        socket.on( "close", hadError => {
+            socket[ "status" ] = "disconnected";
+        });
+        return statusOf( socket );
+    }
+
+    type StatusOf = {
+        id:string,
+        status:"connected"|"disconnected"
+    }
+    let statusOf = ( socket:net.Socket ):StatusOf =>{
+        return {
+            get id(){ return socket["id"]},
+            get status(){ return socket[ "status" ] }
+        }
+    }
 
     let release = ( slot:ServerSlot )=>  {
-        let next = waitConnections[slot.server][slot.app].shift();
-        if( typeof next === "function" ) {
-            next( slot );
+        let next = Object.entries( waitConnections[slot.server][slot.app]).find( ([key, wait], index) => {
+            let waitStatus = statusOf( wait.connection );
+            return !wait.resolved
+                && waitStatus.status === "connected"
+            ;
+        });
+
+        if( !!next ) {
+            let [ key, wait ] = next;
+            wait.resolved = true;
+            delete waitConnections[slot.server][slot.app][ wait.id ];
+            wait.resolve ( slot );
             return;
         }
         slot.connect.on( "close", hadError => {
             delete serverSlots[ slot.server ][ slot.app ][ slot.id ];
         });
         serverSlots[ slot.server ][ slot.app ][ slot.id ] = slot;
+        slot.connect.on( "close", hadError => {
+            delete serverSlots[ slot.server ][ slot.app ][ slot.id ];
+        });
     }
 
-    let connect = ( server:string, app:string|number, waitFor:string, callback:WaitConnection )=>{
+    let resolver = ( server:string, app:string|number, wait:WaitConnection )=>{
+        let status = statusOf( wait.connection );
 
         let entry = Object.entries( serverSlots[server][app] ).find( ([ key, value]) => {
             if( !value ) return false;
@@ -109,12 +149,15 @@ export function server( opts:ServerOptions){
             let next = entry[1];
             next.busy = true;
             delete serverSlots[server][app][ next.id ];
-            callback( next );
+            wait.resolve( next );
             // console.log( "CALLBACK APPLIED!")
             return;
         }
-        waitConnections[server][app].push( callback );
-        // console.log( "CALLBACK REGISTRED!" );
+        waitConnections[server][app][ status.id ] = wait;
+        wait.connection.on( "close", hadError => {
+            let status = statusOf( wait.connection );
+            delete waitConnections[server][app][ status.id  ];
+        });
     }
 
     let agents : {
@@ -122,8 +165,7 @@ export function server( opts:ServerOptions){
     } = {}
 
     let clientOrigin = net.createServer( socket => {
-        socket["id"] = nanoid(16 );
-        // console.log( "NEW CLIENT REQUEST ON SERVER", opts.requestPort );
+        let status = prepareSocket( socket );
         socket.once( "data", (data) => {
             let end = ()=>{
                 socket.end();
@@ -148,18 +190,19 @@ export function server( opts:ServerOptions){
             }
             socket.on( "data", listen );
 
-            // console.log( "ON SERVER REDIRECT AUTH", socket["id"], new Date() );
-            connect( redirect.server, redirect.app, socket["id"],slot => {
-                while ( datas.length ){
-                    slot.connect.write(  datas.shift() );
+            resolver( redirect.server, redirect.app, {
+                id: status.id,
+                connection: socket,
+                resolve( slot ){
+                    while ( datas.length ){
+                        slot.connect.write(  datas.shift() );
+                    }
+                    slot.connect.pipe( socket );
+                    socket.pipe( slot.connect );
+                    socket.off( "data", listen );
+                    socket.write("ready" );
                 }
-                slot.connect.pipe( socket );
-                socket.pipe( slot.connect );
-                socket.off( "data", listen );
-                socket.write("ready" );
-                // console.log( "SERVER REDIRECT READY", socket["id"], new Date())
-            });
-            //Modo waitResponse server | END
+            })
         });
 
         socket.on( "error", err => {
@@ -168,7 +211,7 @@ export function server( opts:ServerOptions){
     });
 
     let serverDestine = net.createServer( socket => {
-        // console.log( "NEW SERVER RELEASE ON CONNECTION" );
+        prepareSocket( socket );
         socket.once( "data", data => {
             let str = data.toString();
             // console.log( "ON RELEASE IN SERVER", str );
@@ -202,13 +245,7 @@ export function server( opts:ServerOptions){
     let tokenService = new TokenService( opts );
 
     let serverAuth = net.createServer( socket => {
-        let id = nanoid(16 );
-        socket[ "id" ] = id;
-        socket["connectionStatus"] = "connected";
-        socket.on( "close", hadError => {
-            socket["connectionStatus"] = "disconnected";
-        })
-
+        let socketStatus = prepareSocket( socket );
         socket.once( "data", data => {
             let str = data.toString();
             let auth:AuthAgent = JSON.parse( str );
@@ -233,13 +270,13 @@ export function server( opts:ServerOptions){
                 socket[ "referer" ] = referer;
                 socket[ "agentServer" ] = auth.agent;
                 agents[ auth.agent ]  = {
-                    id: id,
+                    id: status.id,
                     referer: referer,
                     connection: socket,
                     agent: auth.agent
                 };
                 let authResponse:AuthResult = {
-                    id: id,
+                    id: status.id,
                     referer: referer
                 };
                 socket.write( JSON.stringify({
@@ -250,8 +287,9 @@ export function server( opts:ServerOptions){
 
             let current = agents[ auth.agent ];
             if( !current ) return register();
+            let status = statusOf( current.connection );
             if( current.connection.closed ) return register();
-            if( current.connection["connectionStatus"] !== "connected" ) return register();
+            if( status.status !== "connected" ) return register();
 
             //Check if is alive
             let checkAliveCode = nanoid(32 );
@@ -288,11 +326,10 @@ export function server( opts:ServerOptions){
         socket.on( "close", hadError => {
             let agentServer = socket[ "agentServer" ];
             let referer = socket[ "referer" ];
-            let id = socket[ "id" ];
 
             let agent = agents[ agentServer ];
             if( !agent ) return;
-            if( agent.connection["id"] === socket[ "id" ] ) delete agents[ agentServer ]
+            if( statusOf( agent.connection ).id === socketStatus.id ) delete agents[ agentServer ]
         });
 
 

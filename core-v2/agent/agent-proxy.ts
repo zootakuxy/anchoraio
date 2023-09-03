@@ -330,6 +330,7 @@ export class AgentProxy {
                     request.pipe( appConnection );
                     request.off( "data", listenData );
                     request["anchorPiped"] = true;
+                    console.log( `new connection with ${ app.name } established` );
                 });
                 appConnection.on( "error", err => {
                     console.log("app-server-error", err.message );
