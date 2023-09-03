@@ -1,10 +1,9 @@
 import net from "net";
-import {AuthIO, identifierOf} from "../server/server-proxy";
+import {anchor, AuthIO, identifierOf} from "../server/server-proxy";
 import {nanoid} from "nanoid";
 import {AgentAio} from "./agent-aio";
 import {App} from "../applications";
 import {Defaults} from "../../aio/opts/opts";
-import {application} from "express";
 
 export type AgentProxyOptions = {
     requestPort:number,
@@ -230,8 +229,7 @@ export class AgentProxy {
                 getAway.connection.write( aData );
             }
 
-            getAway.connection.pipe( request );
-            request.pipe( getAway.connection );
+            anchor( getAway.connection, request );
             request.off( "data", opts.dataListen );
             getAway.connection[ "anchored" ] = true;
             request[ "anchored" ] = true;
@@ -320,8 +318,7 @@ export class AgentProxy {
                     while ( datas.length ){
                         appConnection.write(  datas.shift() );
                     }
-                    appConnection.pipe( request );
-                    request.pipe( appConnection );
+                    anchor( appConnection, request );
                     request.off( "data", listenData );
                     request["anchorPiped"] = true;
                     console.log( `new connection with ${ app.name } established` );

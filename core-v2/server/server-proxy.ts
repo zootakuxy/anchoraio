@@ -67,6 +67,20 @@ export function statusOf  ( socket:net.Socket ):StatusOf{
     }
 }
 
+export function anchor( left:net.Socket, right:net.Socket ){
+    let __anchor = ( _left:net.Socket, _right:net.Socket ) => {
+        left.pipe( right );
+        left.on( "close", hadError => {
+            if( hadError ) right.end();
+        });
+        left[ "anchored" ] = true;
+    }
+
+    __anchor( left, right );
+    __anchor( right, left );
+
+}
+
 export function server( opts:ServerOptions){
 
     let createProxy = ()=>{
@@ -202,8 +216,7 @@ export function server( opts:ServerOptions){
                     while ( datas.length ){
                         slot.connect.write(  datas.shift() );
                     }
-                    slot.connect.pipe( socket );
-                    socket.pipe( slot.connect );
+                    anchor( slot.connect, socket );
                     socket.off( "data", listen );
                     socket.write("ready" );
                 }
