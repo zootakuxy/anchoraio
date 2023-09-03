@@ -182,7 +182,7 @@ export class AgentProxy {
     }
 
 
-    private createGetAway ( opts:GetAwayOptions ){
+    public openGetAway ( opts:GetAwayOptions ){
         let connection = net.connect( {
             host: this.opts.serverHost,
             port: this.opts.requestPort
@@ -211,7 +211,7 @@ export class AgentProxy {
         connection.on( "close", hadError => {
             if( !connection["anchored"]) {
                 setTimeout ( ()=>{
-                    this.createGetAway( opts )
+                    this.openGetAway( opts )
                 }, this.opts.restoreTimeout  );
             }
         });
@@ -229,7 +229,7 @@ export class AgentProxy {
             request.off( "data", opts.dataListen );
             getAway.connection[ "anchored" ] = true;
             request[ "anchored" ] = true;
-            this.createGetAway( {
+            this.openGetAway( {
                 server: opts.server,
                 application: opts.application
             });

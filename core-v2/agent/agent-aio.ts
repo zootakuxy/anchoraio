@@ -112,6 +112,15 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
                     this.agentProxy.openApplication( application )
                 }
             });
+
+            Object.entries( this.aioResolve.address ).forEach( ([address, resolved], index) => {
+                for (let i = 0; i < 3; i++) {
+                    this.agentProxy.openGetAway( {
+                        server: resolved.server,
+                        application: resolved.application
+                    })
+                }
+            });
         });
 
         this.on( "authFailed", (code, message) => {
