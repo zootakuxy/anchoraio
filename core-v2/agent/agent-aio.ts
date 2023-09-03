@@ -54,7 +54,8 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
         });
 
         connection.on( "close", hadError => {
-            if( hadError ) setTimeout(()=>{
+            console.log( "connection with server end!")
+            if( hadError || (this.result === "authenticated" && this.status === "started")) setTimeout(()=>{
                 this.createAuthConnection();
             }, this.opts.restoreTimeout );
         });
@@ -97,6 +98,27 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
             }))
         });
 
+        this.on("auth", auth => {
+            this.result = "authenticated";
+            this.authReferer = auth.referer;
+            this.authId = auth.id;
+            this.agentProxy.onAuth( auth.referer );
+            this.status = "started";
+            this.apps.applications().forEach( application => {
+                console.log( "open-application", application.name, application.address, application.port )
+                let releases =application.releases;
+                if( !releases ) releases = Defaults.releases;
+                for ( let i = 0 ; i< releases; i++ ){
+                    this.agentProxy.openApplication( application )
+                }
+            });
+        });
+
+        this.on( "authFailed", (code, message) => {
+            this.result = "failed"
+            console.log( code, message );
+        });
+
         this.init = ()=>{};
     }
 
@@ -104,26 +126,9 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
         this.result = "pendent";
         this.createAuthConnection();
         this.once("auth", auth => {
-            this.result = "authenticated";
-            this.authReferer = auth.referer;
-            this.authId = auth.id;
-            this.agentProxy.onAuth( auth.referer );
             this.agentProxy.start();
-            this.status = "started";
-            this.apps.applications().forEach( application => {
-                console.log( "open-application", application.name, application.address, application.port )
-                let releases =application.releases;
-                if( !releases ) releases = Defaults.releases;
-                for ( let i = 0 ; i< releases; i++ ){
-                   this.agentProxy.openApplication( application )
-                }
-            });
-        });
+        })
 
-        this.once( "authFailed", (code, message) => {
-            this.result = "failed"
-            console.log( code, message );
-        });
     }
 
     stop(){

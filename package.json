@@ -4,6 +4,7 @@
   "description": "",
   "main": "service/index.js",
   "scripts": {
+    "agent": "node aio agent",
     "start": "node test/server.js",
     "tsc-w": "tsc -w"
   },
