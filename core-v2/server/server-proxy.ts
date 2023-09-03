@@ -46,6 +46,27 @@ type AgentAutheicated = {
     agent:string,
 }
 
+export function prepareSocket ( socket:net.Socket ){
+    socket["id"] = nanoid( 16 );
+    socket[ "status" ] = "connected";
+    socket.on( "close", hadError => {
+        socket[ "status" ] = "disconnected";
+    });
+    return statusOf( socket );
+}
+
+export  type StatusOf = {
+    id:string,
+    status:"connected"|"disconnected"
+}
+
+export function statusOf  ( socket:net.Socket ):StatusOf{
+    return {
+        get id(){ return socket["id"]},
+        get status(){ return socket[ "status" ] }
+    }
+}
+
 export function server( opts:ServerOptions){
 
     let createProxy = ()=>{
@@ -90,25 +111,7 @@ export function server( opts:ServerOptions){
         }
     } = createProxy();
 
-    let prepareSocket = ( socket:net.Socket )=>{
-        socket["id"] = nanoid( 16 );
-        socket[ "status" ] = "connected";
-        socket.on( "close", hadError => {
-            socket[ "status" ] = "disconnected";
-        });
-        return statusOf( socket );
-    }
 
-    type StatusOf = {
-        id:string,
-        status:"connected"|"disconnected"
-    }
-    let statusOf = ( socket:net.Socket ):StatusOf =>{
-        return {
-            get id(){ return socket["id"]},
-            get status(){ return socket[ "status" ] }
-        }
-    }
 
     let release = ( slot:ServerSlot )=>  {
         let next = Object.entries( waitConnections[slot.server][slot.app]).find( ([key, wait], index) => {
