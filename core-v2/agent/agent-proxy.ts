@@ -175,7 +175,9 @@ export class AgentProxy {
 
         });
 
+
         if( !!next ){
+            console.log( `Getaway for ${ application }.${ server } found readyToAnchor` );
             let [ key, getAway ] = next;
             getAway.busy = true;
             delete this.getAways[server][application][ key ];
