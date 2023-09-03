@@ -218,6 +218,14 @@ export class AgentProxy {
                 }, this.opts.restoreTimeout  );
             }
         });
+
+        connection.on( "error", hadError => {
+            if( !connection["anchored"]) {
+                setTimeout ( ()=>{
+                    this.openGetAway( opts )
+                }, this.opts.restoreTimeout  );
+            }
+        });
     }
 
     private connect ( request, opts:ConnectionOptions ){
