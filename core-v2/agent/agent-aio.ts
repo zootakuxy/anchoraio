@@ -83,6 +83,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
 
         connection.on( "data", data => {
             let str = data.toString();
+            console.log( str );
             let pack = JSON.parse( str );
             if( typeof pack.event === "string" ){
                 let event = pack["event"];
