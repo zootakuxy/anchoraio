@@ -213,16 +213,10 @@ export class AgentProxy {
 
         connection.on( "close", hadError => {
             if( !connection["anchored"]) {
+                console.log( "Need getAway for ", opts.server, opts.application )
                 setTimeout ( ()=>{
-                    this.openGetAway( opts )
-                }, this.opts.restoreTimeout  );
-            }
-        });
+                    this.openGetAway( opts );
 
-        connection.on( "error", hadError => {
-            if( !connection["anchored"]) {
-                setTimeout ( ()=>{
-                    this.openGetAway( opts )
                 }, this.opts.restoreTimeout  );
             }
         });
