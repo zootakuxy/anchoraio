@@ -71,6 +71,7 @@ export function anchor( left:net.Socket, right:net.Socket ){
     let __anchor = ( _left:net.Socket, _right:net.Socket ) => {
         left.pipe( right );
         left.on( "close", hadError => {
+            console.log( "ANCHOR CLOSED!" );
             if( hadError ) right.end();
         });
         left[ "anchored" ] = true;
