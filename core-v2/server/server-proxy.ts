@@ -134,6 +134,8 @@ export function server( opts:ServerOptions){
         serverSlots[ slot.server ][ slot.app ][ slot.id ] = slot;
         slot.connect.on( "close", hadError => {
             delete serverSlots[ slot.server ][ slot.app ][ slot.id ];
+            console.log( `detached server connection for ${ slot.server }.${ slot.app } because origin ${ slot.id  } is closed!`)
+
         });
     }
 
@@ -158,8 +160,8 @@ export function server( opts:ServerOptions){
         }
         waitConnections[server][app][ status.id ] = wait;
         wait.connection.on( "close", hadError => {
-            let status = statusOf( wait.connection );
             delete waitConnections[server][app][ status.id  ];
+            console.log( `detached wait connection for ${ app }.${ server } because remittent connection ${ status.id } is closed!`)
         });
     }
 
