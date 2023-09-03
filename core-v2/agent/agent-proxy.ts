@@ -205,7 +205,9 @@ export class AgentProxy {
 
             connection.write( JSON.stringify( redirect ) );
             connection.once( "data", ( data ) => {
+                connection[ "readyToAnchor" ] = true;
                 // console.log( "AN AGENT REDIRECT READY" );
+
                 this.registerGetAway( opts, connection );
             });
         });
@@ -325,7 +327,6 @@ export class AgentProxy {
                         }
                     });
                 });
-                response[ "readyToAnchor" ] = true;
                 // console.log( "ON REQUEST READY ON AGENT SERVER")
                 console.log( `busy ${ app.name } established` );
                 this.openApplication( app );
