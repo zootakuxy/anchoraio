@@ -33,7 +33,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
 
     constructor( opts:AgentAioOptions) {
         super();
-        if( !opts.restoreTimeout ) opts.restoreTimeout = 1500;
+        if( !opts.restoreTimeout ) opts.restoreTimeout = Defaults.restoreTimeout;
         this.opts = opts;
         this.token = new TokenService( opts );
         this.agentProxy = new AgentProxy( this, opts );

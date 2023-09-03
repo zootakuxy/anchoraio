@@ -14,7 +14,7 @@ export const Defaults = {
     authPort:  36910,
     requestPort:  36920,
     responsePort:  36930,
-    restoreTimeout: 1500,
+    restoreTimeout: 3500,
     serverHost: "127.0.0.1",
     releases: 2,
 }

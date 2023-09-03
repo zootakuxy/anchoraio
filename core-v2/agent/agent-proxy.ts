@@ -3,6 +3,7 @@ import {AuthIO, identifierOf} from "../server/server-proxy";
 import {nanoid} from "nanoid";
 import {AgentAio} from "./agent-aio";
 import {App} from "../applications";
+import {Defaults} from "../../aio/opts/opts";
 
 export type AgentProxyOptions = {
     requestPort:number,
@@ -39,7 +40,7 @@ export class AgentProxy {
 
     constructor( aio:AgentAio, opts: AgentProxyOptions) {
         this.aio = aio;
-        if( !opts.restoreTimeout ) opts.restoreTimeout = 1500;
+        if( !opts.restoreTimeout ) opts.restoreTimeout = Defaults.restoreTimeout;
         this.opts = opts;
         this.anchor = new net.Server();
         this.connections = {};
