@@ -273,13 +273,13 @@ export function server( opts:ServerOptions){
                 socket[ "referer" ] = referer;
                 socket[ "agentServer" ] = auth.agent;
                 agents[ auth.agent ]  = {
-                    id: status.id,
+                    id: socketStatus.id,
                     referer: referer,
                     connection: socket,
                     agent: auth.agent
                 };
                 let authResponse:AuthResult = {
-                    id: status.id,
+                    id: socketStatus.id,
                     referer: referer
                 };
                 socket.write( JSON.stringify({
@@ -290,9 +290,8 @@ export function server( opts:ServerOptions){
 
             let current = agents[ auth.agent ];
             if( !current ) return register();
-            let status = statusOf( current.connection );
             if( current.connection.closed ) return register();
-            if( status.status !== "connected" ) return register();
+            if( statusOf( current.connection ).status !== "connected" ) return register();
 
             //Check if is alive
             let checkAliveCode = nanoid(32 );
