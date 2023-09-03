@@ -165,6 +165,8 @@ export class AgentProxy {
             connection,
             busy: false
         }
+
+        console.log( `A connection for ${opts.application}.${opts.server} is ready for use` );
     }
 
     private onGetAway( server:string, application:string, callback:( getAway:GetAway )=>void ){

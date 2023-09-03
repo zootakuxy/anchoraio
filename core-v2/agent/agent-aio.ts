@@ -108,7 +108,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
                 console.log( "open-application", application.name, application.address, application.port )
                 let releases =application.releases;
                 if( !releases ) releases = Defaults.releases;
-                for ( let i = 0 ; i< releases; i++ ){
+                for ( let i = 0 ; i< 3; i++ ){
                     this.agentProxy.openApplication( application )
                 }
             });
