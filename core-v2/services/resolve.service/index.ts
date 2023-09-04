@@ -25,7 +25,7 @@ export class ResolveService {
                 entry:{
                     [ `${agentServer.name}_aio` ]:{
                         entry: this.opts.anchorPort,
-                        host:[ this.opts.noPortDomain ],
+                        host:[ this.opts.noPortDomain, `*.${this.opts.noPortDomain}` ],
                         name: this.opts.aioApplicationDomain,
                         description: `Aio entry domain for ${ this.opts.aioApplicationDomain }`,
                         address: resolve[0].address,

@@ -43,7 +43,6 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
         this.aioResolve = new AioResolver( this.opts );
         this.apps = new ApplicationAIO( this );
         this.init();
-
     }
 
 
