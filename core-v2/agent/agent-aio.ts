@@ -117,7 +117,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
             Object.entries( this.aioResolve.address ).filter( ([address, resolved]) => {
                 return availableServers.includes( resolved.serverIdentifier );
             }).forEach( ([address, resolved], index) => {
-                for (let i = 0; i < 10; i++) {
+                for (let i = 0; i < 2; i++) {
                     this.agentProxy.openGetAway( {
                         server: resolved.serverIdentifier,
                         application: resolved.application
@@ -150,7 +150,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
                 console.log( "open-application", application.name, application.address, application.port )
                 let releases =application.releases;
                 if( !releases ) releases = Defaults.releases;
-                for ( let i = 0 ; i< 3; i++ ){
+                for ( let i = 0 ; i< 1; i++ ){
                     this.agentProxy.openApplication( application )
                 }
             });
