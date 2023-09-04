@@ -48,7 +48,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
     get servers():string[]{
         let servers =  Object.entries( this.aioResolve.address ).map( ([key, server], index) => {
             return server.serverIdentifier
-        });
+        }).filter( value => value !== this.opts.identifier )
         return [ ... new Set( servers )];
     }
 
