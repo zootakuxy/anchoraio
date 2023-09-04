@@ -180,9 +180,4 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
         this.agentProxy.stop();
         this.status = "stopped";
     }
-
-    resolve( address: string ) {
-        let app:string, server:string;
-        return this.aioResolve.resolved( address );
-    }
 }

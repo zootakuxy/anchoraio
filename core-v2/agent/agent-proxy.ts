@@ -94,7 +94,7 @@ export class AgentProxy {
     }
 
     resolve( address:string ){
-        return this.aio.resolve( address );
+        return this.aio.aioResolve.resolved( address );
     }
 
     private listen(){
@@ -113,6 +113,8 @@ export class AgentProxy {
                 return;
             }
 
+
+
             request["connected"] = true;
             request.on("close", hadError => {
                 request["connected"] = false;
@@ -130,6 +132,15 @@ export class AgentProxy {
                 console.log( "request-error", err.message );
             });
 
+            if( resolved.serverIdentifier === this.aio.identifier ){
+                return this.directConnect( request, {
+                    server: this.aio.identifier,
+                    application: resolved.application,
+                    dataListen:dataListen,
+                    requestData: requestData
+                })
+            }
+
             this.connect( request, {
                 server: identifierOf( resolved.server ),
                 application: resolved.application,
@@ -137,6 +148,16 @@ export class AgentProxy {
                 requestData: requestData,
             });
         };
+    }
+
+    private directConnect( request:net.Socket, opts:ConnectionOptions ){
+        let app = this.aio.apps.applications().find( value => value.name == opts.application );
+        if( !app ) return request.end();
+        let response = net.connect( {
+            host: app.address,
+            port: app.port
+        });
+        anchor( request, response, opts.requestData, [ ]);
     }
 
     onAuth( auth:string ){
