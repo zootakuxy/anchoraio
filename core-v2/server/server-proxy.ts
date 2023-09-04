@@ -41,7 +41,7 @@ export type AuthResult = {
     availableServers:string[]
 }
 
-type AgentAutheicated = {
+type AgentAuthenticate = {
     connection:net.Socket,
     id:string,
     referer:string,
@@ -194,7 +194,7 @@ export function server( opts:ServerOptions){
     }
 
     let agents : {
-        [p:string]: AgentAutheicated
+        [p:string]: AgentAuthenticate
     } = {}
 
     let clientOrigin = net.createServer( socket => {
@@ -322,6 +322,7 @@ export function server( opts:ServerOptions){
                 }));
 
                 Object.entries( agents ).forEach( ([ keyId, agent], index) => {
+                    if( agent.agent === auth.agent ) return;
                     if( !agent.servers.includes( auth.agent ) ) return;
                     agent.connection.write( JSON.stringify({
                         event:"serverOpen",
