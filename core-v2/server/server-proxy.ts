@@ -332,6 +332,7 @@ export function server( opts:ServerOptions){
 
                 socket.on( "close", hadError => {
                     Object.entries( agents ).forEach( ([ keyId, agent], index) => {
+                        if( agent.agent === auth.agent ) return;
                         if( !agent.servers.includes( auth.agent ) ) return;
                         agent.connection.write( JSON.stringify({
                             event:"serverClose",
