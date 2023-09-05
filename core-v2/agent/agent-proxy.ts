@@ -214,6 +214,8 @@ export class AgentProxy {
 
     public openGetAway ( opts:GetAwayOptions ){
         if(!this.aio.openedServes.includes( opts.server ) ) return;
+        if( opts.server === this.aio.identifier ) return;
+
         let connection = net.connect( {
             host: this.opts.serverHost,
             port: this.opts.requestPort
@@ -356,7 +358,7 @@ export class AgentProxy {
                     });
                 });
                 // console.log( "ON REQUEST READY ON AGENT SERVER")
-                console.log( `busy ${ app.name } established` );
+                console.log( `busy ${ app.name } established with ${connectionBusy.client}` );
                 this.openApplication( app );
             });
         });
