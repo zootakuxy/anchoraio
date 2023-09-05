@@ -1,0 +1,2 @@
+[domains.server.app]
+    address=127.0.0.50
