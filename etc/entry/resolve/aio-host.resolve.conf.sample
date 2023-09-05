@@ -1,2 +1,11 @@
-[domains.server.app]
-    address=127.0.0.50
+[aio.server.app]
+    address=127.255.0.62
+    application=app
+    server=server
+    identifier=server.aio
+    aioHost=ma.server.aio
+    getawayRelease = 3
+    getawayReleaseTimeout = 180000
+    getawayReleaseTimeoutBreak = 300000
+    getawayReleaseOnDiscover = false
+    reference=C:\var\workspace\brainsoft\aio-collection\anchoraio\etc\entry\resolve\127.255.0.62-ma.zootakuxy.aio.resolve.conf
