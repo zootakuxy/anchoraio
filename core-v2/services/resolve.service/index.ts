@@ -16,7 +16,7 @@ export class ResolveService {
     start():number{
 
         let resolve = this.resolver.aioResolve( this.opts.aioApplicationDomain );
-        if( !resolve ) resolve = this.resolver.aioRegisterServer( this.opts.aioApplicationDomain );
+        if( !resolve ) resolve = this.resolver.aioRegisterServer( this.opts.aioApplicationDomain, this.opts );
         let agentServer = this.resolver.serverOf( this.opts.aioApplicationDomain );
 
 

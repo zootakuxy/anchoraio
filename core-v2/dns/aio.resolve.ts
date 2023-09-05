@@ -4,41 +4,30 @@ import ini from "ini";
 import {Localhost} from "./localhost";
 import Path from "path";
 import {Detect, DirWatch} from "../utils/dir-watch";
+import {Defaults} from "../../aio/opts/opts";
 
-export type AgentServer = { name:string, identifier:string, match:RegExp, reference?:string }
-export type AioAnswerer = {
-    address:string,
-    domainName:string,
-    agent:string,
-    application?:number|string,
-    answer:DnsAnswer[]
-};
-
+export type AgentServer = {
+    name:string,
+    identifier:string,
+    match:RegExp,
+    reference?:string,
+    resolved:Resolved[]
+}
 export function domainMath( domainName ):RegExp{
     return new RegExp(`((^)*.${domainName})$|((^)${domainName})$`);
-}
-
-export function asAio( name:string ):AgentServer{
-    let parts = name.split( "." )
-        .filter( value => value && value.length );
-    if( parts.length < 2 ) parts.push( "aio" );
-
-    if( parts[ parts.length-1 ] !== "aio" ) parts.push( "aio" );
-
-    let identifier = parts.join( "." );
-    parts.pop();
-    name = parts.join(".");
-
-    return { name, identifier, match:domainMath( identifier ) };
 }
 
 export interface Resolved {
     reference:string,
     application:string,
     server:string,
-    serverIdentifier:string
-    domainName:string,
-    address:string
+    identifier:string
+    aioHost:string,
+    address:string,
+    getawayRelease:number
+    getawayReleaseTimeout:number|"none"
+    getawayReleaseTimeoutBreak:number|"none"
+    getawayReleaseOnDiscover:boolean
 }
 
 
@@ -49,19 +38,34 @@ export interface AioResolverOptions {
 const extension = "resolve.conf";
 export const RESOLVE_REGEXP = RegExp( `((^)*.${extension})$|((^)${extension})$` );
 
+type ResolvedEntry = {
+    aio?:{
+        [serverName:string]:{
+            [app:string]:Resolved
+        }
+    }
+}
+
+export type AIOHostRegisterOptions = {
+    getawayRelease?:number
+    getawayReleaseTimeout?:number|"none"
+    getawayReleaseTimeoutBreak?:number|"none"
+    getawayReleaseOnDiscover?:boolean
+}
+
 export class AioResolver {
     opts:AioResolverOptions;
     localhost:Localhost;
     dirWatch:DirWatch;
 
     servers:{[p:string|number]:AgentServer} = {};
-    domains:{[p:string]:Resolved}
+    aioHost:{[p:string]:Resolved}
     address:{[p:string]:Resolved}
 
 
     constructor( opts:AioResolverOptions ) {
         this.opts = opts;
-        this.domains = { };
+        this.aioHost = { };
         this.address = { };
         this.servers = { };
         this.localhost = new Localhost( opts );
@@ -93,42 +97,66 @@ export class AioResolver {
         this.detachResolveFile( filename );
         if( detect?.event === "delete" || !fs.existsSync( filename) ) return;
 
-        let resolve:{domains?:{ [p:string]:{ [p:string]:string}}} = ini.parse( fs.readFileSync( filename ).toString() );
+        let resolve:{aio?:{ [p:string]:{ [p:string]:Resolved|string }}} = ini.parse( fs.readFileSync( filename ).toString() );
         if( !resolve ) resolve = {};
-        resolve.domains = resolve.domains || {};
+        resolve.aio = resolve.aio || {};
 
-        Object.entries( resolve.domains ).forEach( ([ server, remotes]) => {
+        if(typeof resolve["domains"] === "object" && !!resolve[ "domains" ] ){
+            resolve.aio = Object.assign( resolve.aio, resolve["domains"] )
+        }
+
+        Object.entries( resolve.aio ).forEach( ([ server, remotes]) => {
             let identifier = `${server}.aio`;
             this.servers[ server ] = {
                 name: server,
                 identifier,
                 match: domainMath( identifier ),
-                reference: filename
+                reference: filename,
+                resolved:[]
             };
 
             Object.entries( remotes ).forEach( ( [ application, address ])=>{
-                let domainName = `${ application}.${identifier}`;
+
+                let aioHost = `${ application}.${identifier}`;
+
+
+                let _resolved:Resolved;
+                if( typeof address === "string" ){
+                    _resolved = {
+                        address: address
+                    } as Resolved;
+                } else if( typeof address === "object") {
+                    _resolved = address;
+                }
 
                 let resolved:Resolved = {
                     reference: filename,
-                    address,
-                    server,
-                    application,
-                    domainName: domainName,
-                    serverIdentifier: identifier
+                    address:_resolved.address,
+                    server: server,
+                    application: application,
+                    aioHost: aioHost,
+                    identifier: identifier,
+                    getawayRelease: _resolved.getawayRelease||2,
+                    getawayReleaseTimeout: _resolved.getawayReleaseTimeout||Defaults.getawayReleaseTimeout,
+                    getawayReleaseTimeoutBreak: _resolved.getawayReleaseTimeoutBreak||Defaults.getawayReleaseTimeoutBreak,
+                    getawayReleaseOnDiscover: _resolved.getawayReleaseOnDiscover
                 };
 
-                this.domains[ domainName ] = resolved;
-                this.address[ address ] = resolved;
+                this.aioHost[ resolved.aioHost ] = resolved;
+                this.address[ resolved.address ] = resolved;
             });
+
+            this.servers[ server ].resolved = Object.entries( this.address )
+                .map( ([address, resolved]) =>resolved )
+                .filter( value => value.server === server );
 
         });
 
     }
 
     detachResolveFile( filename:string ){
-        Object.entries( this.domains ).forEach( ([ key, value])=>{
-            if( value.reference === filename ) delete this.domains[ key ];
+        Object.entries( this.aioHost ).forEach( ([ key, value])=>{
+            if( value.reference === filename ) delete this.aioHost[ key ];
         })
         Object.entries( this.address ).forEach( ([ key, value])=>{
             if( value.reference === filename ) delete this.address[ key ];
@@ -138,41 +166,59 @@ export class AioResolver {
         })
     }
 
-    aioRegisterServer( domainName:string ):DnsAnswer[]{
-        let parts = domainName.split("." ).map( value => value.trim().toLowerCase() );
-        domainName = parts.join( "." );
+    aioRegisterServer( aioHost:string, opts:AIOHostRegisterOptions ):Resolved{
+        let parts = aioHost.split("." ).map( value => value.trim().toLowerCase() );
+        aioHost = parts.join( "." );
 
-        let agentServerName = Object.keys( this.servers ).find(next => { return this.servers[next].match.test( domainName ); })
+        let server = Object.keys( this.servers ).find(next => { return this.servers[next].match.test( aioHost ); })
 
         if( parts.length !== 3 || parts[parts.length-1] !== "aio" ) return null;
         if( parts.filter( value => !value || !value.length).length ) return  null;
-        agentServerName = parts[ 1 ];
-        let identifier = [ agentServerName, "aio" ].join(".");
+        server = parts[ 1 ];
+        let identifier = [ server, "aio" ].join(".");
         let appName = parts[ 0 ];
         let address:string = this.localhost.next();
 
-        let entry = {
-            domains : {
-                [ agentServerName ] : {
-                    [ appName ]: address
+        let filename = Path.join( this.opts.etc, "resolve", `${address}-${aioHost}.resolve.conf` );
+
+        let resolved:Resolved = {
+            address: address,
+            application: appName,
+            server: server,
+            identifier: identifier,
+            aioHost: aioHost,
+            getawayRelease: opts.getawayRelease,
+            getawayReleaseTimeout: opts.getawayReleaseTimeout,
+            getawayReleaseTimeoutBreak: opts.getawayReleaseTimeoutBreak,
+            getawayReleaseOnDiscover: opts.getawayReleaseOnDiscover,
+            reference: filename
+        }
+
+        let entry:ResolvedEntry = {
+            aio : {
+                [ server ] : {
+                    [ appName ]: resolved
                 }
             }
         }
 
-        let filename = Path.join( this.opts.etc, "resolve", `${address}-${domainName}.resolve.conf` );
-
-        this.servers[ agentServerName ] = {
-            name: agentServerName,
+        this.servers[ server ] = {
+            name: server,
             identifier: identifier,
             match: domainMath( identifier ),
-            reference: filename
+            reference: filename,
+            resolved: []
         }
 
+        this.aioHost[ resolved.aioHost ] = resolved;
+        this.address[ resolved.address ] = resolved;
         fs.writeFileSync( filename, ini.stringify( entry ) );
 
-        return [
-            {"name": domainName,"type":1,"class":1,"ttl":300,"address":address }
-        ]
+        this.servers[ server ].resolved = Object.entries( this.address )
+            .map( ([address, resolved]) =>resolved )
+            .filter( value => value.server === server );
+
+        return resolved;
     }
 
     serverOf( domainName:string ){
@@ -182,75 +228,17 @@ export class AioResolver {
         return this.servers[ agentServerName ];
     }
 
-    aioResolve( domainName:string ):DnsAnswer[]{
-        let parts = domainName.split("." ).map( value => value.trim().toLowerCase() );
-        domainName = parts.join( "." );
+    aioResolve( aioHost:string ):Resolved{
+        let parts = aioHost.split("." ).map( value => value.trim().toLowerCase() ).filter( (value, index) => value?.length );
+        let [ _aio, _server, _app ] = [...parts].reverse();
+        aioHost = parts.join( "." );
 
-        let agentServerName = Object.keys( this.servers ).find(next => { return this.servers[next].match.test( domainName ); })
+        let agentServerName = Object.keys( this.servers ).find(next => { return this.servers[next].match.test( aioHost ); })
         let agentServer = this.servers[ agentServerName ];
 
         if( !agentServer ) return null;
+        return  this.aioHost[ aioHost ];
 
-
-        let domain = this.domains[ domainName ];
-
-        if( domain ){
-            return [ {"name": domainName,"type":1,"class":1,"ttl":300,"address":domain.address } ]
-        }
-
-        else return null;
-
-
-        let address;
-        while ( !address ){
-            address = this.localhost.next();
-            if( Object.keys( this.address ).includes( address ) ) address = null;
-        }
-
-        let application;
-        let _domainParts = domainName.split( "." );
-        let _serverParts = agentServer.identifier.split( "." );
-        if( _domainParts.length > _serverParts.length )  application = _domainParts.shift()
-
-        let answer = [{
-            name: domainName,
-            type: Packet.TYPE.A,
-            class: Packet.CLASS.IN,
-            ttl: 300,
-            address: address
-        }];
-
-        if( !application ) return [];
-
-        let resolved =  {
-            reference: Path.join( this.opts.etc, "resolve", "dynamic.resolve.conf" ),
-            domainName: domainName,
-            address: address,
-            application,
-            server: agentServer.name,
-            serverIdentifier: agentServer.identifier
-        };
-
-        this.domains[ domainName ] = resolved;
-        this.address[ address ] = resolved;
-
-        let configs = {}
-
-        Object.entries( this.servers ).forEach( ( [ key, _server ])=>{
-            configs[ _server.name ] = { };
-            Object.entries( this.domains ).filter( ([key, value ])=>{
-                return value.reference === Path.join( this.opts.etc, "resolve", "dynamic.resolve.conf" );
-            }).forEach( ([application, value ])=>{
-                configs[ _server.name ][ value.application ] = value.address;
-            });
-        });
-
-
-        fs.writeFileSync( Path.join( this.opts.etc, "resolve", "dynamic.resolve.conf" ), ini.stringify( configs, {
-            whitespace: true
-        }))
-
-        return answer;
     }
 
     resolved(address:string ){

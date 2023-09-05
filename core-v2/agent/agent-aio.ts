@@ -51,7 +51,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
 
     get servers():string[]{
         let servers =  Object.entries( this.aioResolve.address ).map( ([key, server], index) => {
-            return server.serverIdentifier
+            return server.identifier
         }).filter( value => value !== this.identifier )
         return [ ... new Set( servers )];
     }
@@ -115,16 +115,18 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
 
         let openGetaways = ( availableServers:string[])=>{
             Object.entries( this.aioResolve.address ).filter( ([address, resolved]) => {
-                return availableServers.includes( resolved.serverIdentifier );
+                return availableServers.includes( resolved.identifier );
             }).forEach( ([address, resolved], index) => {
-                for (let i = 0; i < 2; i++) {
+                if( !resolved.getawayReleaseOnDiscover ) return;
+                for (let i = 0; i < resolved.getawayRelease; i++) {
                     this.agentProxy.openGetAway( {
-                        server: resolved.serverIdentifier,
+                        server: resolved.identifier,
                         application: resolved.application
-                    })
+                    }, resolved )
                 }
             });
         }
+
 
         this.on("serverOpen", server => {
             console.log( "ServerOpen", server );
@@ -154,7 +156,6 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
                     this.agentProxy.openApplication( application )
                 }
             });
-
             openGetaways( this.openedServes );
         });
 
