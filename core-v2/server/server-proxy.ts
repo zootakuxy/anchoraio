@@ -27,7 +27,7 @@ export type AuthIO = {
     server:string
     app:string|number,
     authReferer:string,
-    agent:string,
+    origin:string,
 }
 
 export type AuthAgent = {
@@ -39,6 +39,10 @@ export type AuthResult = {
     id:string,
     referer:string
     availableServers:string[]
+}
+
+export type ConnectionBusy = {
+    client:string
 }
 
 type AgentAuthenticate = {
@@ -213,7 +217,7 @@ export function server( opts:ServerOptions){
 
             let auth = Object.entries( agents ).find( ([agent, agentAuth], index) => {
                 return agentAuth.referer === redirect.authReferer
-                    && agentAuth.agent === redirect.agent;
+                    && agentAuth.agent === redirect.origin;
             });
             if(!auth ) return end();
 
@@ -230,7 +234,10 @@ export function server( opts:ServerOptions){
                     anchor( socket, slot.connect, datas, [ ] );
                     socket.off( "data", listen );
                     socket.write("ready" );
-                    slot.connect.write( "busy" );
+                    let busy :ConnectionBusy = {
+                        client: redirect.origin
+                    }
+                    slot.connect.write( JSON.stringify(busy) );
                 }
             })
         });
@@ -252,7 +259,7 @@ export function server( opts:ServerOptions){
             }
             let auth = Object.entries( agents ).find( ([agent, agentAuth], index) => {
                 return agentAuth.referer === pack.authReferer
-                    && agentAuth.agent === pack.agent;
+                    && agentAuth.agent === pack.origin;
             });
             if(!auth ) return end();
 

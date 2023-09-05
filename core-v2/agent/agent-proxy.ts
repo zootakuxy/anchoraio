@@ -1,5 +1,5 @@
 import net from "net";
-import {anchor, AuthIO, identifierOf} from "../server/server-proxy";
+import {anchor, AuthIO, ConnectionBusy, identifierOf} from "../server/server-proxy";
 import {nanoid} from "nanoid";
 import {AgentAio} from "./agent-aio";
 import {App} from "../applications";
@@ -225,7 +225,7 @@ export class AgentProxy {
                 server: identifierOf( opts.server ),
                 app: opts.application,
                 authReferer: this.authKey,
-                agent: identifierOf( this.opts.identifier )
+                origin: identifierOf( this.opts.identifier )
             }
 
             connection.write( JSON.stringify( redirect ) );
@@ -323,7 +323,7 @@ export class AgentProxy {
                 server: identifierOf( this.opts.identifier ),
                 app: app.name,
                 authReferer: this.authKey,
-                agent: identifierOf( this.opts.identifier )
+                origin: identifierOf( this.opts.identifier )
             }
             response.write(  JSON.stringify(auth), err => {
                 // console.log( "ON WRITED!" );
@@ -331,6 +331,7 @@ export class AgentProxy {
 
             response.once( "data", busy => {
                 let str = busy.toString();
+                let connectionBusy:ConnectionBusy = JSON.parse( str );
                 let datas = [];
                 let listenData = data =>{
                     datas.push( data );
@@ -345,7 +346,7 @@ export class AgentProxy {
                         anchor( response, appConnection, datas, [] );
                         response.off( "data", listenData );
                         response["anchorPiped"] = true;
-                        console.log( `new connection with ${ app.name } established` );
+                        console.log( `new connection with ${ connectionBusy.client } established for ${ app.name }` );
                     });
                     appConnection.on( "error", err => {
                         console.log("app-server-error", err.message );
