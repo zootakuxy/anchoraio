@@ -43,6 +43,15 @@ type NeedGetAway = {
     timeout
 }
 
+type GetawayListener = {
+    callback:( getAway:GetAway)=> void,
+    id:string,
+    request:net.Socket,
+    busy: boolean,
+    server:string,
+    application:string
+}
+
 interface AgentProxyListener{
     getAwayRegister( getAway:GetAway )
 }
@@ -72,9 +81,11 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
         }
     }
 
-    private readonly waitGetAway:{
+    private readonly getawayListener:{
         [ server:string ]:{
-            [application:string]:(( getAway:GetAway)=> void) [ ]
+            [application:string]:{
+                [ listenerId:string ]: GetawayListener
+            }
         }
     }
 
@@ -101,11 +112,11 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
                 return target[server];
             }
         });
-        this.waitGetAway = new Proxy({},{
+        this.getawayListener = new Proxy({},{
             get(target: {}, server: string | symbol, receiver: any): any {
                 if( !target[server]) target[ server] = new Proxy({}, {
                     get(target: {}, application: string | symbol, receiver: any): any {
-                        if( !target[application] ) target[application ] = []
+                        if( !target[application] ) target[application ] = {}
                         return target[ application ];
                     }
                 })
@@ -134,6 +145,7 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
     private listen(){
         this._connectionListener = request => {
             request["id"] = `REQ:${nanoid( 16 )}`;
+            request["connectionStatus" ] = "connected";
             this.connections[ request["id"] ] = request;
             const remoteAddressParts = request.address()["address"].split( ":" );
             const address =  remoteAddressParts[ remoteAddressParts.length-1 ];
@@ -158,6 +170,7 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
 
             request["connected"] = true;
             request.on("close", hadError => {
+                request["connectionStatus" ] = "disconnected";
                 request["connected"] = false;
                 delete this.connections[request["id"]];
             })
@@ -181,18 +194,23 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
                 })
             }
 
-            let connect = ()=>{
-                this.connect( request, {
-                    server: resolved.identifier,
-                    application: resolved.application,
-                    dataListen: dataListen,
-                    requestData: requestData,
-                }, resolved );
-            }
+
 
             this.openDemandedGetaway( resolved, request );
-            connect();
+            this.connect( request, {
+                server: resolved.identifier,
+                application: resolved.application,
+                dataListen: dataListen,
+                requestData: requestData,
+            }, resolved );
 
+            if( resolved.requestTimeout === "never" ) return;
+
+            setTimeout(()=>{
+                if( request["connectionStatus"] === "connected" && !request["anchored"] ){
+                    request.end();
+                }
+            }, resolved.requestTimeout );
 
         };
     }
@@ -220,7 +238,7 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
         }
 
 
-        if( resolved.getawayReleaseTimeout === "none" ) return;
+        if( resolved.getawayReleaseTimeout === "never" ) return;
         needGetAway.timeout = setTimeout( ()=>{
             needGetAway.hasRequest = false;
             Object.entries( this.getaway[resolved.identifier][resolved.application]).map( ([key, getAway]) => getAway )
@@ -248,13 +266,18 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
 
 
     private registerGetAway( opts:GetAwayOptions, connection:net.Socket ){
-        let next = this.waitGetAway[opts.server][ opts.application ].shift();
-        let id = `GET:${nanoid( 16 )}`;
-        connection[ "id" ] = id;
+        let [key, next ] = Object.entries( this.getawayListener[opts.server][ opts.application ] )
+            .find( ([listerId, getawayListener], index) => {
+                return !getawayListener.busy
+                    && getawayListener.request["connectionStatus"] === "connected";
+            })||[]
+        let id = connection[ "id" ];
         connection[ "application" ] = opts.application;
         connection[ "server" ] = opts.server;
-        if( typeof next === "function" ) {
-            next( {
+        if( !!next ) {
+            next.busy = true;
+            delete this.getawayListener[opts.server][ opts.application ][  next.id ];
+            next.callback( {
                 busy: true,
                 connection: connection ,
                 id,
@@ -284,10 +307,11 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
             return !getAway.busy
                 && !!getAway.connection["readyToAnchor"];
         });
+        let id = request["id"];
 
 
         if( !!next ){
-            console.log( `REQUEST ${ request["id"]} TO ${ resolved.aioHost }  IMMEDIATELY CONNECT`)
+            console.log( `REQUEST ${ id } TO ${ resolved.aioHost }  IMMEDIATELY CONNECT`)
             let [ key, getAway ] = next;
             getAway.busy = true;
             delete this.getaway[ server ][ application ][ key ];
@@ -295,9 +319,18 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
             return;
         }
         console.log( `REQUEST ${ request["id"]} TO ${ resolved.aioHost } WAIT FOR GETAWAY`)
-        this.waitGetAway[ server] [ application ].push( callback );
+        this.getawayListener[ server] [ application ][ id ] = {
+            id: id,
+            request: request,
+            server: server,
+            application: application,
+            busy: false,
+            callback: callback
+        };
 
-
+        request.on( "close", hadError => {
+            delete this.getawayListener[ server] [ application ][ id ];
+        });
 
     }
 

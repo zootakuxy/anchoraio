@@ -28,8 +28,9 @@ export interface Resolved {
     linkedHost?:string,
     linkedReference?:string
     getawayRelease?:number
-    getawayReleaseTimeout?:number|"none"
-    getawayReleaseOnDiscover?:boolean
+    getawayReleaseTimeout?:number|"never"
+    getawayReleaseOnDiscover?:boolean,
+    requestTimeout:number|"never"
 }
 
 
@@ -50,8 +51,8 @@ type ResolvedEntry = {
 
 export type AIOHostRegisterOptions = {
     getawayRelease?:number
-    getawayReleaseTimeout?:number|"none"
-    getawayReleaseTimeoutBreak?:number|"none"
+    getawayReleaseTimeout?:number|"never"
+    requestTimeout?:number|"never"
     linkedHost:string,
     linkedReference:string
     getawayReleaseOnDiscover?:boolean
@@ -140,6 +141,7 @@ export class AioResolver {
                     identifier: identifier,
                     getawayRelease: _resolved.getawayRelease||Defaults.getawayRelease,
                     getawayReleaseTimeout: _resolved.getawayReleaseTimeout||Defaults.getawayReleaseTimeout,
+                    requestTimeout: _resolved.requestTimeout||Defaults.requestTimeout,
                     getawayReleaseOnDiscover: _resolved.getawayReleaseOnDiscover,
                     linkedService: _resolved.linkedService,
                     linkedReference: _resolved.linkedReference,
@@ -147,10 +149,11 @@ export class AioResolver {
                 };
 
                 let numbers:(keyof Resolved & (
-                    "getawayReleaseTimeout"|"getawayRelease"
-                ))[] = ["getawayReleaseTimeout","getawayRelease"];
+                    "getawayReleaseTimeout"|"getawayRelease"|"requestTimeout"
+                ))[] = ["getawayReleaseTimeout","getawayRelease", "requestTimeout"];
 
                 numbers.forEach( _timeout => {
+                    if( resolved[_timeout] === "never" ) return;
                     resolved[_timeout] = Number( resolved[_timeout] );
                     if( !resolved[ _timeout ] || Number.isNaN( resolved[ _timeout ] ) ){
                         resolved[ _timeout ] = Defaults[_timeout];
@@ -203,6 +206,8 @@ export class AioResolver {
             identifier: identifier,
             aioHost: aioHost,
             reference: filename,
+            requestTimeout: opts.requestTimeout
+
         }
 
         return this.sets( resolved, opts, linked );
@@ -218,6 +223,7 @@ export class AioResolver {
         resolved = Object.assign(resolved, {
             getawayRelease: opts.getawayRelease||Defaults.getawayRelease,
             getawayReleaseTimeout: opts.getawayReleaseTimeout || Defaults.getawayReleaseTimeout,
+            requestTimeout: opts.requestTimeout || Defaults.requestTimeout,
             getawayReleaseOnDiscover: opts.getawayReleaseOnDiscover || false,
             linkedHost: _linked?.host,
             linkedService: _linked?.service,
