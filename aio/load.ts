@@ -4,7 +4,7 @@ import ini from "ini";
 import {Defaults} from "./opts/opts";
 
 type Result = {
-    [p:string|number|symbol]:any;
+    [p:string]:any;
 }
 export function loadConfigsFile<T extends Result>( path:string, encoding?: BufferEncoding ):T{
     let result:Result = {
