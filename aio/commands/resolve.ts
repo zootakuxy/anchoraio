@@ -22,6 +22,8 @@ export const handler = function ( argv: yargs.Arguments<ResolveOptions> ) {
             // console.error(error)
         });
     }
+
+    if( argv["sets"] ) argv.action = "sets";
     const { ResolveService } =  require( "../../core-v2/services/resolve.service" );
     let ts = new ResolveService( argv );
     let resultCode = ts.start();

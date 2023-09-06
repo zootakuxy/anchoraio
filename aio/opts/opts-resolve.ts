@@ -15,6 +15,7 @@ export type ResolveOptions = BaseOptions & AIOHostRegisterOptions &{
     noPortEntry?:string
     noPortDomain?:string
     anchorPort:number,
+    action:"sets"|"view"
 
 };
 
@@ -31,6 +32,24 @@ export function resolveBuilderOptions(yargs:Argv<ResolveOptions> ){
         type: "boolean",
         description: "Generate or update token for identifier"
     });
+
+    yargs.option( "action", {
+        alias:[ ],
+        type:"string",
+        choices: ["sets", "view" ],
+        default: "view",
+        description: "Do action",
+    });
+
+    yargs.option( "sets", {
+        alias:[ ],
+        type:"boolean",
+        default: false,
+        description: "Do action sect",
+
+    });
+
+
 
     yargs.option( "noPortDomain",  {
         alias: [ "n", "noPort" ],

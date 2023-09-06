@@ -1,5 +1,5 @@
 import {ResolveOptions} from "../../../aio/opts/opts-resolve";
-import {AioResolver} from "../../dns/aio.resolve";
+import {AioResolver, Resolved} from "../../dns/aio.resolve";
 import fs from "fs";
 import Path from "path";
 import ini from "ini";
@@ -13,9 +13,20 @@ export class ResolveService {
         this.opts = opts;
     }
 
-    start():number{
 
+
+    start():number{
         let resolve = this.resolver.aioResolve( this.opts.aioApplicationDomain );
+        if( !resolve || this.opts.action === "sets" ) resolve = this.sets( resolve );
+        if( !resolve ) return  -1;
+
+        if( resolve.linkedHost && resolve.linkedReference ) this.link( resolve );
+
+        this.show( resolve );
+        return 0;
+    }
+
+    private sets( resolve:Resolved ){
         let linked = ( address:string ) => {
             if( this.opts.noPortDomain && this.opts.noPortEntry ){
                 let entryName = `${this.opts.noPortDomain}_${address}`;
@@ -30,8 +41,41 @@ export class ResolveService {
 
         if( !resolve ) resolve = this.resolver.aioRegisterServer( this.opts.aioApplicationDomain, this.opts, linked );
         else resolve = this.resolver.sets( resolve, this.opts, linked );
-        let agentServer = this.resolver.serverOf( this.opts.aioApplicationDomain );
+        return resolve;
+    }
 
+    private link( resolve: Resolved ){
+        let agentServer = this.resolver.serverOf( resolve.aioHost );
+        let noPortEntry = {
+            entry:{
+                [ `${agentServer.name}_aio` ]:{
+                    entry: this.opts.anchorPort,
+                    host:[ this.opts.noPortDomain, `*.${this.opts.noPortDomain}` ],
+                    name: this.opts.aioApplicationDomain,
+                    description: `Aio entry domain for ${ this.opts.aioApplicationDomain }`,
+                    address: resolve.address,
+                    port: this.opts.anchorPort,
+                    protocol: "http",
+                    disable: false,
+                    opts: {
+
+                    }
+                }
+            }
+        }
+
+        if( fs.existsSync( resolve.linkedReference ) ){
+            let old = ini.parse( fs.readFileSync( resolve.linkedReference ).toString() )||{};
+            noPortEntry = Object.assign( old, noPortEntry );
+        }
+
+        if( !fs.existsSync( Path.dirname( resolve.linkedReference ) ) ) fs.mkdirSync( Path.dirname( resolve.linkedReference ), {
+            recursive: true
+        });
+        fs.writeFileSync( resolve.linkedReference, ini.stringify( noPortEntry, { whitespace: true } ));
+    }
+
+    private show( resolve:Resolved ){
         let _labels:({key:string,value:any})[] = [];
         let maxLabel = 0, maxValue;
         let label=( key:string, value?:any)=>{
@@ -51,44 +95,13 @@ export class ResolveService {
         label( "GETAWAY-RELEASE-TIMEOUT-BREAK", resolve.getawayReleaseTimeoutBreak );
         label( "GETAWAY-RELEASE-TIMEOUT-BREAK", resolve.getawayReleaseTimeoutBreak );
         label( "FILE", resolve.reference );
+        label( "LINKED NO-PORT" );
+        label( "NOPORT DOMAIN:", resolve.linkedHost );
+        label( "PORT:", this.opts.anchorPort );
+        label( "FILE:", resolve.linkedReference );
 
-        let noPortEntry:any;
-
-
-
-        if( resolve.linkedHost && resolve.linkedReference ){
-            noPortEntry = {
-                entry:{
-                    [ `${agentServer.name}_aio` ]:{
-                        entry: this.opts.anchorPort,
-                        host:[ this.opts.noPortDomain, `*.${this.opts.noPortDomain}` ],
-                        name: this.opts.aioApplicationDomain,
-                        description: `Aio entry domain for ${ this.opts.aioApplicationDomain }`,
-                        address: resolve.address,
-                        port: this.opts.anchorPort,
-                        protocol: "http",
-                        disable: false,
-                        opts: {
-
-                        }
-                    }
-                }
-            }
-
-
-            if( !fs.existsSync( Path.dirname( resolve.linkedReference ) ) ) fs.mkdirSync( Path.dirname( resolve.linkedReference ), {
-                recursive: true
-            });
-            fs.writeFileSync( resolve.linkedReference, ini.stringify( noPortEntry, { whitespace: true } ));
-
-            label( "LINKED NO-PORT" );
-            label( "NOPORT DOMAIN:", resolve.linkedHost );
-            label( "PORT:", this.opts.anchorPort );
-            label( "FILE:", resolve.linkedReference );
-        }
-
-            let self = this;
-            let show :{ [k in typeof self.opts.format]?:()=>void}= {
+        let self = this;
+        let show :{ [k in typeof self.opts.format]?:()=>void}= {
             label(){
                 _labels.forEach( value => {
                     if( !value ){
@@ -107,7 +120,9 @@ export class ResolveService {
                     }
                 }, { whitespace: true }));
 
-                if( noPortEntry ) console.log( ini.stringify(noPortEntry, { whitespace: true }))
+                if( resolve.linkedReference && fs.existsSync( resolve.linkedReference )) {
+                    console.log( fs.readFileSync( resolve.linkedReference ).toString() )
+                }
             }, cfg(){
                 console.log( Path.relative( self.opts.etc, resolve.reference ) );
                 if( resolve.linkedReference )
@@ -122,6 +137,5 @@ export class ResolveService {
             }
         }
         if( typeof show[ self.opts.format ] == "function" ) show[ self.opts.format ]();
-        return 0;
     }
 }
