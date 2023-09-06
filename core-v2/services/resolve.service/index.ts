@@ -87,7 +87,7 @@ export class ResolveService {
         }
 
             let self = this;
-        let show :{ [k in typeof this.opts.format]?:()=>void}= {
+            let show :{ [k in typeof self.opts.format]?:()=>void}= {
             label(){
                 _labels.forEach( value => {
                     if( !value ){
@@ -120,7 +120,7 @@ export class ResolveService {
                 console.table(resolve)
             }
         }
-        if( typeof show[ this.opts.format ] == "function" ) show[ this.opts.format ]();
+        if( typeof show[ self.opts.format ] == "function" ) show[ self.opts.format ]();
         return 0;
     }
 }
