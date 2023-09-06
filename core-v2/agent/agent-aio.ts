@@ -121,7 +121,8 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
                 for (let i = 0; i < resolved.getawayRelease; i++) {
                     this.agentProxy.openGetAway( {
                         server: resolved.identifier,
-                        application: resolved.application
+                        application: resolved.application,
+                        autoReconnect: true
                     }, resolved )
                 }
             });

@@ -29,11 +29,13 @@ type GetAway = {
     connection:net.Socket,
     id:string
     busy:boolean
+    autoReconnect:boolean
 }
 
 type GetAwayOptions = {
     server:string,
-    application:string
+    application:string,
+    autoReconnect:boolean
 }
 
 type NeedGetAway = {
@@ -90,7 +92,7 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
 
         this.getaway = new Proxy({},{
             get(target: {}, server: string | symbol, receiver: any): any {
-                if( !target[server]) target[ server] = new Proxy({}, {
+                if( !target[server]) target[ server ] = new Proxy({}, {
                     get(target: {}, application: string | symbol, receiver: any): any {
                         if( !target[application] ) target[application ] = {}
                         return target[ application ];
@@ -195,8 +197,20 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
                 console.log("=======================OPEN NEWS GET-AWAYS===================")
                 console.log( `REQUEST ${ request["id"]} TO ${ resolved.aioHost }  REQUIRING GETAWAY`)
                 needGetAway.hasRequest = true;
+                for (let i = 0; i < 1; i++) {
+                    this.openGetAway( {
+                        server: resolved.identifier,
+                        application: resolved.application,
+                        autoReconnect: false
+                    }, resolved )
+                }
+
                 for (let i = 0; i < resolved.getawayRelease; i++) {
-                    this.openGetAway( { server: resolved.identifier, application: resolved.application }, resolved )
+                    this.openGetAway( {
+                        server: resolved.identifier,
+                        application: resolved.application,
+                        autoReconnect: true
+                    }, resolved )
                 }
             }
             connect();
@@ -204,10 +218,13 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
             if( resolved.getawayReleaseTimeout === "none" ) return;
             needGetAway.timeout = setTimeout( ()=>{
                 needGetAway.hasRequest = false;
+                Object.entries( this.getaway[resolved.identifier][resolved.application]).map( ([key, getAway]) => getAway )
+                    .filter( value => !value.connection["anchored"] && value.connection["connectionStatus"] === "connected")
+                    .forEach( (value, index, array) => {
+                        console.log("PREPARED GETAWAY ABORTED!");
+                       value.connection.destroy( new Error("ABORTEDGETAWAY"));
+                    });
             }, Number( resolved.getawayReleaseTimeout)  );
-
-
-
         };
     }
 
@@ -227,7 +244,6 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
 
 
     private registerGetAway( opts:GetAwayOptions, connection:net.Socket ){
-        console.log(">>>>>>>>>>>>>>><<<REGISTER GETWAI<<<<<<<<<<<<<<<<<<<<")
         let next = this.waitGetAway[opts.server][ opts.application ].shift();
         let id = `GET:${nanoid( 16 )}`;
         connection[ "id" ] = id;
@@ -237,7 +253,8 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
             next( {
                 busy: true,
                 connection: connection ,
-                id
+                id,
+                autoReconnect: opts.autoReconnect
             });
             return;
         }
@@ -245,7 +262,8 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
         let getAway:GetAway = {
             id,
             connection,
-            busy: false
+            busy: false,
+            autoReconnect: opts.autoReconnect
         };
 
         this.getaway[ opts.server ][ opts.application ][ id ] = getAway
@@ -308,18 +326,10 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
 
             connection.write( JSON.stringify( redirect ) );
             connection.once( "data", ( data ) => {
-            console.log("<<<<<<<<<<<<<<<<<<<<<<sdsdsdsdsds>>>>>>>>>>>>>>>>>>>")
                 connection[ "readyToAnchor" ] = true;
 
                 this.registerGetAway( opts, connection );
             });
-
-            if( resolved.getawayReleaseTimeoutBreak === "none" ) return;
-            setTimeout( ()=>{
-                if( !connection["anchored"] && connection["connectionStatus"] === "connected" ){
-                    connection.end();
-                }
-            }, resolved.getawayReleaseTimeoutBreak  );
         });
 
         connection.on("close", hadError => {
@@ -331,11 +341,8 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
         });
 
         connection.on( "close", hadError => {
-            console.log("<<<<<<<<<<<<<<<<<<<<<<END-SERVER>>>>>>>>>>>>>>>>>>>")
-            console.log( "Need getAway for ", opts.server, opts.application,  !connection[ "anchored" ] )
-            if( !connection[ "anchored" ]) {
+            if( !connection[ "anchored" ] && opts.autoReconnect ) {
                 setTimeout ( ()=>{
-                    console.log("END ABROTALLY CONNECTIONS")
                     this.openGetAway( opts, resolved );
                 }, this.opts.restoreTimeout  );
             }
@@ -347,10 +354,13 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
             anchor( `${opts.application}.${ opts.server }`, "AGENT-CLIENT", request, getAway.connection, opts.requestData, []);
 
             request.off( "data", opts.dataListen );
-            this.openGetAway( {
-                server: opts.server,
-                application: opts.application
-            }, resolved );
+            if( getAway.autoReconnect ){
+                this.openGetAway( {
+                    server: opts.server,
+                    application: opts.application,
+                    autoReconnect: getAway.autoReconnect
+                }, resolved );
+            }
         });
     }
     start(){
@@ -416,9 +426,7 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
                 authId: responseGetaway["id"],
                 origin: identifierOf( this.opts.identifier )
             }
-            responseGetaway.write(  JSON.stringify(auth), err => {
-                // console.log( "ON WRITED!" );
-            });
+            responseGetaway.write(  JSON.stringify(auth));
 
 
             let datas = [];
@@ -428,32 +436,23 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
             responseGetaway.on( "data", listenData );
             responseGetaway.once( "data", busy => {
                 try {
-                    // let str = busy.toString();
-                    // let head = str.substring( 0, str.indexOf("}" )+1 );
-                    // let requestHead = str.substring(head.length, str.length );
-                    // let connectionBusy:ConnectionBusy = JSON.parse( head );
-
-                    // if( requestHead.length ) datas.push( requestHead );
-
-                    // responseGetaway.once( "data", () => {
-                        let appConnection = net.connect({
-                            host: app.address,
-                            port: app.port
-                        });
-                        appConnection["id"] = `RESP:${nanoid(16)}`;
-                        appConnection.on( "connect", () => {
-                            anchor( `${app.name}.${ this.aio.identifier }`, "AGENT-SERVER", responseGetaway, appConnection, datas, [] );
-                            responseGetaway.off( "data", listenData );
-                            responseGetaway["anchorPiped"] = true;
-                            console.log( `new connection with ${ "any" } established for ${ app.name }` );
-                        });
-                        appConnection.on( "error", err => {
-                            console.log("app-server-error", err.message );
-                            if( !responseGetaway["anchorPiped"] ){
-                                responseGetaway.end();
-                            }
-                        });
-                    // });
+                    let appConnection = net.connect({
+                        host: app.address,
+                        port: app.port
+                    });
+                    appConnection["id"] = `RESP:${nanoid(16)}`;
+                    appConnection.on( "connect", () => {
+                        anchor( `${app.name}.${ this.aio.identifier }`, "AGENT-SERVER", responseGetaway, appConnection, datas, [] );
+                        responseGetaway.off( "data", listenData );
+                        responseGetaway["anchorPiped"] = true;
+                        console.log( `new connection with ${ "any" } established for ${ app.name }` );
+                    });
+                    appConnection.on( "error", err => {
+                        console.log("app-server-error", err.message );
+                        if( !responseGetaway["anchorPiped"] ){
+                            responseGetaway.end();
+                        }
+                    });
                     this.openApplication( app );
                 } catch (e) {
                     responseGetaway.end();

@@ -29,7 +29,6 @@ export interface Resolved {
     linkedReference?:string
     getawayRelease?:number
     getawayReleaseTimeout?:number|"none"
-    getawayReleaseTimeoutBreak?:number|"none"
     getawayReleaseOnDiscover?:boolean
 }
 
@@ -141,7 +140,6 @@ export class AioResolver {
                     identifier: identifier,
                     getawayRelease: _resolved.getawayRelease||Defaults.getawayRelease,
                     getawayReleaseTimeout: _resolved.getawayReleaseTimeout||Defaults.getawayReleaseTimeout,
-                    getawayReleaseTimeoutBreak: _resolved.getawayReleaseTimeoutBreak||Defaults.getawayReleaseTimeoutBreak,
                     getawayReleaseOnDiscover: _resolved.getawayReleaseOnDiscover,
                     linkedService: _resolved.linkedService,
                     linkedReference: _resolved.linkedReference,
@@ -150,7 +148,7 @@ export class AioResolver {
 
                 let numbers:(keyof Resolved & (
                     "getawayReleaseTimeout"| "getawayReleaseTimeoutBreak"|"getawayRelease"
-                ))[] = ["getawayReleaseTimeout", "getawayReleaseTimeoutBreak","getawayRelease"];
+                ))[] = ["getawayReleaseTimeout","getawayRelease"];
 
                 numbers.forEach( _timeout => {
                     resolved[_timeout] = Number( resolved[_timeout] );
