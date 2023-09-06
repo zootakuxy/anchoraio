@@ -5,5 +5,5 @@ let resolveRegexp = RegExp( `((^)*.${extension})$|((^)${extension})$` )
 // let resolveRegexp = /(\*\.resolve\.conf$|resolve\.conf$)/
 
 
-console.log( resolveRegexp.test("\\resolve\\\\zootakuxy.resolve.conf.sample")) //False
+console.log( resolveRegexp.test("\\resolve\\\\aio-host.resolve.conf.sample")) //False
 console.log( resolveRegexp.test("\\resolve\\\\zootakuxy.resolve.conf")) //Verdadeiro

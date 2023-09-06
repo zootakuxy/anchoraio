@@ -33,7 +33,7 @@ export function resolveBuilderOptions(yargs:Argv<ResolveOptions> ){
     });
 
     yargs.option( "noPortDomain",  {
-        alias: [ "n", "noPort"],
+        alias: [ "n", "noPort" ],
         type: "string",
         description: "Domain in noport"
     });
@@ -47,7 +47,7 @@ export function resolveBuilderOptions(yargs:Argv<ResolveOptions> ){
         type: "string",
         choices:[ "table", "ini", "label", "json", "file", "cfg" ],
         description: "Generate or update token for identifier",
-        default: "table"
+        default: "label"
     });
 
 

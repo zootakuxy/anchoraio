@@ -24,10 +24,13 @@ export interface Resolved {
     identifier:string
     aioHost:string,
     address:string,
-    getawayRelease:number
-    getawayReleaseTimeout:number|"none"
-    getawayReleaseTimeoutBreak:number|"none"
-    getawayReleaseOnDiscover:boolean
+    linkedService?:string,
+    linkedHost?:string,
+    linkedReference?:string
+    getawayRelease?:number
+    getawayReleaseTimeout?:number|"none"
+    getawayReleaseTimeoutBreak?:number|"none"
+    getawayReleaseOnDiscover?:boolean
 }
 
 
@@ -50,6 +53,8 @@ export type AIOHostRegisterOptions = {
     getawayRelease?:number
     getawayReleaseTimeout?:number|"none"
     getawayReleaseTimeoutBreak?:number|"none"
+    linkedHost:string,
+    linkedReference:string
     getawayReleaseOnDiscover?:boolean
 }
 
@@ -78,8 +83,6 @@ export class AioResolver {
         bases.forEach( value => {
             this.dirWatch.acceptor( Path.join( this.opts.etc, value.base), RegExp( `((^)*.${value.extension})|((^)${value.extension})$` ));
         })
-
-
 
         this.dirWatch.listener.on( "reader", (list:string[]) => {
             list.forEach( filename => {
@@ -139,7 +142,10 @@ export class AioResolver {
                     getawayRelease: _resolved.getawayRelease||2,
                     getawayReleaseTimeout: _resolved.getawayReleaseTimeout||Defaults.getawayReleaseTimeout,
                     getawayReleaseTimeoutBreak: _resolved.getawayReleaseTimeoutBreak||Defaults.getawayReleaseTimeoutBreak,
-                    getawayReleaseOnDiscover: _resolved.getawayReleaseOnDiscover
+                    getawayReleaseOnDiscover: _resolved.getawayReleaseOnDiscover,
+                    linkedService: _resolved.linkedService,
+                    linkedReference: _resolved.linkedReference,
+                    linkedHost: _resolved.linkedHost
                 };
 
                 this.aioHost[ resolved.aioHost ] = resolved;
@@ -166,7 +172,7 @@ export class AioResolver {
         })
     }
 
-    aioRegisterServer( aioHost:string, opts:AIOHostRegisterOptions ):Resolved{
+    aioRegisterServer( aioHost:string, opts:AIOHostRegisterOptions, linked:( address:string )=>{host:string,reference:string, service }):Resolved{
         let parts = aioHost.split("." ).map( value => value.trim().toLowerCase() );
         aioHost = parts.join( "." );
 
@@ -187,41 +193,61 @@ export class AioResolver {
             server: server,
             identifier: identifier,
             aioHost: aioHost,
-            getawayRelease: opts.getawayRelease,
-            getawayReleaseTimeout: opts.getawayReleaseTimeout,
-            getawayReleaseTimeoutBreak: opts.getawayReleaseTimeoutBreak,
-            getawayReleaseOnDiscover: opts.getawayReleaseOnDiscover,
-            reference: filename
+            reference: filename,
         }
+
+        return this.sets( resolved, opts, linked );
+    }
+
+    sets( resolved:Resolved, opts:AIOHostRegisterOptions, linked:( address:string )=>{host:string,reference:string, service }):Resolved{
+        let _linked = linked( resolved.address );
+
+        if ( resolved.linkedReference && resolved.linkedReference !== _linked.reference  && fs.existsSync( resolved.linkedReference ) ) {
+            fs.unlinkSync( resolved.linkedReference );
+        }
+
+        resolved = Object.assign(resolved, {
+            getawayRelease: opts.getawayRelease||Defaults.getawayRelease,
+            getawayReleaseTimeout: opts.getawayReleaseTimeout || Defaults.getawayReleaseTimeout,
+            getawayReleaseTimeoutBreak: opts.getawayReleaseTimeoutBreak || Defaults.getawayReleaseTimeoutBreak,
+            getawayReleaseOnDiscover: opts.getawayReleaseOnDiscover || false,
+            linkedHost: _linked?.host,
+            linkedService: _linked?.service,
+            linkedReference: _linked?.reference,
+        });
 
         let entry:ResolvedEntry = {
             aio : {
-                [ server ] : {
-                    [ appName ]: resolved
+                [ resolved.server ] : {
+                    [ resolved.application ]: resolved
                 }
             }
         }
 
-        this.servers[ server ] = {
-            name: server,
-            identifier: identifier,
-            match: domainMath( identifier ),
-            reference: filename,
+        this.servers[ resolved.server ] = {
+            name: resolved.application,
+            identifier: resolved.identifier,
+            match: domainMath( resolved.identifier ),
+            reference: resolved.reference,
             resolved: []
         }
 
         this.aioHost[ resolved.aioHost ] = resolved;
         this.address[ resolved.address ] = resolved;
-        fs.writeFileSync( filename, ini.stringify( entry ) );
+        fs.writeFileSync( resolved.reference, ini.stringify( entry, {
+            whitespace: true
+        } ) );
 
-        this.servers[ server ].resolved = Object.entries( this.address )
+        this.servers[ resolved.server ].resolved = Object.entries( this.address )
             .map( ([address, resolved]) =>resolved )
-            .filter( value => value.server === server );
-
+            .filter( value => value.server === resolved.server );
         return resolved;
     }
 
-    serverOf( domainName:string ){
+
+
+
+        serverOf( domainName:string ){
         let parts = domainName.split("." ).map( value => value.trim().toLowerCase() );
         domainName = parts.join( "." );
         let agentServerName = Object.keys( this.servers ).find(next => { return this.servers[next].match.test( domainName ); })
