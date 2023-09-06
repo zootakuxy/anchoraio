@@ -153,6 +153,9 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
 
             let resolved = this.resolve( address );
 
+            console.log( resolved );
+
+
             if( !resolved ){
                 // console.log( `Address ${ address } not resolved!` );
                 request.end();
@@ -203,6 +206,7 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
                 dataListen: dataListen,
                 requestData: requestData,
             }, resolved );
+
 
             if( resolved.requestTimeout === "never" ) return;
 
@@ -339,7 +343,6 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
         let hasRequest = this.needGetAway[ opts.server ][ opts.application ].hasRequest;
         if( resolved.getawayReleaseOnDiscover ) hasRequest = true;
 
-        let id = nanoid(12);
         if(!this.aio.openedServes.includes( opts.server ) ) return;
         if(resolved.identifier === this.aio.identifier && this.opts.directConnection === "on" ) return;
         if(!hasRequest ) return;
@@ -348,6 +351,7 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
             host: this.opts.serverHost,
             port: this.opts.requestPort
         });
+        connection[ "id" ] = `${nanoid( 16 )}`;
         connection.on( "connect", () => {
             connection["connectionStatus"] = "connected";
 
@@ -443,7 +447,7 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
             port: this.opts.responsePort
         });
 
-        responseGetaway[ "id" ] = `RET:${nanoid(32 )}`;
+        responseGetaway[ "id" ] = `RET:${nanoid(16 )}`;
         responseGetaway[ "appName" ] = app.name;
         responseGetaway[ "appAddress" ] = app.address;
         responseGetaway[ "appPort" ] = app.port;
