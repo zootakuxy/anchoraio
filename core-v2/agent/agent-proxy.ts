@@ -5,6 +5,7 @@ import {AgentAio} from "./agent-aio";
 import {App} from "../applications";
 import {Defaults} from "../../aio/opts/opts";
 import {Resolved} from "../dns/aio.resolve";
+import {BaseEventEmitter} from "kitres/src/core/util";
 
 export type AgentProxyOptions = {
     requestPort:number,
@@ -40,8 +41,12 @@ type NeedGetAway = {
     timeout
 }
 
+interface AgentProxyListener{
+    getAwayRegister( getAway:GetAway )
+}
 
-export class AgentProxy {
+
+export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
     private opts:AgentProxyOptions;
     private anchor:net.Server;
     private readonly appsConnections:{ [ p:string ]:net.Socket };
@@ -75,6 +80,7 @@ export class AgentProxy {
     private aio: AgentAio;
 
     constructor( aio:AgentAio, opts: AgentProxyOptions) {
+        super();
         this.aio = aio;
         if( !opts.restoreTimeout ) opts.restoreTimeout = Defaults.restoreTimeout;
         this.opts = opts;
@@ -173,34 +179,52 @@ export class AgentProxy {
                 })
             }
 
-
-            let needGetAway = this.needGetAway[ resolved.identifier ][ resolved.application ];
-            console.log( { needGetAway } )
-            // // if( needGetAway.timeout ){
-            // //     clearTimeout( needGetAway.timeout );
-            // // }
-            // //
-            if( !needGetAway.hasRequest ) {
-                console.log( `REQUEST ${ request["id"]} TO ${ resolved.aioHost }  REQUIRING GETAWAY`)
-
-                needGetAway.hasRequest = true;
-                for (let i = 0; i < resolved.getawayRelease; i++) {
-                    this.openGetAway( { server: resolved.identifier, application: resolved.application }, resolved )
-                }
+            let connect = ()=>{
+                this.connect( request, {
+                    server: resolved.identifier,
+                    application: resolved.application,
+                    dataListen: dataListen,
+                    requestData: requestData,
+                }, resolved );
             }
+            return connect();
+
+
+            // let needGetAway = this.needGetAway[ resolved.identifier ][ resolved.application ];
+            // let hasRequest = needGetAway.hasRequest;
+            // console.log( { needGetAway } )
+            // // // if( needGetAway.timeout ){
+            // // //     clearTimeout( needGetAway.timeout );
+            // // // }
+            // // //
+            // if( !needGetAway.hasRequest ) {
+            //     console.log( `REQUEST ${ request["id"]} TO ${ resolved.aioHost }  REQUIRING GETAWAY`)
+            //     needGetAway.hasRequest = true;
+            //     for (let i = 0; i < resolved.getawayRelease; i++) {
+            //         this.openGetAway( { server: resolved.identifier, application: resolved.application }, resolved )
+            //     }
+            // }
+            // //
+            // // if( resolved.getawayReleaseTimeout === "none" ) return;
+            // // needGetAway.timeout = setTimeout( ()=>{
+            // //     needGetAway.hasRequest = false;
+            // // }, resolved.getawayReleaseTimeout  );
             //
-            // if( resolved.getawayReleaseTimeout === "none" ) return;
-            // needGetAway.timeout = setTimeout( ()=>{
-            //     needGetAway.hasRequest = false;
-            // }, resolved.getawayReleaseTimeout  );
-
-
-            this.connect( request, {
-                server: resolved.identifier,
-                application: resolved.application,
-                dataListen: dataListen,
-                requestData: requestData,
-            }, resolved );
+            //
+            //
+            // let callback;
+            // if( !hasRequest ) return this.on("getAwayRegister", callback= ( getAway ) => {
+            //     let counts = Object.entries(this.getaway[ resolved.identifier ][ resolved.application ]).filter( ([key, get]) => {
+            //         return true;
+            //     }).length;
+            //
+            //     if( counts === resolved.getawayRelease ){
+            //         console.log({callback})
+            //         this.onceOff("getAwayRegister", callback );
+            //         connect()
+            //     }
+            // });
+;
         };
     }
 
@@ -220,6 +244,7 @@ export class AgentProxy {
 
 
     private registerGetAway( opts:GetAwayOptions, connection:net.Socket ){
+        console.log("REGISTER GETWAI")
         let next = this.waitGetAway[opts.server][ opts.application ].shift();
         let id = `GET:${nanoid( 16 )}`;
         connection[ "id" ] = id;
@@ -234,15 +259,19 @@ export class AgentProxy {
             return;
         }
 
-        this.getaway[ opts.server ][ opts.application ][ id ] = {
+        let getAway:GetAway = {
             id,
             connection,
             busy: false
-        }
+        };
+
+        this.getaway[ opts.server ][ opts.application ][ id ] = getAway
 
         connection.on( "close", hadError => {
             delete this.getaway[ opts.server ][ opts.application ][ id ];
         });
+
+        this.notify("getAwayRegister", getAway );
     }
 
     private onGetAway( server:string, application:string, resolved:Resolved, request:net.Socket, callback:( getAway:GetAway )=>void ){
@@ -269,16 +298,17 @@ export class AgentProxy {
 
 
     public openGetAway ( opts:GetAwayOptions, resolved:Resolved ){
-        console.log("this.needGetAway")
-        let hasRequest = this.needGetAway[ opts.server ][ opts.application ].hasRequest;
-        if( resolved.getawayReleaseOnDiscover ) hasRequest = true;
-        if(!this.aio.openedServes.includes( opts.server ) ) return;
-        console.log("SDsdsdsdsdsdsdsds 0922")
-        if(resolved.identifier === this.aio.identifier && this.opts.directConnection === "on" ) return;
-        console.log("SDsdsdsdsdsdsdsds 393", { hasRequest,getawayReleaseOnDiscover: resolved.getawayReleaseOnDiscover})
-
-        if(!hasRequest ) return;
-
+        // console.log("this.needGetAway")
+        // let hasRequest = this.needGetAway[ opts.server ][ opts.application ].hasRequest;
+        // if( resolved.getawayReleaseOnDiscover ) hasRequest = true;
+        // if(!this.aio.openedServes.includes( opts.server ) ) return;
+        // console.log("SDsdsdsdsdsdsdsds 0922")
+        // if(resolved.identifier === this.aio.identifier && this.opts.directConnection === "on" ) return;
+        // console.log("SDsdsdsdsdsdsdsds 393", { hasRequest,getawayReleaseOnDiscover: resolved.getawayReleaseOnDiscover})
+        //
+        // if(!hasRequest ) return;
+        //
+        // console.log("SDsdsdsdsdsdsdsds 4345464646444444444444444444 445454")
 
 
 
