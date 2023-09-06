@@ -18,8 +18,10 @@ export const Defaults = {
     serverHost: "127.0.0.1",
     releases: 2,
     getawayRelease: 3,
-    getawayReleaseTimeout: 1000 * 60 * 3,
-    getawayReleaseTimeoutBreak: 1000 * 60 * 5,
+    // getawayReleaseTimeout: 1000 * 60 * 3,
+    // getawayReleaseTimeoutBreak: 1000 * 60 * 5,
+    getawayReleaseTimeout: 1000 * 5,
+    getawayReleaseTimeoutBreak: 1000 * 8
 }
 
 export interface BaseOptions {

@@ -83,10 +83,10 @@ export function anchor( aioHost:string, point:AnchorPoint, requestSide:net.Socke
 
     let hasRequestData = requestData.length? "WITH DATA": "NO DATA";
 
-    let __anchor = ( _left:net.Socket, _right:net.Socket, data:any[] ) => {
+    let __anchor = ( _left:net.Socket, _right:net.Socket ) => {
         _left.pipe( _right );
-        _left.on( "close", hadError => {
-            if( hadError ) _right.end();
+        _left.on( "close", () => {
+            _right.end();
         });
         _left[ "anchored" ] = true;
     }
@@ -97,8 +97,8 @@ export function anchor( aioHost:string, point:AnchorPoint, requestSide:net.Socke
         }
     }
 
-    __anchor( requestSide, responseSide, requestData );
-    __anchor( responseSide, requestSide, responseData );
+    __anchor( requestSide, responseSide );
+    __anchor( responseSide, requestSide );
     __switchData( responseSide, requestData );
     __switchData( requestSide, responseData );
 
@@ -153,7 +153,7 @@ export function server( opts:ServerOptions){
 
 
     let release = ( slot:ServerSlot )=>  {
-        console.log( `new getaway response from ${ slot.server } to ${ slot.server} connected` );
+        console.log( `getaway response from ${ slot.server } to ${ slot.server} connected` );
 
         let next = Object.entries( waitConnections[slot.server][slot.app]).find( ([key, wait], index) => {
             let waitStatus = statusOf( wait.connection );
@@ -174,14 +174,14 @@ export function server( opts:ServerOptions){
         });
         serverSlots[ slot.server ][ slot.app ][ slot.id ] = slot;
         slot.connect.on( "close", hadError => {
+            console.log( `getaway response from ${ slot.server } to ${ slot.server} CLOSED` );
             delete serverSlots[ slot.server ][ slot.app ][ slot.id ];
-
         });
     }
 
     let resolver = ( server:string, app:string|number, wait:WaitConnection )=>{
         let status = statusOf( wait.connection );
-        console.log( `new getaway request from ${ wait.agent } to ${ app}.${ server } connected` );
+        console.log( `getaway request from ${ wait.agent } to ${ app}.${ server } connected` );
 
         let entry = Object.entries( serverSlots[server][app] ).find( ([ key, value]) => {
             if( !value ) return false;
@@ -201,6 +201,7 @@ export function server( opts:ServerOptions){
         }
         waitConnections[server][app][ status.id ] = wait;
         wait.connection.on( "close", hadError => {
+            console.log( `getaway request from ${ wait.agent } to ${ app}.${ server } CLOSED` );
             delete waitConnections[server][app][ status.id  ];
             if( hadError ) console.log( `detached wait connection for ${ app }.${ server } because remittent connection ${ status.id } is closed!`)
         });
@@ -245,11 +246,11 @@ export function server( opts:ServerOptions){
                     socket.off( "data", listen );
                     socket.write("ready" );
 
-                    let busy :ConnectionBusy = {
-                        client: redirect.origin,
-                        authId: redirect.authId
-                    }
-                    slot.connect.write( JSON.stringify(busy) );
+                    // let busy :ConnectionBusy = {
+                    //     client: redirect.origin,
+                    //     authId: redirect.authId
+                    // }
+                    // slot.connect.write( JSON.stringify(busy) );
                 }
             })
         });

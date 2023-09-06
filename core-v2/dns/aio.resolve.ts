@@ -139,7 +139,7 @@ export class AioResolver {
                     application: application,
                     aioHost: aioHost,
                     identifier: identifier,
-                    getawayRelease: _resolved.getawayRelease||2,
+                    getawayRelease: _resolved.getawayRelease||Defaults.getawayRelease,
                     getawayReleaseTimeout: _resolved.getawayReleaseTimeout||Defaults.getawayReleaseTimeout,
                     getawayReleaseTimeoutBreak: _resolved.getawayReleaseTimeoutBreak||Defaults.getawayReleaseTimeoutBreak,
                     getawayReleaseOnDiscover: _resolved.getawayReleaseOnDiscover,
@@ -147,6 +147,17 @@ export class AioResolver {
                     linkedReference: _resolved.linkedReference,
                     linkedHost: _resolved.linkedHost
                 };
+
+                let numbers:(keyof Resolved & (
+                    "getawayReleaseTimeout"| "getawayReleaseTimeoutBreak"|"getawayRelease"
+                ))[] = ["getawayReleaseTimeout", "getawayReleaseTimeoutBreak","getawayRelease"];
+
+                numbers.forEach( _timeout => {
+                    resolved[_timeout] = Number( resolved[_timeout] );
+                    if( !resolved[ _timeout ] || Number.isNaN( resolved[ _timeout ] ) ){
+                        resolved[ _timeout ] = Defaults[_timeout];
+                    }
+                })
 
                 this.aioHost[ resolved.aioHost ] = resolved;
                 this.address[ resolved.address ] = resolved;
