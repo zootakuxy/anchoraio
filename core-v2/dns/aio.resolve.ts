@@ -168,7 +168,7 @@ export class AioResolver {
             if( value.reference === filename ) delete this.address[ key ];
         })
         Object.entries( this.servers ).forEach( ([ key, value])=>{
-            if( value.reference === filename ) delete this.servers[ key ];
+            if( value["reference"] === filename ) delete this.servers[ key ];
         })
     }
 
