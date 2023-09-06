@@ -45,6 +45,7 @@ export class ResolveService {
         label( "SERVER", resolve.server );
         label( "IDENTIFIER", resolve.identifier );
         label( "AIOHOST", resolve.aioHost );
+        label( "AIOHOST", resolve.address );
         label( "GETAWAY-RELEASE", resolve.getawayRelease );
         label( "GETAWAY-RELEASE-TIMEOUT", resolve.getawayReleaseTimeout );
         label( "GETAWAY-RELEASE-TIMEOUT-BREAK", resolve.getawayReleaseTimeoutBreak );
