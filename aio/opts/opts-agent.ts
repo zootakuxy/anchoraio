@@ -69,6 +69,13 @@ export function agentOptsBuilder( yargs:Argv<AgentLauncherOptions> ){
         demandOption: true
     });
 
+    yargs.option("directConnection", {
+        type:"string",
+        default: "on",
+        choices:[ "on", "off" ],
+        "description": "Enable or disable direct connection for real server when"
+    })
+
 
     yargs.option( "selfServer",  {
         type: "boolean",

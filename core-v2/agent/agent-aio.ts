@@ -117,7 +117,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
             Object.entries( this.aioResolve.address ).filter( ([address, resolved]) => {
                 return availableServers.includes( resolved.identifier );
             }).forEach( ([address, resolved], index) => {
-                if( !resolved.getawayReleaseOnDiscover ) return;
+                // if( !resolved.getawayReleaseOnDiscover ) return;
                 for (let i = 0; i < resolved.getawayRelease; i++) {
                     this.agentProxy.openGetAway( {
                         server: resolved.identifier,
@@ -146,6 +146,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
             this.authReferer = auth.referer;
             this.authId = auth.id;
             this.openedServes = auth.availableServers;
+            if( this.opts.directConnection === "off" ) this.openedServes.push( this.identifier );
             this.status = "started";
             this.agentProxy.onAuth( auth.referer );
             this.apps.applications().forEach( application => {

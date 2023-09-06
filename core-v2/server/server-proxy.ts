@@ -20,7 +20,8 @@ type WaitConnection = {
     resolve:( slot:ServerSlot )=>void;
     connection:net.Socket
     resolved?: boolean,
-    id?:string
+    id?:string,
+    agent:string
 }
 
 export type AuthIO = {
@@ -28,6 +29,7 @@ export type AuthIO = {
     app:string|number,
     authReferer:string,
     origin:string,
+    authId:string
 }
 
 export type AuthAgent = {
@@ -42,7 +44,8 @@ export type AuthResult = {
 }
 
 export type ConnectionBusy = {
-    client:string
+    client:string,
+    authId:string
 }
 
 type AgentAuthenticate = {
@@ -73,10 +76,12 @@ export function statusOf  ( socket:net.Socket ):StatusOf{
         get status(){ return socket[ "status" ] }
     }
 }
-
-export function anchor( requestSide:net.Socket, responseSide:net.Socket, requestData:any[], responseData){
+export type AnchorPoint = "AGENT-CLIENT"|"AGENT-CLIENT-DIRECT"|"CENTRAL"|"AGENT-SERVER";
+export function anchor( aioHost:string, point:AnchorPoint, requestSide:net.Socket, responseSide:net.Socket, requestData:any[], responseData){
     if( !requestData ) requestData = [];
     if( !responseData ) responseData = [];
+
+    let hasRequestData = requestData.length? "WITH DATA": "NO DATA";
 
     let __anchor = ( _left:net.Socket, _right:net.Socket, data:any[] ) => {
         _left.pipe( _right );
@@ -96,6 +101,8 @@ export function anchor( requestSide:net.Socket, responseSide:net.Socket, request
     __anchor( responseSide, requestSide, responseData );
     __switchData( responseSide, requestData );
     __switchData( requestSide, responseData );
+
+    console.log( `REQUEST ${ requestSide["id"]} TO ${ aioHost }  ANCHOR AT ${point} ${ hasRequestData }`)
 
 }
 
@@ -146,6 +153,8 @@ export function server( opts:ServerOptions){
 
 
     let release = ( slot:ServerSlot )=>  {
+        console.log( `new getaway response from ${ slot.server } to ${ slot.server} connected` );
+
         let next = Object.entries( waitConnections[slot.server][slot.app]).find( ([key, wait], index) => {
             let waitStatus = statusOf( wait.connection );
             return !wait.resolved
@@ -166,13 +175,13 @@ export function server( opts:ServerOptions){
         serverSlots[ slot.server ][ slot.app ][ slot.id ] = slot;
         slot.connect.on( "close", hadError => {
             delete serverSlots[ slot.server ][ slot.app ][ slot.id ];
-            if( hadError ) console.log( `detached server connection for ${ slot.server }.${ slot.app } because origin ${ slot.id  } is closed!`)
 
         });
     }
 
     let resolver = ( server:string, app:string|number, wait:WaitConnection )=>{
         let status = statusOf( wait.connection );
+        console.log( `new getaway request from ${ wait.agent } to ${ app}.${ server } connected` );
 
         let entry = Object.entries( serverSlots[server][app] ).find( ([ key, value]) => {
             if( !value ) return false;
@@ -215,10 +224,10 @@ export function server( opts:ServerOptions){
             let redirect:AuthIO = JSON.parse( str );
 
 
-            let auth = Object.entries( agents ).find( ([agent, agentAuth], index) => {
+            let [authKey, auth] = Object.entries( agents ).find( ([agent, agentAuth], index) => {
                 return agentAuth.referer === redirect.authReferer
                     && agentAuth.agent === redirect.origin;
-            });
+            })||[];
             if(!auth ) return end();
 
             let datas = [];
@@ -230,12 +239,15 @@ export function server( opts:ServerOptions){
             resolver( redirect.server, redirect.app, {
                 id: status.id,
                 connection: socket,
+                agent: auth.agent,
                 resolve( slot ){
-                    anchor( socket, slot.connect, datas, [ ] );
+                    anchor( `${redirect.app}.${redirect.server}`, "CENTRAL", socket, slot.connect, datas, [ ] );
                     socket.off( "data", listen );
                     socket.write("ready" );
+
                     let busy :ConnectionBusy = {
-                        client: redirect.origin
+                        client: redirect.origin,
+                        authId: redirect.authId
                     }
                     slot.connect.write( JSON.stringify(busy) );
                 }
