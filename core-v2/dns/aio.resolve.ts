@@ -63,7 +63,7 @@ export class AioResolver {
     localhost:Localhost;
     dirWatch:DirWatch;
 
-    servers:{[p:string|number]:AgentServer} = {};
+    servers:{[p:string]:AgentServer} = {};
     aioHost:{[p:string]:Resolved}
     address:{[p:string]:Resolved}
 
