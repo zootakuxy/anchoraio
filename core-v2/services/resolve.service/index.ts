@@ -77,7 +77,7 @@ export class ResolveService {
 
     private show( resolve:Resolved ){
         let _labels:({key:string,value:any})[] = [];
-        let maxLabel = 0, maxValue;
+        let maxLabel = 0, maxValue = 0;
         let label=( key:string, value?:any)=>{
             if( (key.length+1) > maxLabel ) maxLabel = key.length;
             if( ( (value||"").length+1) > maxValue ) maxValue = (value||"").length;
@@ -104,11 +104,11 @@ export class ResolveService {
         let show :{ [k in typeof self.opts.format]?:()=>void}= {
             label(){
                 _labels.forEach( value => {
-                    if( !value ){
-                        console.log( value.key );
+                    if( !value.value ){
+                        console.log( ((value.key+" ").padEnd(maxLabel+1, "="))+("".padEnd( maxValue+1, "=")) );
                         return;
                     }
-                    console.log( value.key.padEnd(maxLabel+1, " "), ((value.value||"")+"").padEnd( maxValue+1, " " ));
+                    console.log( value.key.padEnd(maxLabel+1, " "), ((value.value||"")+"").padEnd( maxValue, " " ));
                     return;
                 });
             }, ini(){
