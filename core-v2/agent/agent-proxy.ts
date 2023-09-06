@@ -190,42 +190,46 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
                 }, resolved );
             }
 
-
-
-            let needGetAway = this.needGetAway[ resolved.identifier ][ resolved.application ];
-            if( !needGetAway.hasRequest ) {
-                console.log("=======================OPEN NEWS GET-AWAYS===================")
-                console.log( `REQUEST ${ request["id"]} TO ${ resolved.aioHost }  REQUIRING GETAWAY`)
-                needGetAway.hasRequest = true;
-                for (let i = 0; i < 1; i++) {
-                    this.openGetAway( {
-                        server: resolved.identifier,
-                        application: resolved.application,
-                        autoReconnect: false
-                    }, resolved )
-                }
-
-                for (let i = 0; i < resolved.getawayRelease; i++) {
-                    this.openGetAway( {
-                        server: resolved.identifier,
-                        application: resolved.application,
-                        autoReconnect: true
-                    }, resolved )
-                }
-            }
+            this.openDemandedGetaway( resolved, request );
             connect();
 
-            if( resolved.getawayReleaseTimeout === "none" ) return;
-            needGetAway.timeout = setTimeout( ()=>{
-                needGetAway.hasRequest = false;
-                Object.entries( this.getaway[resolved.identifier][resolved.application]).map( ([key, getAway]) => getAway )
-                    .filter( value => !value.connection["anchored"] && value.connection["connectionStatus"] === "connected")
-                    .forEach( (value, index, array) => {
-                        console.log("PREPARED GETAWAY ABORTED!");
-                       value.connection.destroy( new Error("ABORTEDGETAWAY"));
-                    });
-            }, Number( resolved.getawayReleaseTimeout)  );
+
         };
+    }
+
+    private openDemandedGetaway( resolved:Resolved, request:net.Socket ){
+        let needGetAway = this.needGetAway[ resolved.identifier ][ resolved.application ];
+        if( !needGetAway.hasRequest ) {
+            console.log( `REQUEST ${ request["id"]} TO ${ resolved.aioHost }  REQUIRING GETAWAY`)
+            needGetAway.hasRequest = true;
+            for (let i = 0; i < 1; i++) {
+                this.openGetAway( {
+                    server: resolved.identifier,
+                    application: resolved.application,
+                    autoReconnect: false
+                }, resolved )
+            }
+
+            for (let i = 0; i < resolved.getawayRelease; i++) {
+                this.openGetAway( {
+                    server: resolved.identifier,
+                    application: resolved.application,
+                    autoReconnect: true
+                }, resolved )
+            }
+        }
+
+
+        if( resolved.getawayReleaseTimeout === "none" ) return;
+        needGetAway.timeout = setTimeout( ()=>{
+            needGetAway.hasRequest = false;
+            Object.entries( this.getaway[resolved.identifier][resolved.application]).map( ([key, getAway]) => getAway )
+                .filter( value => !value.connection["anchored"] && value.connection["connectionStatus"] === "connected")
+                .forEach( (value, index, array) => {
+                    console.log("PREPARED GETAWAY ABORTED!");
+                    value.connection.destroy( new Error("ABORTEDGETAWAY"));
+                });
+        }, Number( resolved.getawayReleaseTimeout)  );
     }
 
     private directConnect( request:net.Socket, opts:ConnectionOptions ){
