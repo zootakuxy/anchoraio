@@ -92,8 +92,6 @@ export class ResolveService {
         label( "AIOHOST", resolve.address );
         label( "GETAWAY-RELEASE", resolve.getawayRelease );
         label( "GETAWAY-RELEASE-TIMEOUT", resolve.getawayReleaseTimeout );
-        label( "GETAWAY-RELEASE-TIMEOUT-BREAK", resolve.getawayReleaseTimeoutBreak );
-        label( "GETAWAY-RELEASE-TIMEOUT-BREAK", resolve.getawayReleaseTimeoutBreak );
         label( "FILE", resolve.reference );
         label( "LINKED NO-PORT" );
         label( "NOPORT DOMAIN:", resolve.linkedHost );

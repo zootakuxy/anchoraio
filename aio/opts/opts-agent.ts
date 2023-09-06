@@ -3,7 +3,7 @@ import {lib} from "../../core-v2/lib";
 import Path from "path";
 import fs from "fs";
 import {AgentAioOptions} from "../../core-v2/agent/agent-aio";
-import {Defaults} from "./opts";
+import {Defaults} from "../../core-v2/defaults";
 
 export type AgentLauncherOptions = AgentAioOptions & {
     selfServer: boolean

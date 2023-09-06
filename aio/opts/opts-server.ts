@@ -1,7 +1,7 @@
 import  {Argv} from "yargs";
 import {lib} from "../../core-v2/lib";
 import {ServerOptions} from "../../core-v2/server/server-proxy";
-import {Defaults} from "./opts";
+import {Defaults} from "../../core-v2/defaults";
 
 export function serverBuilderOptions(yargs:Argv<ServerOptions> ){
 

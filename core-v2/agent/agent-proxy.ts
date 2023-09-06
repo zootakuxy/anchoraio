@@ -3,9 +3,9 @@ import {anchor, AuthIO, ConnectionBusy, identifierOf} from "../server/server-pro
 import {nanoid} from "nanoid";
 import {AgentAio} from "./agent-aio";
 import {App} from "../applications";
-import {Defaults} from "../../aio/opts/opts";
 import {Resolved} from "../dns/aio.resolve";
 import {BaseEventEmitter} from "kitres/src/core/util";
+import {Defaults} from "../defaults";
 
 export type AgentProxyOptions = {
     requestPort:number,

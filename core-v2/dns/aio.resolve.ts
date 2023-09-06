@@ -4,7 +4,7 @@ import ini from "ini";
 import {Localhost} from "./localhost";
 import Path from "path";
 import {Detect, DirWatch} from "../utils/dir-watch";
-import {Defaults} from "../../aio/opts/opts";
+import {Defaults} from "../defaults";
 
 export type AgentServer = {
     name:string,
@@ -147,7 +147,7 @@ export class AioResolver {
                 };
 
                 let numbers:(keyof Resolved & (
-                    "getawayReleaseTimeout"| "getawayReleaseTimeoutBreak"|"getawayRelease"
+                    "getawayReleaseTimeout"|"getawayRelease"
                 ))[] = ["getawayReleaseTimeout","getawayRelease"];
 
                 numbers.forEach( _timeout => {
@@ -218,7 +218,6 @@ export class AioResolver {
         resolved = Object.assign(resolved, {
             getawayRelease: opts.getawayRelease||Defaults.getawayRelease,
             getawayReleaseTimeout: opts.getawayReleaseTimeout || Defaults.getawayReleaseTimeout,
-            getawayReleaseTimeoutBreak: opts.getawayReleaseTimeoutBreak || Defaults.getawayReleaseTimeoutBreak,
             getawayReleaseOnDiscover: opts.getawayReleaseOnDiscover || false,
             linkedHost: _linked?.host,
             linkedService: _linked?.service,
