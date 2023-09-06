@@ -351,7 +351,7 @@ export function server( opts:ServerOptions){
 
             let current = agents[ auth.agent ];
             if( !current ) return register();
-            if( current.connection.closed ) return register();
+            if( current.connection["closed"] ) return register();
             if( statusOf( current.connection ).status !== "connected" ) return register();
 
             //Check if is alive
