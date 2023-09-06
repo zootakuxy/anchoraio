@@ -8,4 +8,6 @@
     getawayReleaseTimeout = 180000
     getawayReleaseTimeoutBreak = 300000
     getawayReleaseOnDiscover = false
-    reference=C:\var\workspace\brainsoft\aio-collection\anchoraio\etc\entry\resolve\127.255.0.62-ma.zootakuxy.aio.resolve.conf
+    reference = C:\var\workspace\anchoraio\etc\entry\resolve\127.255.0.70-ma.zootakuxy.aio.resolve.conf
+    linkedHost = sub.example.com
+    linkedReference = C:\var\workspace\anchoraio\noport\entry\sub.example.com_127.255.0.70.entry.conf
