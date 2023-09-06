@@ -20,8 +20,7 @@ export const Defaults = {
     getawayRelease: 3,
     // getawayReleaseTimeout: 1000 * 60 * 3,
     // getawayReleaseTimeoutBreak: 1000 * 60 * 5,
-    getawayReleaseTimeout: 1000 * 5,
-    getawayReleaseTimeoutBreak: 1000 * 8
+    getawayReleaseTimeout: 1000 * 60 * 1.5,
 }
 
 export interface BaseOptions {
