@@ -153,9 +153,6 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
 
             let resolved = this.resolve( address );
 
-            console.log( resolved );
-
-
             if( !resolved ){
                 // console.log( `Address ${ address } not resolved!` );
                 request.end();
