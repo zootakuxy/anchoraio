@@ -5,6 +5,7 @@ import {Localhost} from "./localhost";
 import Path from "path";
 import {Detect, DirWatch} from "../utils/dir-watch";
 import {Defaults} from "../defaults";
+import {AppProtocol} from "../protocol";
 
 export type AgentServer = {
     name:string,
@@ -25,12 +26,13 @@ export interface Resolved {
     aioHost:string,
     address:string,
     linkedService?:string,
-    linkedHost?:string,
+    linkedHosts?:string,
     linkedReference?:string
     getawayRelease?:number
     getawayReleaseTimeout?:number|"never"
     getawayReleaseOnDiscover?:boolean,
-    requestTimeout:number|"never"
+    requestTimeout:number|"never",
+    protocol?:AppProtocol
 }
 
 
@@ -53,7 +55,7 @@ export type AIOHostRegisterOptions = {
     getawayRelease?:number
     getawayReleaseTimeout?:number|"never"
     requestTimeout?:number|"never"
-    linkedHost:string,
+    linkedHosts:string,
     linkedReference:string
     getawayReleaseOnDiscover?:boolean
 }
@@ -126,17 +128,21 @@ export class AioResolver {
                 let _resolved:Resolved;
                 if( typeof address === "string" ){
                     _resolved = {
-                        address: address
+                        address: address,
                     } as Resolved;
                 } else if( typeof address === "object") {
                     _resolved = address;
                 }
+
+                _resolved.protocol = _resolved.protocol || "aio";
+                // _resolved.getawayRelease = _resolved.getawayRelease || Defaults.protocol[ resolve.]
 
                 let resolved:Resolved = {
                     reference: filename,
                     address:_resolved.address,
                     server: server,
                     application: application,
+                    protocol: _resolved.protocol,
                     aioHost: aioHost,
                     identifier: identifier,
                     getawayRelease: _resolved.getawayRelease||Defaults.getawayRelease,
@@ -145,7 +151,7 @@ export class AioResolver {
                     getawayReleaseOnDiscover: _resolved.getawayReleaseOnDiscover,
                     linkedService: _resolved.linkedService,
                     linkedReference: _resolved.linkedReference,
-                    linkedHost: _resolved.linkedHost
+                    linkedHosts: _resolved.linkedHosts
                 };
 
                 let numbers:(keyof Resolved & (
@@ -184,7 +190,7 @@ export class AioResolver {
         })
     }
 
-    aioRegisterServer( aioHost:string, opts:AIOHostRegisterOptions, linked:( address:string )=>{host:string,reference:string, service }):Resolved{
+    aioRegisterServer( aioHost:string, opts:AIOHostRegisterOptions, linked:( address:string )=>{host:string[],reference:string, service }):Resolved{
         let parts = aioHost.split("." ).map( value => value.trim().toLowerCase() );
         aioHost = parts.join( "." );
 
@@ -213,7 +219,7 @@ export class AioResolver {
         return this.sets( resolved, opts, linked );
     }
 
-    sets( resolved:Resolved, opts:AIOHostRegisterOptions, linked:( address:string )=>{host:string,reference:string, service }):Resolved{
+    sets( resolved:Resolved, opts:AIOHostRegisterOptions, linked:( address:string )=>{host:string[],reference:string, service }):Resolved{
         let _linked = linked( resolved.address );
 
         if ( resolved.linkedReference && resolved.linkedReference !== _linked.reference  && fs.existsSync( resolved.linkedReference ) ) {
@@ -225,7 +231,7 @@ export class AioResolver {
             getawayReleaseTimeout: opts.getawayReleaseTimeout || Defaults.getawayReleaseTimeout,
             requestTimeout: opts.requestTimeout || Defaults.requestTimeout,
             getawayReleaseOnDiscover: opts.getawayReleaseOnDiscover || false,
-            linkedHost: _linked?.host,
+            linkedHosts: _linked?.host,
             linkedService: _linked?.service,
             linkedReference: _linked?.reference,
         });
