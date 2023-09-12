@@ -327,6 +327,7 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
 
 
     public openGetAway ( opts:GetAwayOptions, resolved:Resolved ){
+        console.log( "openGetAway", opts );
         let hasRequest = this.needGetAway[ opts.server ][ opts.application ].hasRequest;
         if( resolved.getawayReleaseOnDiscover ) hasRequest = true;
 
@@ -334,6 +335,7 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
         if(resolved.identifier === this.aio.identifier && this.opts.directConnection === "on" ) return;
         if(!hasRequest ) return;
 
+        console.log( "openGetAway-start", opts );
         let connection = asAnchorSocket(  net.connect( {
             host: this.opts.serverHost,
             port: this.opts.requestPort
