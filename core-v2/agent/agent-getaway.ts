@@ -260,6 +260,7 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
         server?:string
         readyToAnchor:boolean
     }> ){
+        console.log( this.getawayListener );
         let [key, next ] = Object.entries( this.getawayListener[opts.server][ opts.application ] )
             .find( ([listerId, getawayListener], index) => {
                 return !getawayListener.busy
