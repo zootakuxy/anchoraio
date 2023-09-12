@@ -3,13 +3,30 @@ import {AioResolver, Resolved} from "../../dns/aio.resolve";
 import fs from "fs";
 import Path from "path";
 import ini from "ini";
+import unorm from "unorm";
+
+
+function normalize(texto) {
+    // Substitui acentos
+    const normalized = unorm.nfkd(texto);
+    const noAccent = normalized.replace(/[\u0300-\u036F]/g, '');
+    // Substitui caracteres inválidos
+    return noAccent.replace(/[^a-zA-Z0-9\-_.]/g, '_');
+}
+
 
 export class ResolveService {
 
     private resolver:AioResolver;
     opts:ResolveOptions
     constructor( opts:ResolveOptions) {
-        this.resolver = new AioResolver(opts);
+        this.resolver = new AioResolver({
+            etc: opts.etc,
+            getawayRelease: opts.getawayRelease,
+            getawayReleaseTimeout: opts.getawayReleaseTimeout,
+            requestTimeout: opts.requestTimeout,
+            getawayReleaseOnDiscover: opts.getawayReleaseOnDiscover
+        });
         this.opts = opts;
     }
 
@@ -20,7 +37,19 @@ export class ResolveService {
         if( !resolve || this.opts.action === "sets" ) resolve = this.sets( resolve );
         if( !resolve ) return  -1;
 
-        if( resolve.linkedHost && resolve.linkedReference ) this.link( resolve );
+
+        if( this.opts?.noPortDomain && Array.isArray(this.opts.noPortDomain )){
+            this.opts.noPortDomain = this.opts.noPortDomain
+                .filter( value => {
+                    if( !value ) return false;
+                    return value.trim().length;
+                })
+                .map( value => {
+                return value.trim();
+            })
+        }
+
+        if( resolve.linkedHosts && resolve.linkedReference ) this.link( resolve );
 
         this.show( resolve );
         return 0;
@@ -29,7 +58,7 @@ export class ResolveService {
     private sets( resolve:Resolved ){
         let linked = ( address:string ) => {
             if( this.opts.noPortDomain && this.opts.noPortEntry ){
-                let entryName = `${this.opts.noPortDomain}_${address}`;
+                let entryName = `${normalize(this.opts.noPortDomain[0])}_${address}`;
                 let entryFileName = Path.join( this.opts.noPortEntry, `aio.${ entryName }.entry.conf` );
                 return {
                     host: this.opts.noPortDomain,
@@ -50,16 +79,14 @@ export class ResolveService {
             entry:{
                 [ `${agentServer.name}_aio` ]:{
                     entry: this.opts.anchorPort,
-                    host:[ this.opts.noPortDomain, `*.${this.opts.noPortDomain}` ],
+                    host:this.opts.noPortDomain,
                     name: this.opts.aioApplicationDomain,
                     description: `Aio entry domain for ${ this.opts.aioApplicationDomain }`,
                     address: resolve.address,
                     port: this.opts.anchorPort,
                     protocol: "http",
                     disable: false,
-                    opts: {
-
-                    }
+                    opts: { }
                 }
             }
         }
@@ -94,7 +121,7 @@ export class ResolveService {
         label( "GETAWAY-RELEASE-TIMEOUT", resolve.getawayReleaseTimeout );
         label( "FILE", resolve.reference );
         label( "LINKED NO-PORT" );
-        label( "NOPORT DOMAIN:", resolve.linkedHost );
+        label( "NOPORT DOMAIN:", resolve.linkedHosts );
         label( "PORT:", this.opts.anchorPort );
         label( "FILE:", resolve.linkedReference );
 

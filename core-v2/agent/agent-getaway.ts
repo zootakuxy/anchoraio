@@ -1,11 +1,10 @@
 import net from "net";
-import {anchor, AuthIO, ConnectionBusy, identifierOf} from "../server/server-proxy";
-import {nanoid} from "nanoid";
+import { AuthIO} from "../server/server-proxy";
 import {AgentAio} from "./agent-aio";
-import {App} from "../applications";
 import {Resolved} from "../dns/aio.resolve";
 import {BaseEventEmitter} from "kitres/src/core/util";
 import {Defaults} from "../defaults";
+import {asAnchorSocket, AnchorSocket, identifierOf, anchor} from "../net/anchor";
 
 export type AgentProxyOptions = {
     requestPort:number,
@@ -26,7 +25,7 @@ type ConnectionOptions =  {
 }
 
 type GetAway = {
-    connection:net.Socket,
+    connection:AnchorSocket<{anchored?:boolean,readyToAnchor?:boolean}>,
     id:string
     busy:boolean
     autoReconnect:boolean
@@ -46,7 +45,7 @@ type NeedGetAway = {
 type GetawayListener = {
     callback:( getAway:GetAway)=> void,
     id:string,
-    request:net.Socket,
+    request:AnchorSocket<{anchored?:boolean}>,
     busy: boolean,
     server:string,
     application:string
@@ -57,14 +56,12 @@ interface AgentProxyListener{
 }
 
 
-export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
+export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
     private opts:AgentProxyOptions;
     private anchor:net.Server;
-    private readonly appsConnections:{ [ p:string ]:net.Socket };
-    private authKey:string;
-    private _connectionListener:( socket:net.Socket ) => void
-    private readonly connections: {
-        [p:string]:net.Socket
+    private _connectionListener:<T extends { anchored?:boolean }>( socket:AnchorSocket<T> ) => void
+    private readonly getawaysConnections: {
+        [p:string]:AnchorSocket<{anchored?:boolean}>
     };
 
     private readonly needGetAway : {
@@ -98,8 +95,7 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
         if( !opts.restoreTimeout ) opts.restoreTimeout = Defaults.restoreTimeout;
         this.opts = opts;
         this.anchor = new net.Server();
-        this.connections = {};
-        this.appsConnections = {};
+        this.getawaysConnections = {};
 
         this.getaway = new Proxy({},{
             get(target: {}, server: string | symbol, receiver: any): any {
@@ -143,10 +139,12 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
     }
 
     private listen(){
-        this._connectionListener = request => {
-            request["id"] = `REQ:${nanoid( 16 )}`;
-            request["connectionStatus" ] = "connected";
-            this.connections[ request["id"] ] = request;
+        this._connectionListener = _so => {
+            let request = asAnchorSocket( _so, {
+                side: "server",
+                method: "REQ",
+                props:{ anchored: false } } );
+            this.getawaysConnections[ request.id() ] = request;
             const remoteAddressParts = request.address()["address"].split( ":" );
             const address =  remoteAddressParts[ remoteAddressParts.length-1 ];
             // console.log( "NEW REQUEST ON AGENT IN ADDRESS", address );
@@ -159,20 +157,13 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
                 return;
             }
 
-            console.log( `REQUEST ${ request["id"]} TO ${ resolved.aioHost } RECEIVED-REQUEST`);
+            console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost } RECEIVED-REQUEST`);
             let dataListen = data =>{
                 requestData.push( data );
             }
             request.on("data", dataListen );
-
-
-
-
-            request["connected"] = true;
             request.on("close", hadError => {
-                request["connectionStatus" ] = "disconnected";
-                request["connected"] = false;
-                delete this.connections[request["id"]];
+                delete this.getawaysConnections[ request.id() ];
             })
 
             //get server and app by address
@@ -183,8 +174,6 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
                 console.log( "request-error", err.message );
             });
 
-
-
             if( resolved.identifier === this.aio.identifier && this.opts.directConnection === "on" ){
                 return this.directConnect( request, {
                     server: this.aio.identifier,
@@ -193,8 +182,6 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
                     requestData: requestData
                 })
             }
-
-
 
             this.openDemandedGetaway( resolved, request );
             this.connect( request, {
@@ -208,18 +195,17 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
             if( resolved.requestTimeout === "never" ) return;
 
             setTimeout(()=>{
-                if( request["connectionStatus"] === "connected" && !request["anchored"] ){
+                if( request.status() === "connected" && !request.props().anchored ){
                     request.end();
                 }
             }, resolved.requestTimeout );
-
         };
     }
 
-    private openDemandedGetaway( resolved:Resolved, request:net.Socket ){
+    private openDemandedGetaway( resolved:Resolved, request:AnchorSocket<{ anchored?:boolean }> ){
         let needGetAway = this.needGetAway[ resolved.identifier ][ resolved.application ];
         if( !needGetAway.hasRequest ) {
-            console.log( `REQUEST ${ request["id"]} TO ${ resolved.aioHost }  REQUIRING GETAWAY`)
+            console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost }  REQUIRING GETAWAY`)
             needGetAway.hasRequest = true;
             for (let i = 0; i < 1; i++) {
                 this.openGetAway( {
@@ -238,41 +224,37 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
             }
         }
 
-
         if( resolved.getawayReleaseTimeout === "never" ) return;
         needGetAway.timeout = setTimeout( ()=>{
             needGetAway.hasRequest = false;
             Object.entries( this.getaway[resolved.identifier][resolved.application]).map( ([key, getAway]) => getAway )
-                .filter( value => !value.connection["anchored"] && value.connection["connectionStatus"] === "connected")
-                .forEach( (value, index, array) => {
+                .filter( value => !value.connection.props().anchored && value.connection.status() === "connected")
+                .forEach( (value) => {
                     console.log("PREPARED GETAWAY ABORTED!");
                     value.connection.destroy( new Error("ABORTEDGETAWAY"));
                 });
         }, Number( resolved.getawayReleaseTimeout)  );
     }
 
-    private directConnect( request:net.Socket, opts:ConnectionOptions ){
+    private directConnect(request:AnchorSocket<{anchored?:boolean}>, opts:ConnectionOptions ){
         let app = this.aio.apps.applications().find( value => value.name == opts.application );
         if( !app ) return request.end();
-        let response = net.connect( {
+        let response = asAnchorSocket( net.connect( {
             host: app.address,
             port: app.port
+        }), {
+            side: "client",
+            method: "RESP"
         });
         anchor( `${opts.application}.${ opts.server }`, "AGENT-CLIENT-DIRECT", request, response, opts.requestData, [ ]);
     }
 
-    onAuth( auth:string ){
-        this.authKey = auth;
-    }
-
-
-    private registerGetAway( opts:GetAwayOptions, connection:net.Socket ){
+    private registerGetAway( opts:GetAwayOptions, connection:AnchorSocket<{anchored?:boolean}> ){
         let [key, next ] = Object.entries( this.getawayListener[opts.server][ opts.application ] )
             .find( ([listerId, getawayListener], index) => {
                 return !getawayListener.busy
-                    && getawayListener.request["connectionStatus"] === "connected";
+                    && getawayListener.request.status() === "connected";
             })||[]
-        let id = connection[ "id" ];
         connection[ "application" ] = opts.application;
         connection[ "server" ] = opts.server;
         if( !!next ) {
@@ -281,47 +263,46 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
             next.callback( {
                 busy: true,
                 connection: connection ,
-                id,
+                id: connection.id(),
                 autoReconnect: opts.autoReconnect
             });
             return;
         }
 
         let getAway:GetAway = {
-            id,
+            id: connection.id(),
             connection,
             busy: false,
             autoReconnect: opts.autoReconnect
         };
 
-        this.getaway[ opts.server ][ opts.application ][ id ] = getAway
+        this.getaway[ opts.server ][ opts.application ][ connection.id() ] = getAway
 
         connection.on( "close", hadError => {
-            delete this.getaway[ opts.server ][ opts.application ][ id ];
+            delete this.getaway[ opts.server ][ opts.application ][ connection.id() ];
         });
 
         this.notify("getAwayRegister", getAway );
     }
 
-    private onGetAway( server:string, application:string, resolved:Resolved, request:net.Socket, callback:( getAway:GetAway )=>void ){
+    private onGetAway(server:string, application:string, resolved:Resolved, request:AnchorSocket<{anchored?:boolean}>, callback:(getAway:GetAway )=>void ){
         let next = Object.entries( this.getaway[server][application]).find( ([key, getAway], index) => {
             return !getAway.busy
-                && !!getAway.connection["readyToAnchor"];
+                && !!getAway.connection.props().readyToAnchor;
         });
-        let id = request["id"];
 
 
         if( !!next ){
-            console.log( `REQUEST ${ id } TO ${ resolved.aioHost }  IMMEDIATELY CONNECT`)
+            console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost }  IMMEDIATELY CONNECT`)
             let [ key, getAway ] = next;
             getAway.busy = true;
             delete this.getaway[ server ][ application ][ key ];
             callback( getAway );
             return;
         }
-        console.log( `REQUEST ${ request["id"]} TO ${ resolved.aioHost } WAIT FOR GETAWAY`)
-        this.getawayListener[ server] [ application ][ id ] = {
-            id: id,
+        console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost } WAIT FOR GETAWAY`)
+        this.getawayListener[ server] [ application ][ request.id() ] = {
+            id: request.id(),
             request: request,
             server: server,
             application: application,
@@ -330,9 +311,8 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
         };
 
         request.on( "close", hadError => {
-            delete this.getawayListener[ server] [ application ][ id ];
+            delete this.getawayListener[ server] [ application ][ request.id() ];
         });
-
     }
 
 
@@ -344,20 +324,22 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
         if(resolved.identifier === this.aio.identifier && this.opts.directConnection === "on" ) return;
         if(!hasRequest ) return;
 
-        let connection = net.connect( {
+        let connection = asAnchorSocket(  net.connect( {
             host: this.opts.serverHost,
             port: this.opts.requestPort
+        }), {
+            side: "client",
+            method:"SET",
+            props: { anchored: false }
         });
-        connection[ "id" ] = `${nanoid( 16 )}`;
         connection.on( "connect", () => {
-            connection["connectionStatus"] = "connected";
 
             //MODO wait response SERVSER
             let redirect:AuthIO = {
                 server: identifierOf( opts.server ),
                 app: opts.application,
-                authReferer: this.authKey,
-                authId: connection["id"],
+                authReferer: this.aio.authReferer,
+                authId: connection.id(),
                 origin: identifierOf( this.opts.identifier )
             }
 
@@ -370,16 +352,12 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
             });
         });
 
-        connection.on("close", hadError => {
-            connection["connectionStatus"] = "disconnected";
-        });
-
         connection.on("error", err => {
             console.log( "request-to-anchor-error", err.message );
         });
 
         connection.on( "close", hadError => {
-            if( !connection[ "anchored" ] && opts.autoReconnect ) {
+            if( !connection.props().anchored && opts.autoReconnect ) {
                 setTimeout ( ()=>{
                     this.openGetAway( opts, resolved );
                 }, this.opts.restoreTimeout  );
@@ -410,106 +388,12 @@ export class AgentProxy extends BaseEventEmitter<AgentProxyListener>{
     stop(){
         this.status = "stopped";
         this.anchor.off( "connection", this._connectionListener );
-        Object.entries( this.connections ).forEach( ([key, request], index) => {
+        Object.entries( this.getawaysConnections ).forEach( ([key, request], index) => {
             request.end();
         });
-        Object.entries( this.appsConnections ).forEach( ([key, appConnection], index) => {
-            let appName = appConnection["appName"];
-            appConnection.end( ()=>{
-                console.log( "application connection end", appName );
-            });
-        })
         this.anchor.close( err => {
             if( err ) console.log( "Error on end anchor server", err.message );
             else console.log( "Anchor server stop with success!" );
-        });
-
-    }
-
-    closeApp( app:App ){
-        Object.entries( this.appsConnections ).filter( ([id, appSocket], index) => {
-            return appSocket["appName"] === app.name;
-        }).map( ([id, appSocket]) => appSocket )
-            .forEach( appSocket => {
-                appSocket[ "appStatus" ] = "stopped";
-                appSocket.end( () => {
-                    console.log( "application connection end", appSocket[ "appName" ] );
-                });
-            })
-    }
-
-    openApplication (app:App ){
-        let responseGetaway = net.connect( {
-            host: this.opts.serverHost,
-            port: this.opts.responsePort
-        });
-
-        responseGetaway[ "id" ] = `RET:${nanoid(16 )}`;
-        responseGetaway[ "appName" ] = app.name;
-        responseGetaway[ "appAddress" ] = app.address;
-        responseGetaway[ "appPort" ] = app.port;
-        responseGetaway[ "appStatus" ] = "started";
-
-        this.appsConnections[ responseGetaway["id"] ] = responseGetaway;
-        responseGetaway.on( "close", hadError => {
-            delete this.appsConnections[ responseGetaway["id"] ];
-        });
-
-        responseGetaway.on( "connect", () => {
-            // console.log( "ON CONNECT AGENT APP RESPONSE", app.name, this.opts.responsePort )
-            let auth:AuthIO = {
-                server: identifierOf( this.opts.identifier ),
-                app: app.name,
-                authReferer: this.authKey,
-                authId: responseGetaway["id"],
-                origin: identifierOf( this.opts.identifier )
-            }
-            responseGetaway.write(  JSON.stringify(auth));
-
-
-            let datas = [];
-            let listenData = data =>{
-                datas.push( data );
-            }
-            responseGetaway.on( "data", listenData );
-            responseGetaway.once( "data", busy => {
-                try {
-                    let appConnection = net.connect({
-                        host: app.address,
-                        port: app.port
-                    });
-                    appConnection["id"] = `RESP:${nanoid(16)}`;
-                    appConnection.on( "connect", () => {
-                        anchor( `${app.name}.${ this.aio.identifier }`, "AGENT-SERVER", responseGetaway, appConnection, datas, [] );
-                        responseGetaway.off( "data", listenData );
-                        responseGetaway["anchorPiped"] = true;
-                        console.log( `new connection with ${ "any" } established for ${ app.name }` );
-                    });
-                    appConnection.on( "error", err => {
-                        console.log("app-server-error", err.message );
-                        if( !responseGetaway["anchorPiped"] ){
-                            responseGetaway.end();
-                        }
-                    });
-                    this.openApplication( app );
-                } catch (e) {
-                    responseGetaway.end();
-                    console.error( e )
-                }
-            });
-        });
-
-        responseGetaway.on( "error", err => {
-            console.log( "response-connect-error", err.message );
-        });
-
-        responseGetaway.on("close", ( error) => {
-            delete this.appsConnections[ responseGetaway["id"] ];
-            if( !responseGetaway["anchored"] && this.status === "started" && responseGetaway["appStatus"] === "started" ){
-                setTimeout(()=>{
-                    this.openApplication( app );
-                }, this.opts.restoreTimeout)
-            }
         });
     }
 }

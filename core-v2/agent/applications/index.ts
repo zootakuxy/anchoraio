@@ -1,16 +1,17 @@
 import * as fs from "fs";
 import * as path from "path";
 import ini from "ini";
-import {AgentAio} from "../agent/agent-aio";
+import {AgentAio} from "../agent-aio";
 import {BaseEventEmitter} from "kitres/src/core/util";
+import {AppProtocol} from "../../protocol";
 
 export type App = {
     port:number
-    name:string|number,
+    name:string,
     address?:string,
     reference?:string
-    releases?:any
-
+    releases?:any,
+    protocol?:AppProtocol
 }
 
 
@@ -19,7 +20,7 @@ interface ApplicationListener {
 }
 
 export class ApplicationAIO  extends BaseEventEmitter<ApplicationListener>{
-    appsConf:{ apps:{ [p:string]:string|number|App } };
+    appsConf:{ apps:{ [ p:string ]:string|number|App } };
     agent:AgentAio
     seq:number = 0;
 
@@ -40,11 +41,11 @@ export class ApplicationAIO  extends BaseEventEmitter<ApplicationListener>{
             _app = {
                 port: Number( app ),
                 address: "127.0.0.1",
-                name: application
+                name: application as string
             }
         } else if(  typeof app === "string" || typeof app === "number" ) _app = null;
 
-        if(!!_app) _app.name = application;
+        if(!!_app) _app.name = ( application as string );
         if( !!_app && !_app.address ) _app.address = "127.0.0.1";
 
         return _app;

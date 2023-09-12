@@ -14,7 +14,7 @@ export type ResolveOptions = BaseOptions & AIOHostRegisterOptions &{
     format?:"table"|"json"|"label"|"ini"|"file"|"cfg",
     status?:"active"|"disable",
     noPortEntry?:string
-    noPortDomain?:string
+    noPortDomain?:string[]
     anchorPort:number,
     action:"sets"|"view"
 
@@ -55,6 +55,7 @@ export function resolveBuilderOptions(yargs:Argv<ResolveOptions> ){
     yargs.option( "noPortDomain",  {
         alias: [ "n", "noPort" ],
         type: "string",
+        array: true,
         description: "Domain in noport"
     });
 

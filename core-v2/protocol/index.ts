@@ -1,0 +1,1 @@
+export type AppProtocol = "aio"|"http"|"https"|"pg";

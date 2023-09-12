@@ -35,9 +35,12 @@ export interface Resolved {
     protocol?:AppProtocol
 }
 
-
 export interface AioResolverOptions {
-    etc:string
+    etc:string,
+    getawayRelease: number,
+    getawayReleaseTimeout?:number|"never"
+    requestTimeout?:number|"never"
+    getawayReleaseOnDiscover: boolean
 }
 
 const extension = "resolve.conf";
@@ -51,13 +54,23 @@ type ResolvedEntry = {
     }
 }
 
+export type TimeOut = number|"never";
+
 export type AIOHostRegisterOptions = {
     getawayRelease?:number
-    getawayReleaseTimeout?:number|"never"
-    requestTimeout?:number|"never"
+    getawayReleaseTimeout?: TimeOut
+    requestTimeout?: TimeOut
     linkedHosts:string,
     linkedReference:string
     getawayReleaseOnDiscover?:boolean
+}
+
+export function asTimeOut( value:string ):TimeOut{
+    if( !value ) return null;
+    if( value.toString().toLowerCase() === "never" ) return "never";
+    let _number = Number( value );
+    if ( Number.isNaN( _number ) ) return null;
+    return Math.trunc( _number );
 }
 
 export class AioResolver {
@@ -75,6 +88,7 @@ export class AioResolver {
         this.aioHost = { };
         this.address = { };
         this.servers = { };
+
         this.localhost = new Localhost( opts );
         this.dirWatch = new DirWatch();
 
@@ -123,8 +137,6 @@ export class AioResolver {
             Object.entries( remotes ).forEach( ( [ application, address ])=>{
 
                 let aioHost = `${ application}.${identifier}`;
-
-
                 let _resolved:Resolved;
                 if( typeof address === "string" ){
                     _resolved = {
@@ -145,10 +157,10 @@ export class AioResolver {
                     protocol: _resolved.protocol,
                     aioHost: aioHost,
                     identifier: identifier,
-                    getawayRelease: _resolved.getawayRelease||Defaults.getawayRelease,
-                    getawayReleaseTimeout: _resolved.getawayReleaseTimeout||Defaults.getawayReleaseTimeout,
-                    requestTimeout: _resolved.requestTimeout||Defaults.requestTimeout,
-                    getawayReleaseOnDiscover: _resolved.getawayReleaseOnDiscover,
+                    getawayRelease: _resolved.getawayRelease || this.opts.getawayRelease ||Defaults.getawayRelease,
+                    getawayReleaseTimeout: _resolved.getawayReleaseTimeout || this.opts.getawayReleaseTimeout ||Defaults.getawayReleaseTimeout,
+                    requestTimeout: _resolved.requestTimeout|| this.opts.requestTimeout ||Defaults.requestTimeout,
+                    getawayReleaseOnDiscover: _resolved.getawayReleaseOnDiscover || this.opts.getawayReleaseOnDiscover,
                     linkedService: _resolved.linkedService,
                     linkedReference: _resolved.linkedReference,
                     linkedHosts: _resolved.linkedHosts

@@ -80,6 +80,23 @@ export function agentOptsBuilder( yargs:Argv<AgentLauncherOptions> ){
     yargs.option( "selfServer",  {
         type: "boolean",
         description: "Start self server"
+    });
+
+    yargs.option( "getawayReleaseOnDiscover", {
+        type: "boolean",
+        default: false,
+    });
+
+    yargs.option( "getawayRelease", {
+        type: "string",
+    });
+
+    yargs.option( "getawayReleaseTimeout", {
+        type: "string",
+    });
+
+    yargs.option( "requestTimeout", {
+        type: "string"
     })
 
     let noPortVar = Path.join( __dirname, "../../../noport/var" );

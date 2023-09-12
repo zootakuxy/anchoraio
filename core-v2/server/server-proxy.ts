@@ -1,24 +1,25 @@
-import net from "net";
+import { createServer } from "net";
 import {nanoid} from "nanoid";
 import {TokenService} from "../services/token.service";
 import {TokenOptions} from "../../aio/opts/opts-token";
+import {asAnchorSocket, AnchorSocket, anchor} from "../net/anchor";
 export type ServerOptions = TokenOptions & {
     responsePort:number,
     requestPort:number
     authPort:number
 }
 
-type ServerSlot = {
+type ServerSlot<T> = {
     server:string,
     app:string|number,
     busy:boolean,
     id:string
-    connect:net.Socket
+    connect:AnchorSocket<T>
 };
 
-type WaitConnection = {
-    resolve:( slot:ServerSlot )=>void;
-    connection:net.Socket
+type WaitConnection<T> = {
+    resolve:( slot:ServerSlot<T> )=>void;
+    connection:AnchorSocket<T>
     resolved?: boolean,
     id?:string,
     agent:string
@@ -43,68 +44,14 @@ export type AuthResult = {
     availableServers:string[]
 }
 
-export type ConnectionBusy = {
-    client:string,
-    authId:string
-}
-
-type AgentAuthenticate = {
-    connection:net.Socket,
+type AgentAuthenticate<T> = {
+    connection:AnchorSocket<T>,
     id:string,
     referer:string,
     agent:string,
     servers:string[],
 }
 
-export function prepareSocket ( socket:net.Socket ){
-    socket["id"] = nanoid( 16 );
-    socket[ "status" ] = "connected";
-    socket.on( "close", hadError => {
-        socket[ "status" ] = "disconnected";
-    });
-    return statusOf( socket );
-}
-
-export  type StatusOf = {
-    id:string,
-    status:"connected"|"disconnected"
-}
-
-export function statusOf  ( socket:net.Socket ):StatusOf{
-    return {
-        get id(){ return socket["id"]},
-        get status(){ return socket[ "status" ] }
-    }
-}
-export type AnchorPoint = "AGENT-CLIENT"|"AGENT-CLIENT-DIRECT"|"CENTRAL"|"AGENT-SERVER";
-export function anchor( aioHost:string, point:AnchorPoint, requestSide:net.Socket, responseSide:net.Socket, requestData:any[], responseData){
-    if( !requestData ) requestData = [];
-    if( !responseData ) responseData = [];
-
-    let hasRequestData = requestData.length? "WITH DATA": "NO DATA";
-
-    let __anchor = ( _left:net.Socket, _right:net.Socket ) => {
-        _left.pipe( _right );
-        _left.on( "close", () => {
-            _right.end();
-        });
-        _left[ "anchored" ] = true;
-    }
-
-    let __switchData = ( side:net.Socket, data:any[])=>{
-        while ( data.length ){
-            side.write( requestData.shift() );
-        }
-    }
-
-    __anchor( requestSide, responseSide );
-    __anchor( responseSide, requestSide );
-    __switchData( responseSide, requestData );
-    __switchData( requestSide, responseData );
-
-    console.log( `REQUEST ${ requestSide["id"]} TO ${ aioHost }  ANCHOR AT ${point} ${ hasRequestData }`)
-
-}
 
 export function server( opts:ServerOptions){
 
@@ -138,27 +85,26 @@ export function server( opts:ServerOptions){
 
     let serverSlots:{
         [server:string]:{
-            [app:string]:{[id:string]:ServerSlot}
+            [app:string]:{[id:string]:ServerSlot<{anchored?:boolean}>}
         }
     } = createProxyObject();
 
     let waitConnections:{
         [server:string]:{
             [app:string]: {
-                [ connection:string ]:WaitConnection
+                [ connection:string ]:WaitConnection<{anchored?:boolean}>
             }
         }
     } = createProxy();
 
 
 
-    let release = ( slot:ServerSlot )=>  {
+    let release = ( slot:ServerSlot<{anchored?:boolean}> )=>  {
         console.log( `getaway response from ${ slot.server } to ${ slot.server} connected` );
 
         let next = Object.entries( waitConnections[slot.server][slot.app]).find( ([key, wait], index) => {
-            let waitStatus = statusOf( wait.connection );
             return !wait.resolved
-                && waitStatus.status === "connected"
+                && wait.connection.status() === "connected"
             ;
         });
 
@@ -179,8 +125,7 @@ export function server( opts:ServerOptions){
         });
     }
 
-    let resolver = ( server:string, app:string|number, wait:WaitConnection )=>{
-        let status = statusOf( wait.connection );
+    let resolver = ( server:string, app:string|number, wait:WaitConnection<{anchored?:boolean}> )=>{
         console.log( `getaway request from ${ wait.agent } to ${ app}.${ server } connected` );
 
         let entry = Object.entries( serverSlots[server][app] ).find( ([ key, value]) => {
@@ -199,20 +144,23 @@ export function server( opts:ServerOptions){
             // console.log( "CALLBACK APPLIED!")
             return;
         }
-        waitConnections[server][app][ status.id ] = wait;
+        waitConnections[server][app][ wait.connection.id() ] = wait;
         wait.connection.on( "close", hadError => {
             console.log( `getaway request from ${ wait.agent } to ${ app}.${ server } CLOSED` );
-            delete waitConnections[server][app][ status.id  ];
-            if( hadError ) console.log( `detached wait connection for ${ app }.${ server } because remittent connection ${ status.id } is closed!`)
+            delete waitConnections[server][app][ wait.connection.id()  ];
+            if( hadError ) console.log( `detached wait connection for ${ app }.${ server } because remittent connection ${ wait.connection.id() } is closed!`)
         });
     }
 
     let agents : {
-        [p:string]: AgentAuthenticate
+        [p:string]: AgentAuthenticate<{anchored?:boolean}>
     } = {}
 
-    let clientOrigin = net.createServer( socket => {
-        let status = prepareSocket( socket );
+    let clientOrigin = createServer( _so => {
+        let socket = asAnchorSocket( _so, {
+            side: "server",
+            method: "GET"
+        });
         socket.once( "data", (data) => {
             let end = ()=>{
                 socket.end();
@@ -238,7 +186,7 @@ export function server( opts:ServerOptions){
             socket.on( "data", listen );
 
             resolver( redirect.server, redirect.app, {
-                id: status.id,
+                id: socket.id(),
                 connection: socket,
                 agent: auth.agent,
                 resolve( slot ){
@@ -260,8 +208,11 @@ export function server( opts:ServerOptions){
         })
     });
 
-    let serverDestine = net.createServer( socket => {
-        prepareSocket( socket );
+    let serverDestine = createServer( _so => {
+        let socket = asAnchorSocket( _so, {
+            side: "server",
+            method: "SET"
+        } );
         socket.once( "data", data => {
             let str = data.toString();
             // console.log( "ON RELEASE IN SERVER", str );
@@ -294,8 +245,12 @@ export function server( opts:ServerOptions){
 
     let tokenService = new TokenService( opts );
 
-    let serverAuth = net.createServer( socket => {
-        let socketStatus = prepareSocket( socket );
+    let serverAuth = createServer( _ns => {
+        let socket = asAnchorSocket( _ns, {
+            side: "server",
+            method: "AUTH"
+
+        });
         socket.once( "data", data => {
             let str = data.toString();
             let auth:AuthAgent = JSON.parse( str );
@@ -322,7 +277,7 @@ export function server( opts:ServerOptions){
                 if( !auth.servers ) auth.servers = [];
 
                 agents[ auth.agent ]  = {
-                    id: socketStatus.id,
+                    id: socket.id(),
                     referer: referer,
                     connection: socket,
                     agent: auth.agent,
@@ -331,7 +286,7 @@ export function server( opts:ServerOptions){
 
                 let servers = Object.keys( agents ).filter( value => auth.servers.includes( value ));
                 let authResponse:AuthResult = {
-                    id: socketStatus.id,
+                    id: socket.id(),
                     referer: referer,
                     availableServers: servers
                 };
@@ -365,7 +320,7 @@ export function server( opts:ServerOptions){
             let current = agents[ auth.agent ];
             if( !current ) return register();
             if( current.connection["closed"] ) return register();
-            if( statusOf( current.connection ).status !== "connected" ) return register();
+            if( current.connection.status() !== "connected" ) return register();
 
             //Check if is alive
             let checkAliveCode = nanoid(32 );
@@ -399,13 +354,13 @@ export function server( opts:ServerOptions){
             current.connection.write( JSON.stringify( checkAlive ) );
         });
 
-        socket.on( "close", hadError => {
+        socket.on( "close", () => {
             let agentServer = socket[ "agentServer" ];
             let referer = socket[ "referer" ];
 
             let agent = agents[ agentServer ];
             if( !agent ) return;
-            if( statusOf( agent.connection ).id === socketStatus.id ) delete agents[ agentServer ]
+            if( agent.connection.id() === socket.id() ) delete agents[ agentServer ]
         });
 
 
@@ -414,7 +369,7 @@ export function server( opts:ServerOptions){
         });
     });
 
-    [{serverAuth}, {serverDestine}, {clientOrigin} ].forEach( (entry, index) => {
+    [{serverAuth}, {serverDestine}, {clientOrigin} ].forEach( (entry) => {
         Object.entries( entry ).forEach( ([key, server]) => {
             server.on("error", err => {
                console.log( key, "error", err.message );
@@ -427,10 +382,6 @@ export function server( opts:ServerOptions){
     clientOrigin.listen( opts.requestPort );
 }
 
-export function identifierOf( identifier:string ){
-    if(! identifier.endsWith(".aio") ) return `${identifier}.aio`;
-    return  identifier;
-}
 
 
 
