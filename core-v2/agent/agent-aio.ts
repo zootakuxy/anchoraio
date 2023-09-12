@@ -107,19 +107,6 @@ export class AgentAio extends BaseEventEmitter<AuthSocketListener> {
             connection.write(JSON.stringify( auth ));
         });
 
-        // connection.on( "data", data => {
-        //     let str = data.toString();
-        //     console.log( str );
-        //     let pack = JSON.parse( str );
-        //     if( typeof pack.event === "string" ){
-        //         let event = pack[ "event" ];
-        //         let args = pack["args"];
-        //         if( !args ) args = [];
-        //         // @ts-ignore
-        //         this.notify( event, ...args );
-        //     }
-        // });
-
         this.serverAuthConnection = connection;
     }
 
@@ -141,7 +128,6 @@ export class AgentAio extends BaseEventEmitter<AuthSocketListener> {
             Object.entries( this.aioResolve.address ).filter( ([address, resolved]) => {
                 return availableServers.includes( resolved.identifier );
             }).forEach( ([address, resolved], index) => {
-                // if( !resolved.getawayReleaseOnDiscover ) return;
                 for (let i = 0; i < resolved.getawayRelease; i++) {
                     this.agentProxy.openGetAway( {
                         server: resolved.identifier,

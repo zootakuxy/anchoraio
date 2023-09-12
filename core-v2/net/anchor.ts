@@ -14,7 +14,7 @@ interface SocketListen<T extends {
      * @param event - O evento para o qual registrar o callback.
      * @param callback - O callback a ser registrado.
      */
-    listen<K extends keyof T>(event: K, callback: T[K]): void;
+    listen<K extends keyof T>( method:"on"| "once", event: K, callback: T[K]): void;
     /**
      * Notifica os ouvintes registrados para um evento específico.
      * @param event - O evento para o qual notificar os ouvintes.
@@ -22,6 +22,8 @@ interface SocketListen<T extends {
      * @returns Uma matriz de objetos que representam os ouvintes notificados.
      */
     send<K extends keyof T>(event: K, ...args: T[K] extends (...args: infer P) => any ? P : never[]);
+
+    eventListener():Listener<T>
 }
 
 
@@ -93,8 +95,8 @@ export function asAnchorSocket<T extends {}, E extends { [ K in keyof E]:Callabl
         socket.write( _str.replace( /\|/g, scape ) +delimiter )
     }
 
-    socket.listen = (event, callback) => {
-        opts.attache.on( event, callback );
+    socket.listen = ( method, event, callback) => {
+        opts.attache[method]( event, callback );
     };
 
     socket.on("data", data => {
@@ -113,7 +115,12 @@ export function asAnchorSocket<T extends {}, E extends { [ K in keyof E]:Callabl
                     opts.attache.notifySafe( pack[EVENT_NAME] as any, ...pack[EVENT_ARGS] as any );
                 } catch (e) {}
             });
-    })
+    });
+
+
+    socket.eventListener = ( )=>{
+        return opts.attache;
+    }
     return socket;
 }
 

@@ -1,10 +1,10 @@
 import net from "net";
-import { AuthIO} from "../server/server-proxy";
 import {AgentAio} from "./agent-aio";
 import {Resolved} from "../dns/aio.resolve";
 import {BaseEventEmitter} from "kitres/src/core/util";
 import {Defaults} from "../defaults";
 import {asAnchorSocket, AnchorSocket, identifierOf, anchor} from "../net/anchor";
+import {AuthIO} from "../net/auth";
 
 export type AgentProxyOptions = {
     requestPort:number,
