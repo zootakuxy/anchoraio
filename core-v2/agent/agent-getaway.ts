@@ -161,8 +161,6 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
                 return;
             }
 
-            console.table( resolved )
-
             console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost } RECEIVED-REQUEST`);
             let dataListen = data =>{
                 requestData.push( data );
