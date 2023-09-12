@@ -19,17 +19,18 @@ export type AgentAioOptions = AgentProxyOptions& TokenOptions& {
 
 }
 
-interface AgentAioListener {
+export interface AuthSocketListener {
     auth( auth:AuthResult )
     authFailed( code:string, message:string )
     isAlive( code:string, referer ),
     serverOpen( server:string ),
     serverClose( server:string )
 }
-export class AgentAio extends BaseEventEmitter<AgentAioListener> {
+
+export class AgentAio extends BaseEventEmitter<AuthSocketListener> {
     private agentProxy:AgentGetaway;
     private token:TokenService;
-    private serverAuthConnection:AnchorSocket<{}>;
+    private serverAuthConnection:AnchorSocket<{}, AuthSocketListener>;
     public opts:AgentAioOptions;
     public appServer:AppServer;
 
@@ -86,9 +87,9 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
             host: this.opts.serverHost
         }), {
             side: "client",
-            method: "AUTH"
+            method: "AUTH",
+            attache: this.listener()
         } );
-
 
         this._auth = null;
 
@@ -113,18 +114,18 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener> {
             connection.write(JSON.stringify( auth ));
         });
 
-        connection.on( "data", data => {
-            let str = data.toString();
-            console.log( str );
-            let pack = JSON.parse( str );
-            if( typeof pack.event === "string" ){
-                let event = pack[ "event" ];
-                let args = pack["args"];
-                if( !args ) args = [];
-                // @ts-ignore
-                this.notify( event, ...args );
-            }
-        });
+        // connection.on( "data", data => {
+        //     let str = data.toString();
+        //     console.log( str );
+        //     let pack = JSON.parse( str );
+        //     if( typeof pack.event === "string" ){
+        //         let event = pack[ "event" ];
+        //         let args = pack["args"];
+        //         if( !args ) args = [];
+        //         // @ts-ignore
+        //         this.notify( event, ...args );
+        //     }
+        // });
 
         this.serverAuthConnection = connection;
     }

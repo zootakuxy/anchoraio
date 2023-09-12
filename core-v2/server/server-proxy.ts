@@ -3,6 +3,7 @@ import {nanoid} from "nanoid";
 import {TokenService} from "../services/token.service";
 import {TokenOptions} from "../../aio/opts/opts-token";
 import {asAnchorSocket, AnchorSocket, anchor} from "../net/anchor";
+import {AuthSocketListener} from "../agent/agent-aio";
 export type ServerOptions = TokenOptions & {
     responsePort:number,
     requestPort:number
@@ -14,12 +15,12 @@ type ServerSlot<T> = {
     app:string|number,
     busy:boolean,
     id:string
-    connect:AnchorSocket<T>
+    connect:AnchorSocket<T, any>
 };
 
 type WaitConnection<T> = {
     resolve:( slot:ServerSlot<T> )=>void;
-    connection:AnchorSocket<T>
+    connection:AnchorSocket<T, any>
     resolved?: boolean,
     id?:string,
     agent:string
@@ -45,7 +46,7 @@ export type AuthResult = {
 }
 
 type AgentAuthenticate<T> = {
-    connection:AnchorSocket<T>,
+    connection:AnchorSocket<T, AuthSocketListener >,
     id:string,
     referer:string,
     agent:string,
@@ -245,7 +246,7 @@ export function server( opts:ServerOptions){
     let tokenService = new TokenService( opts );
 
     let serverAuth = createServer( _ns => {
-        let socket = asAnchorSocket( _ns, {
+        let socket = asAnchorSocket<any, AuthSocketListener>( _ns, {
             side: "server",
             method: "AUTH",
         });
@@ -283,34 +284,38 @@ export function server( opts:ServerOptions){
                 };
 
                 let servers = Object.keys( agents ).filter( value => auth.servers.includes( value ));
-                let authResponse:AuthResult = {
+                // let authResponse:AuthResult = ;
+
+                socket.send("auth", {
                     id: socket.id(),
                     referer: referer,
                     availableServers: servers
-                };
+                } );
 
-                socket.write( JSON.stringify({
-                    event:"auth",
-                    args:[ authResponse ]
-                }));
+                // socket.write( JSON.stringify({
+                //     event:"auth",
+                //     args:[ authResponse ]
+                // }));
 
                 Object.entries( agents ).forEach( ([ keyId, agent], index) => {
                     if( agent.agent === auth.agent ) return;
                     if( !agent.servers.includes( auth.agent ) ) return;
-                    agent.connection.write( JSON.stringify({
-                        event:"serverOpen",
-                        args:[ auth.agent ]
-                    }));
+                    agent.connection.send("serverOpen", auth.agent );
+                    // agent.connection.write( JSON.stringify({
+                    //     event:"serverOpen",
+                    //     args:[ auth.agent ]
+                    // }));
                 });
 
                 socket.on( "close", hadError => {
                     Object.entries( agents ).forEach( ([ keyId, agent], index) => {
                         if( agent.agent === auth.agent ) return;
                         if( !agent.servers.includes( auth.agent ) ) return;
-                        agent.connection.write( JSON.stringify({
-                            event:"serverClose",
-                            args:[ auth.agent ]
-                        }));
+                        agent.connection.send( "serverClose", auth.agent );
+                        // agent.connection.write( JSON.stringify({
+                        //     event:"serverClose",
+                        //     args:[ auth.agent ]
+                        // }));
                     });
                 })
             }

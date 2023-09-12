@@ -1,9 +1,18 @@
-let extension = "resolve.conf";
-let resolveRegexp = RegExp( `((^)*.${extension})$|((^)${extension})$` )
+let scape = "\\|";
+let delimiter = "||";
 
-// let extension = "resolve.conf";
-// let resolveRegexp = /(\*\.resolve\.conf$|resolve\.conf$)/
+console.log( "escape", scape)
 
+let strs = [ "NANE ANA||Age 23|Morada Riboque",
+    "NANE ANA|Age 23|Morada Riboque" ];
 
-console.log( resolveRegexp.test("\\resolve\\\\aio-host.resolve.conf.sample")) //False
-console.log( resolveRegexp.test("\\resolve\\\\zootakuxy.resolve.conf")) //Verdadeiro
+let joins = strs.map( value => {
+    return value.replace( /\|/g, scape );
+}).join( delimiter );
+
+console.log( "JOINS:", joins );
+
+joins.split( delimiter ).forEach( value => {
+    console.log( "SCAPE-PART",value );
+    console.log( "ORIGINAL-PART",value.replace( /\\\|/g, "|") );
+});

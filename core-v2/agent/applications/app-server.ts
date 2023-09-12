@@ -17,7 +17,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             appPort: number,
             appStatus: "started"|"stopped",
             anchorPiped: boolean
-    }> };
+    }, any> };
     private aio:AgentAio;
 
     constructor( aio:AgentAio ) {

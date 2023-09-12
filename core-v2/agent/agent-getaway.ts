@@ -29,7 +29,7 @@ type GetAway = {
         readyToAnchor?:boolean
         application?:string
         server?:string
-    }>,
+    }, any>,
     id:string
     busy:boolean
     autoReconnect:boolean
@@ -49,7 +49,7 @@ type NeedGetAway = {
 type GetawayListener = {
     callback:( getAway:GetAway)=> void,
     id:string,
-    request:AnchorSocket<{}>,
+    request:AnchorSocket<{}, any>,
     busy: boolean,
     server:string,
     application:string
@@ -63,9 +63,9 @@ interface AgentProxyListener{
 export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
     private opts:AgentProxyOptions;
     private anchor:net.Server;
-    private _connectionListener:<T>( socket:AnchorSocket<T> ) => void
+    private _connectionListener:<T>( socket:AnchorSocket<T, any> ) => void
     private readonly getawaysConnections: {
-        [p:string]:AnchorSocket<{}>
+        [p:string]:AnchorSocket<{}, any>
     };
 
     private readonly needGetAway : {
@@ -206,7 +206,7 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
         };
     }
 
-    private openDemandedGetaway( resolved:Resolved, request:AnchorSocket<{}> ){
+    private openDemandedGetaway( resolved:Resolved, request:AnchorSocket<{}, any> ){
         let needGetAway = this.needGetAway[ resolved.identifier ][ resolved.application ];
         if( !needGetAway.hasRequest ) {
             console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost }  REQUIRING GETAWAY`)
@@ -242,7 +242,7 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
         }, Number( resolved.getawayReleaseTimeout)  );
     }
 
-    private directConnect(request:AnchorSocket<{}>, opts:ConnectionOptions ){
+    private directConnect(request:AnchorSocket<{}, any>, opts:ConnectionOptions ){
         let app = this.aio.apps.applications().find( value => value.name == opts.application );
         if( !app ) return request.end();
         let response = asAnchorSocket( net.connect( {
@@ -259,7 +259,7 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
         application?:string,
         server?:string
         readyToAnchor:boolean
-    }> ){
+    }, any> ){
         let [key, next ] = Object.entries( this.getawayListener[ opts.server ][ opts.application ] )
             .find( ([, getawayListener], index) => {
                 return !getawayListener.busy
@@ -300,7 +300,7 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
         this.notify("getAwayRegister", getAway );
     }
 
-    private onGetAway(server:string, application:string, resolved:Resolved, request:AnchorSocket<{}>, callback:(getAway:GetAway )=>void ){
+    private onGetAway(server:string, application:string, resolved:Resolved, request:AnchorSocket<{}, any>, callback:(getAway:GetAway )=>void ){
         let next = Object.entries( this.getaway[ server ][application]).find( ([, getAway], index) => {
             return !getAway.busy
                 && !!getAway.connection.props().readyToAnchor;
