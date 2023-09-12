@@ -229,10 +229,11 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
         if( resolved.getawayReleaseTimeout === "never" ) return;
         needGetAway.timeout = setTimeout( ()=>{
             needGetAway.hasRequest = false;
-            Object.entries( this.getaway[resolved.identifier][resolved.application]).map( ([key, getAway]) => getAway )
-                .filter( value => !value.connection.props().anchored && value.connection.status() === "connected")
+            Object.entries( this.getaway[ resolved.identifier ][ resolved.application ]).map( ([key, getAway]) => getAway )
+                .filter( getAway => !getAway.connection.props().anchored && getAway.connection.status() === "connected")
                 .forEach( (value) => {
-                    console.log("PREPARED GETAWAY ABORTED!");
+                    console.log( value.connection );
+                    console.log( "PREPARED GETAWAY ABORTED!" );
                     value.connection.destroy( new Error("ABORTEDGETAWAY"));
                 });
         }, Number( resolved.getawayReleaseTimeout)  );
