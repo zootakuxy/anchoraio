@@ -44,7 +44,8 @@ export interface AsSocketAIOOptions <T, E extends { [ K in keyof E]:CallableFunc
     side: ConnectionSide
     method: ConnectionMethod
     props?:T,
-    attache?:Listener<E>
+    attache?:Listener<E>,
+    noListen?:boolean
 }
 
 export type AnchorPoint = "AGENT-CLIENT"|"AGENT-CLIENT-DIRECT"|"CENTRAL"|"AGENT-SERVER";
@@ -86,7 +87,10 @@ export function asAnchorSocket<T extends {}, E extends { [ K in keyof E]:Callabl
     const EVENT_NAME="aio.send.eventName"  as const;
     const EVENT_ARGS="aio.send.args"  as const;
 
+
+
     socket.send = ( event, ...args)=>{
+        if( opts.noListen ) return;
         let pack =  {
             [EVENT_NAME]: event,
             [EVENT_ARGS]: args
@@ -96,10 +100,12 @@ export function asAnchorSocket<T extends {}, E extends { [ K in keyof E]:Callabl
     }
 
     socket.listen = ( method, event, callback) => {
+        if( opts.noListen ) return;
         opts.attache[method]( event, callback );
     };
 
     socket.on("data", data => {
+        if( opts.noListen ) return;
         let str:string = data.toString();
         str.split( delimiter ).filter( value => value && value.length )
             .forEach( value => {
@@ -119,9 +125,14 @@ export function asAnchorSocket<T extends {}, E extends { [ K in keyof E]:Callabl
 
 
     socket.eventListener = ( )=>{
+        if( opts.noListen ) return null;
         return opts.attache;
     }
     return socket;
+}
+
+function listen(){
+
 }
 
 export function anchor<T extends { }, E extends { [ K in keyof E]:CallableFunction}>(aioHost:string, point:AnchorPoint, requestSide:AnchorSocket<T, E>, responseSide:AnchorSocket<T, E>, requestData:any[], responseData){
