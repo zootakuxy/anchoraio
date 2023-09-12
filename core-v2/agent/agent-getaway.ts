@@ -249,14 +249,18 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
         anchor( `${opts.application}.${ opts.server }`, "AGENT-CLIENT-DIRECT", request, response, opts.requestData, [ ]);
     }
 
-    private registerGetAway( opts:GetAwayOptions, connection:AnchorSocket<{anchored?:boolean}> ){
+    private registerGetAway( opts:GetAwayOptions, connection:AnchorSocket<{
+        anchored?:boolean,
+        application?:string,
+        server?:string
+    }> ){
         let [key, next ] = Object.entries( this.getawayListener[opts.server][ opts.application ] )
             .find( ([listerId, getawayListener], index) => {
                 return !getawayListener.busy
                     && getawayListener.request.status() === "connected";
             })||[]
-        connection[ "application" ] = opts.application;
-        connection[ "server" ] = opts.server;
+        connection.props().application = opts.application;
+        connection.props().server = opts.server;
         if( !!next ) {
             next.busy = true;
             delete this.getawayListener[opts.server][ opts.application ][  next.id ];
@@ -278,7 +282,7 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
 
         this.getaway[ opts.server ][ opts.application ][ connection.id() ] = getAway
 
-        connection.on( "close", hadError => {
+        connection.on( "close", () => {
             delete this.getaway[ opts.server ][ opts.application ][ connection.id() ];
         });
 
@@ -290,7 +294,6 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
             return !getAway.busy
                 && !!getAway.connection.props().readyToAnchor;
         });
-
 
         if( !!next ){
             console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost }  IMMEDIATELY CONNECT`)
@@ -330,8 +333,12 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
         }), {
             side: "client",
             method:"SET",
-            props: { anchored: false }
+            props: {
+                anchored: false,
+                readyToAnchor: false
+            }
         });
+
         connection.on( "connect", () => {
 
             //MODO wait response SERVSER
@@ -346,7 +353,7 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
 
             connection.write( JSON.stringify( redirect ) );
             connection.once( "data", ( data ) => {
-                connection[ "readyToAnchor" ] = true;
+                connection.props().readyToAnchor = true;
 
                 this.registerGetAway( opts, connection );
             });
