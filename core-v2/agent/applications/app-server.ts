@@ -31,9 +31,9 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             return appSocket.props().appName === app.name;
         }).map( ([id, appSocket]) => appSocket )
             .forEach( appSocket => {
-                appSocket[ "appStatus" ] = "stopped";
+                appSocket.props().appStatus = "stopped";
                 appSocket.end( () => {
-                    console.log( "application connection end", appSocket[ "appName" ] );
+                    console.log( "application connection end", appSocket.props().appName );
                 });
             })
     }
@@ -55,16 +55,13 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             }
         });
 
-
-
-
         this.appsConnections[ responseGetaway.id() ] = responseGetaway;
         responseGetaway.on( "close", hadError => {
             delete this.appsConnections[ responseGetaway.id() ];
         });
 
         responseGetaway.on( "connect", () => {
-            // console.log( "ON CONNECT AGENT APP RESPONSE", app.name, this.opts.responsePort )
+            console.log( "open-getaway-application", app.name, app.address, app.port, "connected" );
             let auth:AuthIO = {
                 server: identifierOf( this.aio.opts.identifier ),
                 app: app.name,
