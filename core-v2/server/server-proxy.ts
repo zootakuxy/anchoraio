@@ -3,7 +3,7 @@ import {nanoid} from "nanoid";
 import {TokenService} from "../services/token.service";
 import {TokenOptions} from "../../aio/opts/opts-token";
 import {asAnchorSocket, AnchorSocket, anchor} from "../net/anchor";
-import {AuthSocketListener} from "../agent/agent-aio";
+import {AuthAgent, AuthIO, AuthSocketListener} from "../net/auth";
 export type ServerOptions = TokenOptions & {
     responsePort:number,
     requestPort:number
@@ -26,24 +26,6 @@ type WaitConnection<T> = {
     agent:string
 }
 
-export type AuthIO = {
-    server:string
-    app:string|number,
-    authReferer:string,
-    origin:string,
-    authId:string
-}
-
-export type AuthAgent = {
-    agent:string,
-    token:string,
-    servers:string[]
-}
-export type AuthResult = {
-    id:string,
-    referer:string
-    availableServers:string[]
-}
 
 type AgentAuthenticate<T> = {
     connection:AnchorSocket<T, AuthSocketListener >,

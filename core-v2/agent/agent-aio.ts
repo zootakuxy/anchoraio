@@ -2,13 +2,13 @@ import {AgentGetaway,AgentProxyOptions} from "./agent-getaway";
 import {TokenService} from "../services/token.service";
 import {TokenOptions} from "../../aio/opts/opts-token";
 import net from "net";
-import {AuthAgent, AuthResult} from "../server/server-proxy";
 import {BaseEventEmitter} from "kitres";
 import {AioResolver} from "../dns/aio.resolve";
 import {ApplicationAIO} from "./applications";
 import {Defaults} from "../defaults";
 import {AppServer} from "./applications/app-server";
 import {asAnchorSocket, AnchorSocket} from "../net/anchor";
+import {AuthAgent, AuthResult, AuthSocketListener} from "../net/auth";
 
 export type AgentAioOptions = AgentProxyOptions& TokenOptions& {
     authPort:number
@@ -19,13 +19,6 @@ export type AgentAioOptions = AgentProxyOptions& TokenOptions& {
 
 }
 
-export interface AuthSocketListener {
-    auth( auth:AuthResult )
-    authFailed( code:string, message:string )
-    isAlive( code:string, referer ),
-    serverOpen( server:string ),
-    serverClose( server:string )
-}
 
 export class AgentAio extends BaseEventEmitter<AuthSocketListener> {
     private agentProxy:AgentGetaway;
