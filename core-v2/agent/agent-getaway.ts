@@ -260,13 +260,8 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
         server?:string
         readyToAnchor:boolean
     }> ){
-        console.log(  this.getawayListener );
         let [key, next ] = Object.entries( this.getawayListener[ opts.server ][ opts.application ] )
-            .find( ([listerId, getawayListener], index) => {
-                console.log( {
-                    busy: getawayListener.busy,
-                    status: getawayListener.request.status()
-                })
+            .find( ([, getawayListener], index) => {
                 return !getawayListener.busy
                     && getawayListener.request.status() === "connected";
             })||[]
@@ -306,7 +301,7 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
     }
 
     private onGetAway(server:string, application:string, resolved:Resolved, request:AnchorSocket<{}>, callback:(getAway:GetAway )=>void ){
-        let next = Object.entries( this.getaway[ server ][application]).find( ([key, getAway], index) => {
+        let next = Object.entries( this.getaway[ server ][application]).find( ([, getAway], index) => {
             return !getAway.busy
                 && !!getAway.connection.props().readyToAnchor;
         });
@@ -367,11 +362,8 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
                 origin: identifierOf( this.opts.identifier )
             }
 
-            console.log( "auth-get-away" )
-
             connection.write( JSON.stringify( redirect ) );
             connection.once( "data", ( data ) => {
-                console.log( "auth-get-away-success" )
                 connection.props().readyToAnchor = true;
                 this.registerGetAway( opts, connection );
             });
