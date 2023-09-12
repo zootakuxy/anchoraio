@@ -332,13 +332,10 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
         let includeServers = this.aio.openedServes.includes( opts.server )
         let remotelyOnly = resolved.identifier === this.aio.identifier && this.opts.directConnection === "on";
 
-        console.log( "openGetAway", opts.server, opts.application, {hasRequest,includeServers, remotelyOnly} );
-
         if(!includeServers) return;
         if(remotelyOnly) return;
         if(!hasRequest ) return;
 
-        console.log( "openGetAway-start", opts.server, opts.application );
         let connection = asAnchorSocket(  net.connect( {
             host: this.opts.serverHost,
             port: this.opts.requestPort
@@ -361,9 +358,11 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
                 origin: identifierOf( this.opts.identifier )
             }
 
+            console.log( "auth-get-away" )
 
             connection.write( JSON.stringify( redirect ) );
             connection.once( "data", ( data ) => {
+                console.log( "auth-get-away-success" )
                 connection.props().readyToAnchor = true;
                 this.registerGetAway( opts, connection );
             });
