@@ -235,10 +235,9 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
             needGetAway.hasRequest = false;
             Object.entries( this.getaway[ resolved.identifier ][ resolved.application ]).map( ([key, getAway]) => getAway )
                 .filter( getAway => !getAway.connection.anchored() && getAway.connection.status() === "connected")
-                .forEach( (value) => {
-                    console.log( value.connection );
+                .forEach( ( getAway) => {
                     console.log( "PREPARED GETAWAY ABORTED!" );
-                    value.connection.destroy( new Error("ABORTEDGETAWAY"));
+                    getAway.connection.destroy( new Error("ABORTEDGETAWAY"));
                 });
         }, Number( resolved.getawayReleaseTimeout)  );
     }
@@ -297,7 +296,8 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
     }
 
     private onGetAway(server:string, application:string, resolved:Resolved, request:AnchorSocket<{}>, callback:(getAway:GetAway )=>void ){
-        let next = Object.entries( this.getaway[server][application]).find( ([key, getAway], index) => {
+        console.log( { server, application }, this.getaway )
+        let next = Object.entries( this.getaway[ server ][application]).find( ([key, getAway], index) => {
             return !getAway.busy
                 && !!getAway.connection.props().readyToAnchor;
         });
