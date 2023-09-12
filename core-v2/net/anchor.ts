@@ -6,9 +6,10 @@ export type ConnectionStatus = "connected" | "disconnected";
 export type ConnectionMethod = "REQ"|"RESP"|"GET"|"SET"|"AUTH";
 
 
-export interface AnchorSocket<T extends { anchored?: boolean}> extends net.Socket {
+export interface AnchorSocket<T > extends net.Socket {
     id():string,
     status(): ConnectionStatus,
+    anchored():boolean
     props():T
 }
 
@@ -25,7 +26,7 @@ export interface AsSocketAIOOptions <T>{
     props?:T
 }
 
-export function asAnchorSocket<T extends { anchored?: boolean} >(net:net.Socket, opts:AsSocketAIOOptions<T> ){
+export function asAnchorSocket<T extends {} >(net:net.Socket, opts:AsSocketAIOOptions<T> ){
     let socket:AnchorSocket<T> = net as AnchorSocket<T>;
     socket[ "_id" ] = `${ opts.method }:${ nanoid( 16 ) }`;
     if( opts.side === "client" ){
@@ -37,18 +38,20 @@ export function asAnchorSocket<T extends { anchored?: boolean} >(net:net.Socket,
         socket["_status"] = "disconnected";
     });
 
-    socket[ "_props" ] = opts?.props||{};
+    socket[ "_props" ] = opts?.props;
+    if( !socket[ "_props" ] ) socket[ "_props" ] = {}
 
     socket.status = ()=>{ return socket[ "_status" ]; }
     socket.id = ()=>{ return socket[ "_id" ]; }
     socket.props = () => {
       return socket[ "_props" ];
     };
+    socket.anchored  = () =>  false;
     return socket;
 }
 export type AnchorPoint = "AGENT-CLIENT"|"AGENT-CLIENT-DIRECT"|"CENTRAL"|"AGENT-SERVER";
 
-export function anchor<T extends { anchored?:boolean }>(aioHost:string, point:AnchorPoint, requestSide:AnchorSocket<T>, responseSide:AnchorSocket<T>, requestData:any[], responseData){
+export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, requestSide:AnchorSocket<T>, responseSide:AnchorSocket<T>, requestData:any[], responseData){
     if( !requestData ) requestData = [];
     if( !responseData ) responseData = [];
 
@@ -59,7 +62,7 @@ export function anchor<T extends { anchored?:boolean }>(aioHost:string, point:An
         _left.on( "close", () => {
             _right.end();
         });
-        _left.props().anchored = true;
+        _left.anchored  = () =>  true;
     }
 
     let __switchData = (side:AnchorSocket<T>, data:any[])=>{

@@ -16,8 +16,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             appAddress: string,
             appPort: number,
             appStatus: "started"|"stopped",
-            anchorPiped: boolean,
-            anchored: boolean
+            anchorPiped: boolean
     }> };
     private aio:AgentAio;
 
@@ -53,7 +52,6 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                 appPort: app.port,
                 appStatus: "started" as const,
                 anchorPiped: false,
-                anchored: false
             }
         });
 
@@ -89,7 +87,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                         port: app.port
                     }), {
                         side: "client",
-                        method: "RESP"
+                        method: "RESP",
                     });
                     appConnection.on( "connect", () => {
                         anchor( `${app.name}.${ this.aio.identifier }`, "AGENT-SERVER", responseGetaway, appConnection, datas, [] );
@@ -117,7 +115,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
 
         responseGetaway.on("close", ( error) => {
             delete this.appsConnections[ responseGetaway.id() ];
-            if( !responseGetaway.props().anchored && this.aio.status === "started" && responseGetaway.props().appStatus === "started" ){
+            if( !responseGetaway.anchored() && this.aio.status === "started" && responseGetaway.props().appStatus === "started" ){
                 setTimeout(()=>{
                     this.openApplication( app );
                 }, this.aio.opts.restoreTimeout)

@@ -29,7 +29,7 @@ interface AgentAioListener {
 export class AgentAio extends BaseEventEmitter<AgentAioListener> {
     private agentProxy:AgentGetaway;
     private token:TokenService;
-    private serverAuthConnection:AnchorSocket<{anchored?:boolean}>;
+    private serverAuthConnection:AnchorSocket<{}>;
     public opts:AgentAioOptions;
     public appServer:AppServer;
 

@@ -85,21 +85,21 @@ export function server( opts:ServerOptions){
 
     let serverSlots:{
         [server:string]:{
-            [app:string]:{[id:string]:ServerSlot<{anchored?:boolean}>}
+            [app:string]:{[id:string]:ServerSlot<{}>}
         }
     } = createProxyObject();
 
     let waitConnections:{
         [server:string]:{
             [app:string]: {
-                [ connection:string ]:WaitConnection<{anchored?:boolean}>
+                [ connection:string ]:WaitConnection<{}>
             }
         }
     } = createProxy();
 
 
 
-    let release = ( slot:ServerSlot<{anchored?:boolean}> )=>  {
+    let release = ( slot:ServerSlot<{}> )=>  {
         console.log( `getaway response from ${ slot.server } to ${ slot.server} connected` );
 
         let next = Object.entries( waitConnections[slot.server][slot.app]).find( ([key, wait], index) => {
@@ -125,7 +125,7 @@ export function server( opts:ServerOptions){
         });
     }
 
-    let resolver = ( server:string, app:string|number, wait:WaitConnection<{anchored?:boolean}> )=>{
+    let resolver = ( server:string, app:string|number, wait:WaitConnection<{}> )=>{
         console.log( `getaway request from ${ wait.agent } to ${ app}.${ server } connected` );
 
         let entry = Object.entries( serverSlots[server][app] ).find( ([ key, value]) => {
@@ -153,13 +153,13 @@ export function server( opts:ServerOptions){
     }
 
     let agents : {
-        [p:string]: AgentAuthenticate<{anchored?:boolean}>
+        [p:string]: AgentAuthenticate<{}>
     } = {}
 
     let clientOrigin = createServer( _so => {
         let socket = asAnchorSocket( _so, {
             side: "server",
-            method: "GET"
+            method: "GET",
         });
         socket.once( "data", (data) => {
             let end = ()=>{
@@ -211,7 +211,7 @@ export function server( opts:ServerOptions){
     let serverDestine = createServer( _so => {
         let socket = asAnchorSocket( _so, {
             side: "server",
-            method: "SET"
+            method: "SET",
         } );
         socket.once( "data", data => {
             let str = data.toString();
@@ -248,8 +248,7 @@ export function server( opts:ServerOptions){
     let serverAuth = createServer( _ns => {
         let socket = asAnchorSocket( _ns, {
             side: "server",
-            method: "AUTH"
-
+            method: "AUTH",
         });
         socket.once( "data", data => {
             let str = data.toString();
