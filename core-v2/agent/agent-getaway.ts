@@ -268,6 +268,8 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
         connection.props().application = opts.application;
         connection.props().server = opts.server;
         if( !!next ) {
+            console.log(`OPEN GETAWAY TO ${opts.application}.${ opts.server } RESOLVE IMMEDIATE: ${ next.request.id() }`)
+
             next.busy = true;
             delete this.getawayListener[opts.server][ opts.application ][  next.id ];
             next.callback( {
@@ -278,6 +280,9 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
             });
             return;
         }
+
+        console.log(`OPEN GETAWAY TO ${opts.application}.${ opts.server } REGISTERED`)
+
 
         let getAway:GetAway = {
             id: connection.id(),
@@ -296,7 +301,6 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
     }
 
     private onGetAway(server:string, application:string, resolved:Resolved, request:AnchorSocket<{}>, callback:(getAway:GetAway )=>void ){
-        console.log( { server, application }, this.getaway )
         let next = Object.entries( this.getaway[ server ][application]).find( ([key, getAway], index) => {
             return !getAway.busy
                 && !!getAway.connection.props().readyToAnchor;
