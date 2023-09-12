@@ -338,7 +338,7 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
         if(remotelyOnly) return;
         if(!hasRequest ) return;
 
-        console.log( "openGetAway", opts.server, opts.application );
+        console.log( "openGetAway-start", opts.server, opts.application );
         let connection = asAnchorSocket(  net.connect( {
             host: this.opts.serverHost,
             port: this.opts.requestPort
