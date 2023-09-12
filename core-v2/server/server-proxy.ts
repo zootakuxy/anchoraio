@@ -54,7 +54,7 @@ type AgentAuthenticate<T> = {
 
 
 export function server( opts:ServerOptions){
-
+    console.table( Object.entries( opts ) );
     let createProxy = ()=>{
         return new Proxy({}, {
             get(target: {}, p: string | symbol, receiver: any): any {

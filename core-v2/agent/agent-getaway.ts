@@ -157,6 +157,8 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
                 return;
             }
 
+            console.table( resolved )
+
             console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost } RECEIVED-REQUEST`);
             let dataListen = data =>{
                 requestData.push( data );
@@ -178,7 +180,7 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
                 return this.directConnect( request, {
                     server: this.aio.identifier,
                     application: resolved.application,
-                    dataListen:dataListen,
+                    dataListen: dataListen,
                     requestData: requestData
                 })
             }
@@ -354,7 +356,6 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
             connection.write( JSON.stringify( redirect ) );
             connection.once( "data", ( data ) => {
                 connection.props().readyToAnchor = true;
-
                 this.registerGetAway( opts, connection );
             });
         });

@@ -1,4 +1,3 @@
-import {DnsAnswer, Packet} from "dns2";
 import * as fs from "fs";
 import ini from "ini";
 import {Localhost} from "./localhost";
