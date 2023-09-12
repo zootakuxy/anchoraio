@@ -33,9 +33,12 @@ export function asAnchorSocket<T extends {} >(net:net.Socket, opts:AsSocketAIOOp
         socket.on( "connect", () => {
             socket[ "_status" ] = "connected";
         });
+    } else {
+        socket["_status"]= "connected"
     }
+
     socket.on( "close", hadError => {
-        socket["_status"] = "disconnected";
+        socket[ "_status"] = "disconnected";
     });
 
     socket[ "_props" ] = opts?.props;
