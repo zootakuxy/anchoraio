@@ -1,5 +1,5 @@
 import  {Argv} from "yargs";
-import {lib} from "../../core-v2/lib";
+import {lib} from "../../core-v2/utils/lib";
 import {ServerOptions} from "../../core-v2/server/server-proxy";
 import {Defaults} from "../../core-v2/defaults";
 

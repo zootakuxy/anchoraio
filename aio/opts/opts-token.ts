@@ -1,5 +1,5 @@
 import {Argv} from "yargs";
-import {lib} from "../../core-v2/lib";
+import {lib} from "../../core-v2/utils/lib";
 import {BaseOptions} from "./opts";
 
 export type TokenOptions = BaseOptions & {

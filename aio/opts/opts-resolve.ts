@@ -1,8 +1,8 @@
 import {Argv} from "yargs";
-import {lib} from "../../core-v2/lib";
-import {AIOHostRegisterOptions} from "../../core-v2/dns/aio.resolve";
+import {lib} from "../../core-v2";
+import {AIOHostRegisterOptions} from "../../core-v2";
 import {BaseOptions} from "./opts";
-import {Defaults} from "../../core-v2/defaults";
+import {Defaults} from "../../core-v2";
 
 export type ResolveOptions = BaseOptions & AIOHostRegisterOptions &{
     remoteServer?:string

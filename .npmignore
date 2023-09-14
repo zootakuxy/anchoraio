@@ -1,0 +1,38 @@
+# Created by .ignore support plugin (hsz.mobi)
+# .idea
+# package-lock.json
+# node_modules/
+# readme/
+# src/teste/
+# src/var/
+# var/
+# export.d.ts
+# export.d.ts.map
+# export.js
+# export.js.map
+# yarn.lock
+# yarn-error.log
+
+
+
+
+# Ignorar tudo
+*
+
+# Incluir arquivos específicos
+!core-v2/**/*.js
+!core-v2/**/*.js.map
+!core-v2/**/*.d.ts
+
+!aio/**/*.js
+!aio/**/*.js.map
+!aio/**/*.d.ts
+
+!kitres*
+!LICENSE
+!package.json
+!README.md
+!tsconfig.json
+
+
+

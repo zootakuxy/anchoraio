@@ -1,14 +1,14 @@
 import {AgentGetaway,AgentProxyOptions} from "./agent-getaway";
-import {TokenService} from "../services/token.service";
+import {TokenService} from "../services";
 import {TokenOptions} from "../../aio/opts/opts-token";
 import net from "net";
 import {BaseEventEmitter} from "kitres";
-import {AioResolver} from "../dns/aio.resolve";
+import {AioResolver} from "../dns";
 import {ApplicationAIO} from "./applications";
 import {Defaults} from "../defaults";
-import {AppServer} from "./applications/app-server";
-import {asAnchorSocket, AnchorSocket} from "../net/anchor";
-import {AuthAgent, AuthResult, AuthSocketListener} from "../net/auth";
+import {AppServer} from "./applications";
+import {asAnchorSocket, AnchorSocket} from "../net";
+import {AuthAgent, AuthResult, AuthSocketListener} from "../net";
 
 export type AgentAioOptions = AgentProxyOptions& TokenOptions& {
     authPort:number
@@ -16,19 +16,18 @@ export type AgentAioOptions = AgentProxyOptions& TokenOptions& {
     requestTimeout: number|"never",
     getawayReleaseOnDiscover: boolean,
     getawayReleaseTimeout: number|"never"
-
 }
 
 
 export class AgentAio extends BaseEventEmitter<AuthSocketListener> {
-    private agentProxy:AgentGetaway;
+    private readonly agentProxy:AgentGetaway;
     private token:TokenService;
     private serverAuthConnection:AnchorSocket<{}, AuthSocketListener>;
     public opts:AgentAioOptions;
     public appServer:AppServer;
 
     private result:"failed"|"authenticated"|"pendent" = "pendent";
-    private _status:"started"|"stopped" = "stopped";
+    private _status:"started"|"stopped"|"staring" = "stopped";
     public readonly aioResolve:AioResolver;
     public apps:ApplicationAIO;
     public authId:string;
@@ -92,7 +91,7 @@ export class AgentAio extends BaseEventEmitter<AuthSocketListener> {
 
         connection.on( "close", hadError => {
             console.log( "connection with server end!")
-            if( hadError || (this.result === "authenticated" && this.status === "started")) setTimeout(()=>{
+            if( (hadError && this.status !== "stopped" ) || ( this.result === "authenticated" && this.status === "started" )) setTimeout(()=>{
                 this.createAuthConnection();
             }, this.opts.restoreTimeout );
         });
@@ -111,9 +110,12 @@ export class AgentAio extends BaseEventEmitter<AuthSocketListener> {
     }
 
     private init(){
-        this.apps.on("register", app => {
+        this.apps.on("sets", (app, old) => {
             if( this.status !== "started" )  return;
             if( this.result !== "authenticated" ) return;
+            if( !!old ){
+                this.appServer.closeApp( old );
+            }
             this.appServer.openApplication( app );
         });
 
@@ -179,6 +181,7 @@ export class AgentAio extends BaseEventEmitter<AuthSocketListener> {
     }
 
     start(){
+        this._status = "staring";
         this.result = "pendent";
         this.createAuthConnection();
         this.once("auth", auth => {
@@ -189,8 +192,8 @@ export class AgentAio extends BaseEventEmitter<AuthSocketListener> {
 
     stop(){
         this._status = "stopped";
-        this.serverAuthConnection.end();
-        this.agentProxy.stop();
-        this.appServer.stop();
+        if( this.serverAuthConnection ) this.serverAuthConnection.end();
+        if( this.agentProxy ) this.agentProxy.stop();
+        if( this.appServer ) this.appServer.stop();
     }
 }

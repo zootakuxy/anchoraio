@@ -2,8 +2,8 @@ import {App} from "./index";
 import net from "net";
 import {BaseEventEmitter} from "kitres/src/core/util";
 import {AgentAio} from "../agent-aio";
-import {asAnchorSocket, AnchorSocket, identifierOf, anchor} from "../../net/anchor";
-import {AuthIO} from "../../net/auth";
+import {asAnchorSocket, AnchorSocket, identifierOf, anchor} from "../../net";
+import {AuthIO} from "../../net";
 
 export interface AppProxyEvent{
 

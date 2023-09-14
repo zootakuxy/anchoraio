@@ -70,6 +70,10 @@ export function asAnchorSocket<T extends {}, E extends { [ K in keyof E]:Callabl
         socket[ "_status"] = "disconnected";
     });
 
+    socket.on("error", err => {
+       socket.end();
+    });
+
 
     socket[ "_props" ] = opts?.props;
     if( !socket[ "_props" ] ) socket[ "_props" ] = {}

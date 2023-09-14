@@ -2,6 +2,8 @@
 import {FileUtil} from "zoo.util/lib/file-util";
 import path from "path";
 import fs from "fs";
+import * as child_process from "child_process";
+import Path from "path";
 
 export function cleanJs( dirname ){
     //language=file-reference
@@ -21,5 +23,9 @@ export function cleanJs( dirname ){
 
 if( require.main.filename === __filename ){
     //language=file-reference
-    cleanJs( process.cwd() )
+    // cleanJs( process.cwd() );
+    // child_process.spawn( "tsc.cmd", {
+    // //language=file-reference
+    //     cwd: Path.join( __dirname, "./" )
+    // })
 }

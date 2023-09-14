@@ -1,5 +1,5 @@
 import {ResolveOptions} from "../../../aio/opts/opts-resolve";
-import {AioResolver, Resolved} from "../../dns/aio.resolve";
+import {AioResolver, Resolved} from "../../dns";
 import fs from "fs";
 import Path from "path";
 import ini from "ini";
@@ -19,7 +19,7 @@ export class ResolveService {
 
     private resolver:AioResolver;
     opts:ResolveOptions
-    constructor( opts:ResolveOptions) {
+    constructor( opts:ResolveOptions ) {
         this.resolver = new AioResolver({
             etc: opts.etc,
             getawayRelease: opts.getawayRelease,
@@ -29,9 +29,6 @@ export class ResolveService {
         });
         this.opts = opts;
     }
-
-
-
     start():number{
         let resolve = this.resolver.aioResolve( this.opts.aioApplicationDomain );
         if( !resolve || this.opts.action === "sets" ) resolve = this.sets( resolve );
@@ -55,7 +52,7 @@ export class ResolveService {
         return 0;
     }
 
-    private sets( resolve:Resolved ){
+    public sets( resolve:Resolved ){
         let linked = ( address:string ) => {
             if( this.opts.noPortDomain && this.opts.noPortEntry ){
                 let entryName = `${normalize(this.opts.noPortDomain[0])}_${address}`;
@@ -73,18 +70,17 @@ export class ResolveService {
         return resolve;
     }
 
-    private link( resolve: Resolved ){
+    public link( resolve: Resolved ){
         let agentServer = this.resolver.serverOf( resolve.aioHost );
         let noPortEntry = {
             entry:{
                 [ `${agentServer.name}_aio` ]:{
-                    entry: this.opts.anchorPort,
                     host:this.opts.noPortDomain,
                     name: this.opts.aioApplicationDomain,
                     description: `Aio entry domain for ${ this.opts.aioApplicationDomain }`,
                     address: resolve.address,
                     port: this.opts.anchorPort,
-                    protocol: "http",
+                    protocol: resolve.protocol||"http",
                     disable: false,
                     opts: { }
                 }

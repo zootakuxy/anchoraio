@@ -275,10 +275,7 @@ export class AioResolver {
         return resolved;
     }
 
-
-
-
-        serverOf( domainName:string ){
+    serverOf( domainName:string ){
         let parts = domainName.split("." ).map( value => value.trim().toLowerCase() );
         domainName = parts.join( "." );
         let agentServerName = Object.keys( this.servers ).find(next => { return this.servers[next].match.test( domainName ); })

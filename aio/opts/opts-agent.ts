@@ -1,5 +1,5 @@
 import  {Argv} from "yargs";
-import {lib} from "../../core-v2/lib";
+import {lib} from "../../core-v2/utils/lib";
 import Path from "path";
 import fs from "fs";
 import {AgentAioOptions} from "../../core-v2/agent/agent-aio";
