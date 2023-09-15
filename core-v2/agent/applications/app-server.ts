@@ -64,6 +64,8 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
 
         responseGetaway.on( "connect", () => {
             console.log( "open-getaway-application", app.name, app.address, app.port, "connected" );
+            let grants = app.grants;
+            if( !grants ) grants = ["*"];
             let auth:ApplicationGetawayAuth = {
                 server: identifierOf( this.aio.opts.identifier ),
                 app: app.name,
@@ -71,7 +73,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                 authId: responseGetaway.id(),
                 origin: identifierOf( this.aio.opts.identifier ),
                 machine: this.aio.machine(),
-                grants: app.grants
+                grants: grants
             }
             responseGetaway.write(  JSON.stringify(auth));
 
