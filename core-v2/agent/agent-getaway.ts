@@ -166,6 +166,11 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
             }
 
             console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost } RECEIVED-REQUEST`);
+            if( !this.aio.openedServes.includes( resolved.identifier  ) ) {
+                console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost } CANCELED | RESOLVE SERVER IS OFFLINE`);
+
+                request.end()
+            }
             let dataListen = data =>{
                 requestData.push( data );
             }

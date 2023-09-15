@@ -182,8 +182,6 @@ export function server( opts:ServerOptions){
             console.log( "requestGetawaySever:redirect.server", agents[ redirect.server ])
 
 
-
-
             let datas = [];
             let listen = data =>{
                 datas.push( data );
