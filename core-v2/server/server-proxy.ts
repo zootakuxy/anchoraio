@@ -272,6 +272,9 @@ export function server( opts:ServerOptions){
             if( !token.token ) return end( "Token invalid" );
             if( token.token.token !== auth.token ) return  end( "1012","Invalid token math" );
             if( token.token.status !== "active" ) return end("1013",`Invalid token status ${ token.token.status }`);
+
+            console.log( auth, token )
+
             if( !token.token.machine ){
                 token = tokenService.link( auth.agent, auth.machine )
             }
