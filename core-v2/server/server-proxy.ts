@@ -15,7 +15,6 @@ type ServerSlot<T> = {
     grants:string[],
     app:string|number,
     busy:boolean,
-    id:string
     connect:AnchorSocket<T, any>
 };
 
@@ -106,12 +105,12 @@ export function server( opts:ServerOptions){
             return;
         }
         slot.connect.on( "close", hadError => {
-            delete serverSlots[ slot.server ][ slot.app ][ slot.id ];
+            delete serverSlots[ slot.server ][ slot.app ][ slot.connect.id() ];
         });
-        serverSlots[ slot.server ][ slot.app ][ slot.id ] = slot;
+        serverSlots[ slot.server ][ slot.app ][ slot.connect.id() ] = slot;
         slot.connect.on( "close", hadError => {
             console.log( `getaway response from ${ slot.server } to ${ slot.server} CLOSED` );
-            delete serverSlots[ slot.server ][ slot.app ][ slot.id ];
+            delete serverSlots[ slot.server ][ slot.app ][ slot.connect.id() ];
         });
     }
 
@@ -129,7 +128,7 @@ export function server( opts:ServerOptions){
         if( entry && entry[1] ){
             let next = entry[1];
             next.busy = true;
-            delete serverSlots[server][app][ next.id ];
+            delete serverSlots[server][app][ next.connect.id() ];
             wait.resolve( next );
             // console.log( "CALLBACK APPLIED!")
             return;
@@ -245,7 +244,6 @@ export function server( opts:ServerOptions){
                 grants: pack.grants,
                 busy: false,
                 connect: socket,
-                id: nanoid(32 )
             });
             // console.log( "ON SERVER AGENT READY")
         });
