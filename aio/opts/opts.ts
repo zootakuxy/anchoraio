@@ -2,7 +2,7 @@ import {Argv} from "yargs";
 import {loadConfigsFile} from "../load";
 import Path from "path";
 import {AgentLauncherOptions} from "./opts-agent";
-import {Defaults} from "../../core-v2/defaults";
+import {Defaults} from "../../core-v2";
 
 
 

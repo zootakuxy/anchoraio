@@ -64,8 +64,18 @@ export function agentOptsBuilder( yargs:Argv<AgentLauncherOptions> ){
     yargs.option( "anchorPort", {
         type:"number",
         alias: [ "anchor" ],
-        default: Defaults.anchorPort,
-        coerce: lib.typeParser.asInt,
+        array: true,
+        default: [Defaults.anchorPort],
+        coerce: arg => {
+            if( !Array.isArray( arg ) && Number.isNaN( Number( arg ) ) ) return null;
+            if(!Array.isArray( arg ) ) return [Number( arg )];
+            let ports = [...arg]
+                .map( value => Number( value ) )
+                .filter( value => !Number.isNaN( value ) )
+            ;
+            if( !ports.length ) return null;
+            return ports;
+        },
         demandOption: true
     });
 

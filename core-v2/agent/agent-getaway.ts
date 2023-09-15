@@ -1,16 +1,17 @@
 import net from "net";
 import {AgentAio} from "./agent-aio";
-import {Resolved} from "../dns/aio.resolve";
+import {Resolved} from "../dns";
 import {BaseEventEmitter} from "kitres/src/core/util";
 import {Defaults} from "../defaults";
-import {asAnchorSocket, AnchorSocket, identifierOf, anchor} from "../net/anchor";
-import {AuthIO} from "../net/auth";
+import {asAnchorSocket, AnchorSocket, identifierOf, anchor} from "../net";
+import {AuthIO} from "../net";
+import {AIOServer} from "../net/server";
 
 export type AgentProxyOptions = {
     requestPort:number,
     responsePort:number,
     serverHost:string,
-    anchorPort:number,
+    anchorPort:number|number[],
     identifier:string,
     restoreTimeout: number,
     directConnection: "on"|"off"
@@ -62,7 +63,7 @@ interface AgentProxyListener{
 
 export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
     private opts:AgentProxyOptions;
-    private anchor:net.Server;
+    private anchor:AIOServer;
     private _connectionListener:<T>( socket:AnchorSocket<T, any> ) => void
     private readonly getawaysConnections: {
         [p:string]:AnchorSocket<{}, any>
@@ -98,7 +99,9 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
         this.aio = aio;
         if( !opts.restoreTimeout ) opts.restoreTimeout = Defaults.restoreTimeout;
         this.opts = opts;
-        this.anchor = new net.Server();
+        this.anchor = new AIOServer({
+            safe: true
+        });
         this.getawaysConnections = {};
 
         this.getaway = new Proxy({},{
@@ -398,7 +401,13 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
     }
     start(){
         this.anchor.on( "connection", this._connectionListener );
-        this.anchor.listen( this.opts.anchorPort );
+        let _ports:number[];
+
+        if( Array.isArray( this.opts.anchorPort ) ) _ports = this.opts.anchorPort.map( value => Number( value ));
+        else _ports = [ Number( this.opts.anchorPort) ];
+        this.anchor.listen(  ( port ) => {
+            console.log( `AIO agent listen anchor on aio://127.*.*.*:${ port }`)
+        }, ..._ports);
         this.status = "started";
     }
 
