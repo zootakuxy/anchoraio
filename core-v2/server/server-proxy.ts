@@ -147,7 +147,7 @@ export function server( opts:ServerOptions){
         [p:string]: AgentAuthenticate<{}>
     } = {}
 
-    let clientOrigin = createServer( _so => {
+    let requestGetawaySever = createServer(_so => {
         let socket = asAnchorSocket( _so, {
             side: "server",
             method: "GET",
@@ -171,7 +171,10 @@ export function server( opts:ServerOptions){
                     && agentAuth.agent === redirect.origin
                     && agentAuth.machine === redirect.machine
                     && !!agentAuth.apps[ redirect.app ]
-                    && agentAuth.apps[ redirect.app ].grants.includes( redirect.origin )
+                    && (
+                        agentAuth.apps[ redirect.app ].grants.includes( redirect.origin )
+                        || agentAuth.apps[ redirect.app ].grants.includes( "*" )
+                    )
             })
             if(!auth ) return end();
 
@@ -359,7 +362,7 @@ export function server( opts:ServerOptions){
         });
     });
 
-    [{serverAuth}, {serverDestine}, {clientOrigin} ].forEach( (entry) => {
+    [{serverAuth}, {serverDestine}, {clientOrigin: requestGetawaySever} ].forEach( (entry) => {
         Object.entries( entry ).forEach( ([key, server]) => {
             server.on("error", err => {
                console.log( key, "error", err.message );
@@ -369,5 +372,5 @@ export function server( opts:ServerOptions){
 
     serverAuth.listen( opts.authPort );
     serverDestine.listen( opts.responsePort );
-    clientOrigin.listen( opts.requestPort );
+    requestGetawaySever.listen( opts.requestPort );
 }
