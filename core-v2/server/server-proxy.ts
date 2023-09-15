@@ -168,7 +168,6 @@ export function server( opts:ServerOptions){
                 return agentAuth.referer === redirect.authReferer
                     && agentAuth.agent === redirect.origin
                     && agentAuth.machine === redirect.machine
-                    && !!agentAuth.apps[ redirect.app ]
             })
             console.log( {
                 auth:!!auth
