@@ -170,11 +170,24 @@ export function server( opts:ServerOptions){
                     && agentAuth.machine === redirect.machine
                     && !!agentAuth.apps[ redirect.app ]
             })
+            console.log( {
+                auth:!!auth
+            });
             if(!auth ) return end();
             let resolverApp = agents?.[ redirect.server ]?.apps?.[ redirect.app ];
+            console.log( "requestGetawaySever:new-request", {
+                grants: resolverApp?.grants?.includes?.( "*" ) || resolverApp?.grants?.includes?.( redirect.origin ),
+                auth: auth.id,
+                servers: auth.servers,
+                apps: auth.apps,
+                referer: auth.referer,
+                resolverApp: resolverApp
+            })
             if( !resolverApp ) return end();
             let grants = resolverApp.grants.includes( "*" );
             if( !grants ) grants = resolverApp.grants.includes( redirect.origin );
+
+
             if( !grants ) return end();
 
 
@@ -223,13 +236,7 @@ export function server( opts:ServerOptions){
                 return null;
             });
 
-            console.log( pack, {
-                id: auth.id,
-                apps: auth.apps,
-                servers: auth.servers,
-                machine: auth.machine,
-                referer: auth.referer,
-            } );
+
             if(!auth ) return end();
 
             auth.apps[ pack.app ] = {
