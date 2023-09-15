@@ -119,6 +119,13 @@ export class AgentAio extends BaseEventEmitter<AuthSocketListener> {
             this.appServer.openApplication( app );
         });
 
+        this.apps.on( "delete", app => {
+            this.appServer.closeApp( app );
+        });
+
+
+
+
         this.on("isAlive", ( code ) => {
             if( this.serverAuthConnection ) this.serverAuthConnection.write( JSON.stringify({
                 event:"isAlive",
