@@ -4,7 +4,6 @@ import {TokenService} from "../services";
 import {TokenOptions} from "../../aio/opts/opts-token";
 import {asAnchorSocket, AnchorSocket, anchor} from "../net";
 import {AuthAgent, AuthSocketListener, RequestGetawayAuth, ApplicationGetawayAuth} from "../net";
-import {application} from "express";
 export type ServerOptions = TokenOptions & {
     responsePort:number,
     requestPort:number

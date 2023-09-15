@@ -9,7 +9,6 @@ import {Defaults} from "../defaults";
 import {AppServer} from "./applications";
 import {asAnchorSocket, AnchorSocket} from "../net";
 import {AuthAgent, AuthResult, AuthSocketListener} from "../net";
-import machine from "node-machine-id"
 
 export type AgentAioOptions = AgentProxyOptions& TokenOptions& {
     authPort:number
@@ -109,7 +108,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
                 agent: this.opts.identifier,
                 token: token.token.token,
                 servers: this.servers,
-                machine: machine.machineIdSync( true )
+                machine: this.machine()
             }
             connection.write(JSON.stringify( auth ));
         });
@@ -190,6 +189,11 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
         });
 
         this.init = ()=>{};
+    }
+
+    machine(){
+        const machine = require( "node-machine-id" );
+        return `${this.identifier }://${ machine.machineIdSync(true)}/${ machine.machineIdSync()}`;
     }
 
     start(){

@@ -364,7 +364,7 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
                 authReferer: this.aio.authReferer,
                 authId: connection.id(),
                 origin: identifierOf( this.opts.identifier ),
-                machine: machine.machineIdSync( true )
+                machine: this.aio.machine()
             }
 
             connection.write( JSON.stringify( redirect ) );

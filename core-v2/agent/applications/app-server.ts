@@ -70,7 +70,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                 authReferer: this.aio.authReferer,
                 authId: responseGetaway.id(),
                 origin: identifierOf( this.aio.opts.identifier ),
-                machine: machine.machineIdSync( true ),
+                machine: this.aio.machine(),
                 grants: app.grants
             }
             responseGetaway.write(  JSON.stringify(auth));
