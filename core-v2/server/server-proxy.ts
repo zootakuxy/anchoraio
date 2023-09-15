@@ -224,7 +224,13 @@ export function server( opts:ServerOptions){
                 return null;
             });
 
-            console.log( pack, auth );
+            console.log( pack, {
+                id: auth.id,
+                apps: auth.apps,
+                servers: auth.servers,
+                machine: auth.machine,
+                referer: auth.referer,
+            } );
             if(!auth ) return end();
 
             auth.apps[ pack.app ] = {
