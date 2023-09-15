@@ -28,6 +28,7 @@
     "nanoid": "^3.2.0",
     "netaddr": "^1.1.0",
     "node_dns_changer": "^1.1.9",
+    "node-machine-id": "^1.1.12",
     "recursive-watch": "^1.1.4",
     "source-map-support": "^0.5.21",
     "unorm": "^1.6.0",

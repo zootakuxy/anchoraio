@@ -2,8 +2,10 @@ import {App} from "./index";
 import net from "net";
 import {BaseEventEmitter} from "kitres/src/core/util";
 import {AgentAio} from "../agent-aio";
-import {asAnchorSocket, AnchorSocket, identifierOf, anchor} from "../../net";
+import {asAnchorSocket, AnchorSocket, identifierOf, anchor, ApplicationGetawayAuth} from "../../net";
 import {AuthIO} from "../../net";
+import {string} from "yargs";
+import machine from "node-machine-id";
 
 export interface AppProxyEvent{
 
@@ -62,12 +64,14 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
 
         responseGetaway.on( "connect", () => {
             console.log( "open-getaway-application", app.name, app.address, app.port, "connected" );
-            let auth:AuthIO = {
+            let auth:ApplicationGetawayAuth = {
                 server: identifierOf( this.aio.opts.identifier ),
                 app: app.name,
                 authReferer: this.aio.authReferer,
                 authId: responseGetaway.id(),
-                origin: identifierOf( this.aio.opts.identifier )
+                origin: identifierOf( this.aio.opts.identifier ),
+                machine: machine.machineIdSync( true ),
+                grants: app.grants
             }
             responseGetaway.write(  JSON.stringify(auth));
 

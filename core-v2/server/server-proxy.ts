@@ -1,9 +1,10 @@
 import { createServer } from "net";
 import {nanoid} from "nanoid";
-import {TokenService} from "../services/token.service";
+import {TokenService} from "../services";
 import {TokenOptions} from "../../aio/opts/opts-token";
-import {asAnchorSocket, AnchorSocket, anchor} from "../net/anchor";
-import {AuthAgent, AuthIO, AuthSocketListener} from "../net/auth";
+import {asAnchorSocket, AnchorSocket, anchor} from "../net";
+import {AuthAgent, AuthSocketListener, RequestGetawayAuth, ApplicationGetawayAuth} from "../net";
+import {application} from "express";
 export type ServerOptions = TokenOptions & {
     responsePort:number,
     requestPort:number
@@ -12,6 +13,7 @@ export type ServerOptions = TokenOptions & {
 
 type ServerSlot<T> = {
     server:string,
+    grants:string[],
     app:string|number,
     busy:boolean,
     id:string
@@ -26,12 +28,19 @@ type WaitConnection<T> = {
     agent:string
 }
 
-
+type App = {
+    name:string,
+    grants:string[]
+}
 type AgentAuthenticate<T> = {
     connection:AnchorSocket<T, AuthSocketListener >,
     id:string,
     referer:string,
     agent:string,
+    apps:{
+        [application:string]:App
+    }
+    machine:string
     servers:string[],
 }
 
@@ -152,13 +161,18 @@ export function server( opts:ServerOptions){
 
             //Modo waitResponse server
             // console.log( "ON SERVER REDIRECT", data.toString() );
-            let redirect:AuthIO = JSON.parse( str );
+            let redirect:RequestGetawayAuth = JSON.parse( str );
 
 
-            let [authKey, auth] = Object.entries( agents ).find( ([agent, agentAuth], index) => {
+            let auth = Object.entries( agents )
+                .map( value => value[1])
+                .find( (agentAuth, index) => {
                 return agentAuth.referer === redirect.authReferer
-                    && agentAuth.agent === redirect.origin;
-            })||[];
+                    && agentAuth.agent === redirect.origin
+                    && agentAuth.machine === redirect.machine
+                    && !!agentAuth.apps[ redirect.app ]
+                    && agentAuth.apps[ redirect.app ].grants.includes( redirect.origin )
+            })
             if(!auth ) return end();
 
             let datas = [];
@@ -192,21 +206,31 @@ export function server( opts:ServerOptions){
         socket.once( "data", data => {
             let str = data.toString();
             // console.log( "ON RELEASE IN SERVER", str );
-            let pack:AuthIO = JSON.parse( str );
+            let pack:ApplicationGetawayAuth = JSON.parse( str );
 
             let end = ()=>{
                 socket.end();
             }
-            let auth = Object.entries( agents ).find( ([agent, agentAuth], index) => {
-                return agentAuth.referer === pack.authReferer
-                    && agentAuth.agent === pack.origin;
+            let auth = Object.entries( agents )
+                .map( value => value[1] ).find( (agentAuth, index) => {
+                if( agentAuth.referer === pack.authReferer
+                    && agentAuth.agent === pack.origin
+                    && agentAuth.machine === pack.machine
+                ) return agentAuth;
+                return null;
             });
             if(!auth ) return end();
+
+            auth.apps[ pack.app ] = {
+                grants: pack.grants,
+                name: pack.app
+            }
 
             // console.log( "NEW SERVER RELEASE AUTH" );
             release( {
                 app: pack.app,
                 server: pack.server,
+                grants: pack.grants,
                 busy: false,
                 connect: socket,
                 id: nanoid(32 )
@@ -238,12 +262,16 @@ export function server( opts:ServerOptions){
                 return;
             }
 
-            if( !auth || !auth.agent || !auth.token ) return end( "1010", "Missing auth props");
+            if( !auth || !auth.agent || !auth.token || !auth.machine ) return end( "1010", "Missing auth props");
             let token = tokenService.tokenOf( auth.agent );
             if( !token ) return end( "1011", "Token not found" );
             if( !token.token ) return end( "Token invalid" );
             if( token.token.token !== auth.token ) return  end( "1012","Invalid token math" );
             if( token.token.status !== "active" ) return end("1013",`Invalid token status ${ token.token.status }`);
+            if( !token.token.machine ){
+                token = tokenService.link( auth.agent, auth.machine )
+            }
+            if( token.token.machine !== auth.machine ) return end( "1014", "Token viculado com outro servidor" );
 
             let register = ()=>{
                 let referer = `${nanoid(16 )}`;
@@ -256,7 +284,9 @@ export function server( opts:ServerOptions){
                     referer: referer,
                     connection: socket,
                     agent: auth.agent,
-                    servers: auth.servers
+                    servers: auth.servers,
+                    machine: auth.machine,
+                    apps:{}
                 };
 
                 let servers = Object.keys( agents ).filter( value => auth.servers.includes( value ));
@@ -271,14 +301,14 @@ export function server( opts:ServerOptions){
                 Object.entries( agents ).forEach( ([ keyId, agent], index) => {
                     if( agent.agent === auth.agent ) return;
                     if( !agent.servers.includes( auth.agent ) ) return;
-                    agent.connection.send("serverOpen", auth.agent );
+                    agent.connection.send("remoteServerOpen", auth.agent );
                 });
 
                 socket.on( "close", hadError => {
                     Object.entries( agents ).forEach( ([ keyId, agent], index) => {
                         if( agent.agent === auth.agent ) return;
                         if( !agent.servers.includes( auth.agent ) ) return;
-                        agent.connection.send( "serverClose", auth.agent );
+                        agent.connection.send( "remoteServerClosed", auth.agent );
                     });
                 })
             }

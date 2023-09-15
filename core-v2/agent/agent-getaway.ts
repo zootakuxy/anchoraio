@@ -3,9 +3,10 @@ import {AgentAio} from "./agent-aio";
 import {Resolved} from "../dns";
 import {BaseEventEmitter} from "kitres/src/core/util";
 import {Defaults} from "../defaults";
-import {asAnchorSocket, AnchorSocket, identifierOf, anchor} from "../net";
+import {asAnchorSocket, AnchorSocket, identifierOf, anchor, RequestGetawayAuth} from "../net";
 import {AuthIO} from "../net";
 import {AIOServer} from "../net/server";
+import machine from "node-machine-id";
 
 export type AgentProxyOptions = {
     requestPort:number,
@@ -357,12 +358,13 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
         connection.on( "connect", () => {
 
             //MODO wait response SERVSER
-            let redirect:AuthIO = {
+            let redirect:RequestGetawayAuth = {
                 server: identifierOf( opts.server ),
                 app: opts.application,
                 authReferer: this.aio.authReferer,
                 authId: connection.id(),
-                origin: identifierOf( this.opts.identifier )
+                origin: identifierOf( this.opts.identifier ),
+                machine: machine.machineIdSync( true )
             }
 
             connection.write( JSON.stringify( redirect ) );

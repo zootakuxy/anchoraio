@@ -8,21 +8,30 @@ export interface AuthSocketListener {
     auth( auth:AuthResult )
     authFailed( code:string, message:string )
     isAlive( code:string, referer ),
-    serverOpen( server:string ),
-    serverClose( server:string )
+    remoteServerOpen( server:string ),
+    remoteServerClosed( server:string )
 }
 
 
 export type AuthIO = {
     server:string
-    app:string|number,
+    app:string,
     authReferer:string,
     origin:string,
-    authId:string
+    authId:string,
+    machine: string
+}
+
+export type ApplicationGetawayAuth = AuthIO& {
+    grants:string[]
+}
+
+export type RequestGetawayAuth = AuthIO& {
 }
 
 export type AuthAgent = {
     agent:string,
     token:string,
-    servers:string[]
+    servers:string[],
+    machine: string,
 }

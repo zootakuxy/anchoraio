@@ -9,6 +9,7 @@ import {Defaults} from "../defaults";
 import {AppServer} from "./applications";
 import {asAnchorSocket, AnchorSocket} from "../net";
 import {AuthAgent, AuthResult, AuthSocketListener} from "../net";
+import machine from "node-machine-id"
 
 export type AgentAioOptions = AgentProxyOptions& TokenOptions& {
     authPort:number
@@ -19,10 +20,16 @@ export type AgentAioOptions = AgentProxyOptions& TokenOptions& {
 }
 
 
-export class AgentAio extends BaseEventEmitter<AuthSocketListener> {
+interface AgentAioListener extends AuthSocketListener {
+    agentStart(),
+    agentStarted(),
+    agentStop()
+}
+
+export class AgentAio extends BaseEventEmitter<AgentAioListener > {
     private readonly agentProxy:AgentGetaway;
     private token:TokenService;
-    private serverAuthConnection:AnchorSocket<{}, AuthSocketListener>;
+    private serverAuthConnection:AnchorSocket<{}, AgentAioListener>;
     public opts:AgentAioOptions;
     public appServer:AppServer;
 
@@ -101,7 +108,8 @@ export class AgentAio extends BaseEventEmitter<AuthSocketListener> {
             let auth:AuthAgent = {
                 agent: this.opts.identifier,
                 token: token.token.token,
-                servers: this.servers
+                servers: this.servers,
+                machine: machine.machineIdSync( true )
             }
             connection.write(JSON.stringify( auth ));
         });
@@ -122,9 +130,6 @@ export class AgentAio extends BaseEventEmitter<AuthSocketListener> {
         this.apps.on( "delete", app => {
             this.appServer.closeApp( app );
         });
-
-
-
 
         this.on("isAlive", ( code ) => {
             if( this.serverAuthConnection ) this.serverAuthConnection.write( JSON.stringify({
@@ -148,13 +153,13 @@ export class AgentAio extends BaseEventEmitter<AuthSocketListener> {
         }
 
 
-        this.on("serverOpen", server => {
+        this.on("remoteServerOpen", server => {
             console.log( "ServerOpen", server );
             this.openedServes.push( server );
             openGetaways( [ server ] );
         });
 
-        this.on( "serverClose", server => {
+        this.on( "remoteServerClosed", server => {
             console.log( "serverClose", server );
             let index = this.openedServes.indexOf( server );
             if( index === -1 ) return;
@@ -193,8 +198,9 @@ export class AgentAio extends BaseEventEmitter<AuthSocketListener> {
         this.createAuthConnection();
         this.once("auth", auth => {
             this.agentProxy.start();
-        })
-
+            this.notify("agentStarted" )
+        });
+        this.notify("agentStart" )
     }
 
     stop(){
@@ -202,5 +208,6 @@ export class AgentAio extends BaseEventEmitter<AuthSocketListener> {
         if( this.serverAuthConnection ) this.serverAuthConnection.end();
         if( this.agentProxy ) this.agentProxy.stop();
         if( this.appServer ) this.appServer.stop();
+        this.notify( "agentStop" );
     }
 }

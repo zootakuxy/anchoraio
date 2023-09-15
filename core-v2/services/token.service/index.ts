@@ -4,6 +4,7 @@ import chalk from "chalk";
 import Path from "path";
 import ini from "ini";
 import {nanoid} from "nanoid";
+import {iniutil} from "kitres";
 
 export interface Token {
     identifier:string,
@@ -11,6 +12,7 @@ export interface Token {
     date:string,
     status:"active"|"disable",
     mail:string
+    machine?:string
 }
 
 export class TokenService {
@@ -114,6 +116,15 @@ export class TokenService {
         if( ![ "active", "disable" ].includes( token.status ) ) return {}
         let json = JSON.stringify( token );
         return { raw, token, json, filename, confName  };
+    }
+
+    public link( name:string, machine:string ){
+        let token = this.tokenOf( name );
+        if( !token ) return null;
+        if( !token.token ) return null;
+        this.token.machine = machine;
+        fs.writeFileSync( token.filename, iniutil.stringify( token.token ) );
+        return this.tokenOf( name );
     }
 
     public confNameOf( identifier?:string ):{ confName?:string, filename?:string }{
