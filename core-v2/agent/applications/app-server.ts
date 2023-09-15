@@ -41,7 +41,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
     }
 
 
-    openApplication (app:App ){
+    openApplication ( app:App ){
         let responseGetaway = asAnchorSocket( net.connect( {
             host: this.aio.opts.serverHost,
             port: this.aio.opts.responsePort

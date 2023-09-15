@@ -174,19 +174,9 @@ export function server( opts:ServerOptions){
             });
             if(!auth ) return end();
             let resolverApp = agents?.[ redirect.server ]?.apps?.[ redirect.app ];
-            console.log( "requestGetawaySever:new-request", {
-                grants: resolverApp?.grants?.includes?.( "*" ) || resolverApp?.grants?.includes?.( redirect.origin ),
-                auth: auth.id,
-                servers: auth.servers,
-                apps: auth.apps,
-                referer: auth.referer,
-                resolverApp: resolverApp
-            })
             if( !resolverApp ) return end();
             let grants = resolverApp.grants.includes( "*" );
             if( !grants ) grants = resolverApp.grants.includes( redirect.origin );
-
-
             if( !grants ) return end();
 
 
@@ -242,6 +232,14 @@ export function server( opts:ServerOptions){
                 grants: pack.grants,
                 name: pack.app
             }
+
+            console.log( "responseGetawayApplication:new-get-away-response", {
+                grants: pack.grants,
+                auth: auth.id,
+                servers: auth.servers,
+                app: pack.app,
+                referer: auth.referer
+            })
 
             // console.log( "NEW SERVER RELEASE AUTH" );
             release( {
