@@ -122,7 +122,7 @@ export class TokenService {
         let token = this.tokenOf( name );
         if( !token ) return null;
         if( !token.token ) return null;
-        this.token.machine = machine;
+        token.token.machine = machine;
         fs.writeFileSync( token.filename, iniutil.stringify( token.token ) );
         return this.tokenOf( name );
     }
