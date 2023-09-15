@@ -202,7 +202,7 @@ export function server( opts:ServerOptions){
         })
     });
 
-    let serverDestine = createServer( _so => {
+    let responseGetawayApplication = createServer(_so => {
         let socket = asAnchorSocket( _so, {
             side: "server",
             method: "SET",
@@ -223,6 +223,8 @@ export function server( opts:ServerOptions){
                 ) return agentAuth;
                 return null;
             });
+
+            console.log( pack, auth );
             if(!auth ) return end();
 
             auth.apps[ pack.app ] = {
@@ -363,7 +365,7 @@ export function server( opts:ServerOptions){
         });
     });
 
-    [{serverAuth}, {serverDestine}, {clientOrigin: requestGetawaySever} ].forEach( (entry) => {
+    [{serverAuth}, {serverDestine: responseGetawayApplication}, {clientOrigin: requestGetawaySever} ].forEach( (entry) => {
         Object.entries( entry ).forEach( ([key, server]) => {
             server.on("error", err => {
                console.log( key, "error", err.message );
@@ -372,6 +374,6 @@ export function server( opts:ServerOptions){
     });
 
     serverAuth.listen( opts.authPort );
-    serverDestine.listen( opts.responsePort );
+    responseGetawayApplication.listen( opts.responsePort );
     requestGetawaySever.listen( opts.requestPort );
 }
