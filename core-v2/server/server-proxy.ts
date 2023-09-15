@@ -273,11 +273,12 @@ export function server( opts:ServerOptions){
             if( token.token.token !== auth.token ) return  end( "1012","Invalid token math" );
             if( token.token.status !== "active" ) return end("1013",`Invalid token status ${ token.token.status }`);
 
-            console.log( auth, token )
+
 
             if( !token.token.machine ){
                 token = tokenService.link( auth.agent, auth.machine )
             }
+            console.log( auth, token )
             if( token.token.machine !== auth.machine ) return end( "1014", "Token viculado com outro servidor" );
 
             let register = ()=>{
