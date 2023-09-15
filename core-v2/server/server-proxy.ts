@@ -171,12 +171,14 @@ export function server( opts:ServerOptions){
                     && agentAuth.agent === redirect.origin
                     && agentAuth.machine === redirect.machine
                     && !!agentAuth.apps[ redirect.app ]
-                    && (
-                        agentAuth.apps[ redirect.app ].grants.includes( redirect.origin )
-                        || agentAuth.apps[ redirect.app ].grants.includes( "*" )
-                    )
             })
             if(!auth ) return end();
+            let resolverApp = agents?.[ redirect.server ]?.apps?.[ redirect.app ];
+            if( !resolverApp ) return end();
+            let grants = resolverApp.grants.includes( "*" );
+            if( !grants ) grants = resolverApp.grants.includes( redirect.origin );
+            if( !grants ) return end();
+
 
             let datas = [];
             let listen = data =>{
