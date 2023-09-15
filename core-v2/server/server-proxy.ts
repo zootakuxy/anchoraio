@@ -232,15 +232,6 @@ export function server( opts:ServerOptions){
                 grants: pack.grants,
                 name: pack.app
             }
-
-            console.log( "responseGetawayApplication:new-get-away-response", {
-                grants: pack.grants,
-                auth: auth.id,
-                servers: auth.servers,
-                app: pack.app,
-                referer: auth.referer
-            })
-
             // console.log( "NEW SERVER RELEASE AUTH" );
             release( {
                 app: pack.app,

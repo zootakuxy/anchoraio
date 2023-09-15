@@ -96,7 +96,13 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
         });
 
         connection.on( "close", hadError => {
-            console.log( "connection with server end!")
+            console.log( "connection with server end!", {
+                hadError,
+                "this.status": this.status,
+                "this.result": this.result,
+
+            })
+
             if( (hadError && this.status !== "stopped" ) || ( this.result === "authenticated" && this.status === "started" )) setTimeout(()=>{
                 this.createAuthConnection();
             }, this.opts.restoreTimeout );
@@ -131,10 +137,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
         });
 
         this.on("isAlive", ( code ) => {
-            if( this.serverAuthConnection ) this.serverAuthConnection.write( JSON.stringify({
-                event:"isAlive",
-                args:[ code, this.authReferer ]
-            }))
+            if( this.serverAuthConnection ) this.serverAuthConnection.send( "isAlive", code, this.authReferer )
         });
 
         let openGetaways = ( availableServers:string[])=>{
@@ -208,6 +211,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
     }
 
     stop(){
+        console.log( "stopping agent server... ", this.identifier )
         this._status = "stopped";
         if( this.serverAuthConnection ) this.serverAuthConnection.end();
         if( this.agentProxy ) this.agentProxy.stop();
