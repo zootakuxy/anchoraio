@@ -19,6 +19,7 @@ export type App = {
 
 interface ApplicationListener {
     sets(app:App, old?:App )
+    delete( app:App )
 }
 
 export class ApplicationAIO  extends BaseEventEmitter<ApplicationListener>{
@@ -61,6 +62,23 @@ export class ApplicationAIO  extends BaseEventEmitter<ApplicationListener>{
         });
     }
 
+    deleteApplication( application:string ){
+        let app = this.getApplication( application );
+        if( !app ) return {
+            result: false,
+            message: "Application does not exists"
+        }
+
+        delete this.appsConf.apps[application];
+        this.saveChange();
+        this.notify( "delete", app );
+        return  {
+            result: true,
+            message: `Application ${ app.name } deleted success!`,
+            app: app
+        }
+    }
+
     setApplication ( app:App ){
         if( !app.port ) return {
             result:false,
@@ -80,13 +98,7 @@ export class ApplicationAIO  extends BaseEventEmitter<ApplicationListener>{
         let old = this.getApplication( app.name );
 
         this.appsConf.apps[ app.name ] = app;
-
-        fs.writeFileSync(
-            this.fileConf,
-            iniutil.identity(
-                ini.stringify( this.appsConf,  { whitespace: true })
-            )
-        );
+        this.saveChange()
 
         this.notify( "sets", app, old );
         return {
@@ -94,5 +106,14 @@ export class ApplicationAIO  extends BaseEventEmitter<ApplicationListener>{
             message: "success",
             app: app
         };
+    }
+
+    private saveChange(){
+        fs.writeFileSync(
+            this.fileConf,
+            iniutil.identity(
+                ini.stringify( this.appsConf,  { whitespace: true })
+            )
+        );
     }
 }

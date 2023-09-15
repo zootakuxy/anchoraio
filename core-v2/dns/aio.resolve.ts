@@ -5,6 +5,7 @@ import Path from "path";
 import {Detect, DirWatch} from "../utils/dir-watch";
 import {Defaults} from "../defaults";
 import {AppProtocol} from "../protocol";
+import {BaseEventEmitter, iniutil} from "kitres";
 
 export type AgentServer = {
     name:string,
@@ -25,7 +26,7 @@ export interface Resolved {
     aioHost:string,
     address:string,
     linkedService?:string,
-    linkedHosts?:string,
+    linkedHosts?:string[],
     linkedReference?:string
     getawayRelease?:number
     getawayReleaseTimeout?:number|"never"
@@ -59,7 +60,7 @@ export type AIOHostRegisterOptions = {
     getawayRelease?:number
     getawayReleaseTimeout?: TimeOut
     requestTimeout?: TimeOut
-    linkedHosts:string,
+    linkedHosts:string[],
     linkedReference:string
     getawayReleaseOnDiscover?:boolean
 }
@@ -72,7 +73,17 @@ export function asTimeOut( value:string ):TimeOut{
     return Math.trunc( _number );
 }
 
-export class AioResolver {
+export type DropResolveOptions = {
+    resolveAddress?:string,
+    resolveAioHost?:string
+}
+
+export interface AioResolverEvent {
+    drop( resolve:Resolved )
+    set( resolve:Resolved, old?:Resolved )
+}
+
+export class AioResolver extends BaseEventEmitter<AioResolverEvent>{
     opts:AioResolverOptions;
     localhost:Localhost;
     dirWatch:DirWatch;
@@ -83,6 +94,7 @@ export class AioResolver {
 
 
     constructor( opts:AioResolverOptions ) {
+        super();
         this.opts = opts;
         this.aioHost = { };
         this.address = { };
@@ -255,6 +267,9 @@ export class AioResolver {
             }
         }
 
+        let current = this.address[ resolved.address ];
+
+
         this.servers[ resolved.server ] = {
             name: resolved.application,
             identifier: resolved.identifier,
@@ -272,6 +287,8 @@ export class AioResolver {
         this.servers[ resolved.server ].resolved = Object.entries( this.address )
             .map( ([address, resolved]) =>resolved )
             .filter( value => value.server === resolved.server );
+
+        this.notify( "set", resolved, current );
         return resolved;
     }
 
@@ -291,11 +308,44 @@ export class AioResolver {
         let agentServer = this.servers[ agentServerName ];
 
         if( !agentServer ) return null;
-        return  this.aioHost[ aioHost ];
-
+        let resolved = this.aioHost[ aioHost ];
+        if( !resolved ) return null;
+        return JSON.parse( JSON.stringify( resolved ));;
     }
 
-    resolved(address:string ){
-        return this.address[ address ];
+    resolved( address:string ):Resolved{
+        let resolved = this.address[ address ];
+        if( !resolved ) return null;
+        return JSON.parse( JSON.stringify( resolved )) as Resolved;
+    }
+
+    dropResolve( opts:DropResolveOptions ){
+        let resolved = !!opts?.resolveAddress ? this.resolved( opts.resolveAddress )
+            : !!opts?.resolveAioHost ? this.aioResolve( opts.resolveAioHost )
+                : null;
+
+        let _result = ( res:boolean, message:string, hint?:Resolved|any )=>{
+            return {
+                result: res,
+                message: message,
+                hint: !res? hint : null,
+                resolved: (!!res? hint: null) as Resolved
+            }
+        }
+
+        if( !resolved ) return _result(false, "Not resolved!" );
+        let configs:ResolvedEntry = ini.parse( fs.readFileSync( resolved.reference ).toString( ));
+        if( !configs ) return _result( false, "Invalid entry file", configs );
+        if( !configs.aio ) return _result( false, "Invalid entry file missing aio", configs );
+        if( !configs.aio[ resolved.server ]  ) return _result( false, "Invalid entry file missing server", configs );
+        if( !configs.aio[ resolved.server ][ resolved.application ]  ) return _result( false, "Invalid entry file missing application", configs );
+
+        delete this.address[ resolved.address ];
+        delete this.aioHost[ resolved.aioHost ];
+        delete configs.aio[ resolved.server ][ resolved.application ];
+        fs.writeFileSync(resolved.reference, iniutil.stringify( configs ));
+        this.notify( "drop", resolved );
+
+        return _result( true, "successo", resolved );
     }
 }
