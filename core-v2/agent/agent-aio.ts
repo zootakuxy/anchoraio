@@ -113,6 +113,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
             }, this.opts.restoreTimeout );
         });
 
+
         connection.once("connect", () => {
             let token = this.token.tokenOf( this.opts.identifier );
             let auth:AuthAgent = {
@@ -121,7 +122,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
                 servers: this.servers,
                 machine: this.machine()
             }
-            connection.write(JSON.stringify( auth ));
+            connection.send( "auth", auth );
         });
 
         this.serverAuthConnection = connection;
@@ -166,7 +167,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
             this.availableRemoteServers.splice( index, 1 );
         });
 
-        this.on("auth", auth => {
+        this.on("authResult", auth => {
             this.result = "authenticated";
             this._auth = auth;
             this.authId = auth.id;
@@ -244,7 +245,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
         this._status = "staring";
         this.result = "pendent";
         this.createAuthConnection();
-        this.once("auth", auth => {
+        this.once("authResult", auth => {
             this.agentProxy.start();
             this.notify("agentStarted" )
         });

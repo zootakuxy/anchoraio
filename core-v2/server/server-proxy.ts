@@ -244,9 +244,7 @@ export function server( opts:ServerOptions){
             side: "server",
             method: "AUTH",
         });
-        socket.once( "data", data => {
-            let str = data.toString();
-            let auth:AuthAgent = JSON.parse( str );
+        socket.eventListener().on( "auth", auth => {
             let end = ( code?:string, message?:string )=>{
                 socket.write( JSON.stringify({
                     event:"authFailed",
@@ -286,7 +284,7 @@ export function server( opts:ServerOptions){
                 let servers = Object.keys( agents ).filter( value => auth.servers.includes( value ));
                 // let authResponse:AuthResult = ;
 
-                socket.send("auth", {
+                socket.send("authResult", {
                     id: socket.id(),
                     referer: referer,
                     availableServers: servers

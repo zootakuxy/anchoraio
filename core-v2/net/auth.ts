@@ -10,7 +10,8 @@ export type ServerReleaseOptions = {
     grants:string[]
 }
 export interface AuthSocketListener {
-    auth( auth:AuthResult )
+    auth( auth:AuthAgent )
+    authResult(auth:AuthResult )
     authFailed( code:string, message:string )
     isAlive( code:string, referer ),
     remoteServerOpen( server:string ),
