@@ -167,10 +167,6 @@ export function server( opts:ServerOptions){
             })
             if(!auth ) return end();
             let resolverApp = agents?.[ redirect.server ]?.apps?.[ redirect.app ];
-
-            console.log( {
-                resolverApp
-            })
             if( !resolverApp ) return end();
             let grants = resolverApp.grants.includes( "*" );
             if( !grants ) grants = resolverApp.grants.includes( redirect.origin );
