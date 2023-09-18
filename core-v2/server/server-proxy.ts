@@ -330,29 +330,37 @@ export function server( opts:ServerOptions){
             });
 
             current.connection.eventListener().on( "appServerRelease", (opts) => {
+                let notify = [];
                 Object.entries( agents ).forEach( ([ keyId, agent], index) => {
                     if( agent.agent === auth.agent ) return;
                     if( !agent.servers.includes( auth.agent ) ) return;
                     if( !opts.grants.includes( "*" ) || !opts.grants.includes( agent.agent ) ) return;
+                    notify.push( agent.agent );
                     agent.connection.send( "appServerRelease", {
                         app: opts.app,
                         grants: opts.grants,
                         server: auth.agent
                     } );
                 });
+                console.log( "server:appServerRelease", opts, notify.join("|"))
+
             });
 
             current.connection.eventListener().on( "appServerClosed", ( opts) => {
+                let notify = [];
                 Object.entries( agents ).forEach( ([ keyId, agent], index) => {
                     if( agent.agent === auth.agent ) return;
                     if( !agent.servers.includes( auth.agent ) ) return;
                     if( !opts.grants.includes( "*" ) || !opts.grants.includes( agent.agent ) ) return;
+                    notify.push( agent.agent );
                     agent.connection.send( "appServerClosed", {
                         grants: opts.grants,
                         server: auth.agent,
                         app: opts.app
-                    } );
+                    });
                 });
+
+                console.log( "server:appServerClosed", opts, notify.join("|"))
             });
 
 
