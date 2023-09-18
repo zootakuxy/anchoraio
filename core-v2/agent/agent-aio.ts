@@ -210,7 +210,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
             } );
         });
 
-        this.serverAuthConnection.eventListener().on("appServerRelease", (opts) => {
+        this.on("appServerRelease", (opts) => {
             let remote = this.availableRemoteServers.find( value => value.name );
             if( !remote ) this.availableRemoteServers.push( remote = {
                 name: opts.server,
@@ -219,7 +219,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
             remote.apps.add( opts.app );
         });
 
-        this.serverAuthConnection.eventListener().on("appServerClosed", opts => {
+        this.on("appServerClosed", opts => {
             let remote = this.availableRemoteServers.find( value => value.name );
             if( !remote ) this.availableRemoteServers.push( remote = {
                 name: opts.server,
