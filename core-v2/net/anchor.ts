@@ -5,11 +5,11 @@ export type ConnectionSide = "server"|"client";
 export type ConnectionStatus = "connected" | "disconnected";
 export type ConnectionMethod = "REQ"|"RESP"|"GET"|"SET"|"AUTH";
 
-export interface AnchorSocket<T> extends net.Socket {
+export interface AnchorSocket<P> extends net.Socket {
     id():string,
     status(): ConnectionStatus,
     anchored():boolean
-    props():T,
+    props( props?:P):P,
 }
 
 export function identifierOf( identifier:string ){
@@ -81,7 +81,8 @@ export function asAnchorConnect<P extends {} >( socket:net.Socket, opts:AsAnchor
 
     _socket.status = ()=>{ return _socket[ "_status" ]; }
     _socket.id = ()=>{ return _socket[ "_id" ]; }
-    _socket.props = () => {
+    _socket.props = ( props:P ) => {
+        if( !! props ) _socket[ "_props" ] = props;
         return _socket[ "_props" ];
     };
 
