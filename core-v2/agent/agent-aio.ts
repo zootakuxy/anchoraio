@@ -198,7 +198,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
             this.serverAuthConnection.send("appServerRelease", {
                 server: this.identifier,
                 app: app.name,
-                grants: app.grants
+                grants: app.grants||[ ]
             } );
         });
 
