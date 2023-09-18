@@ -209,7 +209,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
                 server: this.identifier,
                 app: app.name,
                 grants: app.grants
-            } );
+            });
         });
 
         this.on("appServerRelease", (opts) => {

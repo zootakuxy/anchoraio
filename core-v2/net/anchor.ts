@@ -114,6 +114,7 @@ export function asAnchorSocket<T extends {}, E extends { [ K in keyof E]:Callabl
         str.split( delimiter ).filter( value => value && value.length )
             .forEach( value => {
                 let original = value.replace( /\\\|/g, "|");
+                console.log({original} );
                 try {
                     let pack = JSON.parse( original );
                     if( !pack || typeof pack !== "object" ) return;

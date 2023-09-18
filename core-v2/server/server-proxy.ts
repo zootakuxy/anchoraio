@@ -360,7 +360,7 @@ export function server( opts:ServerOptions){
                     });
                 });
 
-                console.log( "server:appServerClosed", opts, notify.join("|"))
+                // console.log( "server:appServerClosed", opts, notify.join("|"))
             });
 
 
