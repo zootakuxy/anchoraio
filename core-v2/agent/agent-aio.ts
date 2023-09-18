@@ -195,6 +195,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
         });
 
         this.appServer.on("onAppRelease", app => {
+            console.log( "agent:onAppRelease", app );
             this.serverAuthConnection.send("appServerRelease", {
                 server: this.identifier,
                 app: app.name,
@@ -202,7 +203,8 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
             } );
         });
 
-        this.appServer.on( "onAppRelease", app => {
+        this.appServer.on( "onAppClosed", app => {
+            console.log( "agent:onAppClosed", app );
             this.serverAuthConnection.send( "appServerClosed", {
                 server: this.identifier,
                 app: app.name,
