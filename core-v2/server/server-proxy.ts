@@ -343,7 +343,6 @@ export function server( opts:ServerOptions){
                     } );
                 });
                 console.log( "server:appServerRelease", opts, notify.join("|"))
-
             });
 
             current.connection.eventListener().on( "appServerClosed", ( opts) => {

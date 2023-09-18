@@ -122,10 +122,10 @@ export function asAnchorSocket<T extends {}, E extends { [ K in keyof E]:Callabl
                     if( !keys.includes(EVENT_NAME) || ! keys.includes( EVENT_ARGS ) ) return;
                     if( typeof pack[EVENT_NAME ] !== "string" ) return;
 
-                    console.log( { original } );
 
 
                     if( !Array.isArray( pack[EVENT_ARGS] )) return;
+                    console.log( { original } );
                     opts.attache.notifySafe( pack[EVENT_NAME] as any, ...pack[EVENT_ARGS] as any );
                 } catch (e) {
                     console.log( e );
