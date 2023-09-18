@@ -327,7 +327,35 @@ export function server( opts:ServerOptions){
                     clearTimeout( timeoutCode );
                     return end( "1014","Another agent instance is connected!" );
                 }
-            })
+            });
+
+            current.connection.eventListener().on( "appServerRelease", (opts) => {
+                Object.entries( agents ).forEach( ([ keyId, agent], index) => {
+                    if( agent.agent === auth.agent ) return;
+                    if( !agent.servers.includes( auth.agent ) ) return;
+                    if( !opts.grants.includes( "*" ) || !opts.grants.includes( agent.agent ) ) return;
+                    agent.connection.send( "appServerRelease", {
+                        app: opts.app,
+                        grants: opts.grants,
+                        server: auth.agent
+                    } );
+                });
+            });
+
+            current.connection.eventListener().on( "appServerClosed", ( opts) => {
+                Object.entries( agents ).forEach( ([ keyId, agent], index) => {
+                    if( agent.agent === auth.agent ) return;
+                    if( !agent.servers.includes( auth.agent ) ) return;
+                    if( !opts.grants.includes( "*" ) || !opts.grants.includes( agent.agent ) ) return;
+                    agent.connection.send( "appServerClosed", {
+                        grants: opts.grants,
+                        server: auth.agent,
+                        app: opts.app
+                    } );
+                });
+            });
+
+
 
             let timeoutCheck = ()=>{
                 current.connection.eventListener().onceOff( "isAlive", listenResponse );

@@ -164,7 +164,10 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
             }
 
             console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost } RECEIVED-REQUEST`);
-            if( !this.aio.openedServes.includes( resolved.identifier  ) ) {
+            if( !this.aio.availableRemoteServers.find( value => {
+                return value.name === resolved.identifier
+                    && value.apps.has( resolved.application )
+            }) ) {
                 console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost } CANCELED | RESOLVE SERVER IS OFFLINE`);
 
                 request.end()
@@ -194,7 +197,7 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
                 })
             }
 
-            this.openDemandedGetaway( resolved, request );
+            this.releaseGetaways( resolved, request );
             this.connect( request, {
                 server: resolved.identifier,
                 application: resolved.application,
@@ -213,19 +216,17 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
         };
     }
 
-    private openDemandedGetaway( resolved:Resolved, request:AnchorSocket<{}, any> ){
+    private releaseGetaways( resolved:Resolved, request:AnchorSocket<{}, any> ){
         let needGetAway = this.needGetAway[ resolved.identifier ][ resolved.application ];
         if( !needGetAway.hasRequest ) {
             console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost }  REQUIRING GETAWAY`)
             if(needGetAway.timeout ) clearTimeout( needGetAway.timeout )
             needGetAway.hasRequest = true;
-            for (let i = 0; i < 1; i++) {
-                this.openGetAway( {
-                    server: resolved.identifier,
-                    application: resolved.application,
-                    autoReconnect: false
-                }, resolved )
-            }
+            this.openGetAway( {
+                server: resolved.identifier,
+                application: resolved.application,
+                autoReconnect: false
+            }, resolved )
 
             for (let i = 0; i < resolved.getawayRelease; i++) {
                 this.openGetAway( {
@@ -340,7 +341,10 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
     public openGetAway ( opts:GetAwayOptions, resolved:Resolved ){
         let hasRequest = this.needGetAway[ opts.server ][ opts.application ].hasRequest;
         if( resolved.getawayReleaseOnDiscover ) hasRequest = true;
-        let includeServers = this.aio.openedServes.includes( opts.server )
+        let includeServers = this.aio.availableRemoteServers.find(  value => {
+            return value.name === opts.server
+                && value.apps.has( resolved.application );
+        } )
         let remotelyOnly = resolved.identifier === this.aio.identifier && this.opts.directConnection === "on";
 
         if(!includeServers) return;
@@ -404,6 +408,7 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
             }
         });
     }
+
     start(){
         this.anchor.on( "connection", this._connectionListener );
         let _ports:number[];

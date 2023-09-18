@@ -4,12 +4,19 @@ export type AuthResult = {
     availableServers:string[]
 }
 
+export type ServerReleaseOptions = {
+    server:string,
+    app:string,
+    grants:string[]
+}
 export interface AuthSocketListener {
     auth( auth:AuthResult )
     authFailed( code:string, message:string )
     isAlive( code:string, referer ),
     remoteServerOpen( server:string ),
-    remoteServerClosed( server:string )
+    remoteServerClosed( server:string ),
+    appServerRelease( opts:ServerReleaseOptions ),
+    appServerClosed( opts:ServerReleaseOptions )
 }
 
 

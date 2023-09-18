@@ -25,6 +25,11 @@ interface AgentAioListener extends AuthSocketListener {
     agentStop()
 }
 
+export type AvailableServer = {
+    name:string,
+    apps:Set<string>
+};
+
 export class AgentAio extends BaseEventEmitter<AgentAioListener > {
     private readonly agentProxy:AgentGetaway;
     private token:TokenService;
@@ -37,7 +42,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
     public readonly aioResolve:AioResolver;
     public apps:ApplicationAIO;
     public authId:string;
-    public openedServes:string[] = []
+    public availableRemoteServers:AvailableServer[] = []
     private _auth:AuthResult;
 
 
@@ -128,7 +133,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
             if( this.result !== "authenticated" ) return;
             if( !!old ){
                 this.appServer.closeApp( old ).then( value => {
-                    this.appServer.openApplication( app );
+                    this.appServer.releaseApplication( app );
                 })
             }
         });
@@ -143,50 +148,45 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
             if( this.serverAuthConnection ) this.serverAuthConnection.send( "isAlive", code, this.authReferer )
         });
 
-        let openGetaways = ( availableServers:string[])=>{
-            Object.entries( this.aioResolve.address ).filter( ([address, resolved]) => {
-                return availableServers.includes( resolved.identifier );
-            }).forEach( ([address, resolved], index) => {
-                for (let i = 0; i < resolved.getawayRelease; i++) {
-                    this.agentProxy.openGetAway( {
-                        server: resolved.identifier,
-                        application: resolved.application,
-                        autoReconnect: true
-                    }, resolved )
-                }
-            });
-        }
-
 
         this.on("remoteServerOpen", server => {
             console.log( "ServerOpen", server );
-            this.openedServes.push( server );
-            openGetaways( [ server ] );
+            if( this.availableRemoteServers.find( value => value.name === server )){
+                this.availableRemoteServers.push( {
+                    name: server,
+                    apps: new Set( )
+                });
+            }
         });
 
         this.on( "remoteServerClosed", server => {
             console.log( "serverClose", server );
-            let index = this.openedServes.indexOf( server );
+            let index = this.availableRemoteServers.findIndex( value => value.name === server );
             if( index === -1 ) return;
-            this.openedServes.splice( index, 1 );
+            this.availableRemoteServers.splice( index, 1 );
         });
 
         this.on("auth", auth => {
             this.result = "authenticated";
             this._auth = auth;
             this.authId = auth.id;
-            this.openedServes = auth.availableServers;
-            if( this.opts.directConnection === "off" ) this.openedServes.push( this.identifier );
+            this.availableRemoteServers = [];
+            auth.availableServers.forEach( value => {
+                this.availableRemoteServers.push({
+                    name: value,
+                    apps: new Set()
+                })
+            });
+
+            if( this.opts.directConnection === "off" ) this.availableRemoteServers.push( {
+                name: this.identifier,
+                apps: new Set( this.apps.applications().map( value => value.name ) )
+            });
+
             this._status = "started";
             this.apps.applications().forEach( application => {
-                console.log( "open-application", application.name, application.address, application.port )
-                let releases =application.releases;
-                if( !releases ) releases = Defaults.serverRelease||1;
-                for ( let i = 0 ; i< releases; i++ ){
-                    this.appServer.openApplication( application )
-                }
+               this.appServer.releaseApplication( application );
             });
-            openGetaways( this.openedServes );
         });
 
         this.on( "authFailed", (code, message) => {
@@ -194,6 +194,39 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
             console.log( code, message );
         });
 
+        this.appServer.on("onAppRelease", app => {
+            this.serverAuthConnection.send("appServerRelease", {
+                server: this.identifier,
+                app: app.name,
+                grants: app.grants
+            } );
+        });
+
+        this.appServer.on( "onAppRelease", app => {
+            this.serverAuthConnection.send( "appServerClosed", {
+                server: this.identifier,
+                app: app.name,
+                grants: app.grants
+            } );
+        });
+
+        this.serverAuthConnection.eventListener().on("appServerRelease", (opts) => {
+            let remote = this.availableRemoteServers.find( value => value.name );
+            if( !remote ) this.availableRemoteServers.push( remote = {
+                name: opts.server,
+                apps: new Set()
+            });
+            remote.apps.add( opts.app );
+        });
+
+        this.serverAuthConnection.eventListener().on("appServerClosed", opts => {
+            let remote = this.availableRemoteServers.find( value => value.name );
+            if( !remote ) this.availableRemoteServers.push( remote = {
+                name: opts.server,
+                apps: new Set()
+            });
+            remote.apps.delete( opts.app )
+        });
         this.init = ()=>{};
     }
 

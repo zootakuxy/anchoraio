@@ -1,14 +1,13 @@
-import {App} from "./index";
+import {App} from "./app";
 import net from "net";
 import {BaseEventEmitter} from "kitres/src/core/util";
 import {AgentAio} from "../agent-aio";
 import {asAnchorSocket, AnchorSocket, identifierOf, anchor, ApplicationGetawayAuth} from "../../net";
-import {AuthIO} from "../../net";
-import {string} from "yargs";
-import machine from "node-machine-id";
+import {Defaults} from "../../defaults";
 
 export interface AppProxyEvent{
-
+    onAppRelease( app:App ),
+    onAppClosed( app:App )
 }
 
 export class AppServer extends BaseEventEmitter<AppProxyEvent>{
@@ -38,7 +37,11 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                 appSocket.props().appStatus = "stopped";
                 appSocket.on( "close", hadError => {
                     iCounts--;
-                    if( iCounts === 0 ) return resolve( sockets);
+                    if( iCounts === 0 ){
+                        this.notifySafe( "onAppClosed", app );
+                        resolve( sockets );
+                        return;
+                    }
                 });
                 appSocket.end( () => {
                     console.log( "application connection end", appSocket.props().appName );
@@ -47,6 +50,15 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
         })
     }
 
+    public releaseApplication( app:App ){
+        console.log( "open-application", app.name, app.address, app.port )
+        let releases =app.releases;
+        if( !releases ) releases = Defaults.serverRelease||1;
+        for ( let i = 0 ; i< releases; i++ ){
+            this.openApplication( app )
+        }
+        this.notify("onAppRelease", app );
+    }
 
     openApplication ( app:App ){
         let responseGetaway = asAnchorSocket( net.connect( {
