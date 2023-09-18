@@ -176,9 +176,6 @@ export function server( opts:ServerOptions){
             if( !grants ) grants = resolverApp.grants.includes( redirect.origin );
             if( !grants ) return end();
 
-            console.log( "requestGetawaySever:redirect.server", agents[ redirect.server ])
-
-
             let datas = [];
             let listen = data =>{
                 datas.push( data );
