@@ -355,9 +355,10 @@ export function server( opts:ServerOptions){
             let notify = [];
             Object.entries( agents ).forEach( ([ keyId, agent], index) => {
                 if( agent.agent === auth.agent ) return;
-                console.log( "notifyClientApplicationOnline",  agent.agent );
                 if( !agent.servers.includes( auth.agent ) ) return;
-                if( !opts.grants.includes( "*" ) || !opts.grants.includes( agent.agent ) ) return;
+                console.log( "notifyClientApplicationOnline",  agent.agent );
+                let grants = opts.grants.includes( "*" ) || opts.grants.includes( agent.agent )
+                if( !grants ) return;
                 notify.push( agent.agent );
                 agent.connection.send( "appServerRelease", {
                     app: opts.app,
