@@ -375,6 +375,10 @@ export function server( opts:ServerOptions){
             current.connection.send( "isAlive", checkAliveCode, null );
         });
 
+        socket.on( "data", data => {
+            console.log( data.toString() );
+        })
+
         socket.on( "close", () => {
             let agentServer = socket[ "agentServer" ];
             let referer = socket[ "referer" ];
