@@ -128,6 +128,7 @@ export function asAnchorSocket<T extends {}, E extends { [ K in keyof E]:Callabl
                     console.log( `NOTIFY:ANCHOR-POINT ${opts.side} | ${opts.method}`, pack[ EVENT_NAME ], pack[ EVENT_ARGS ] )
                     opts.attache.notify( pack[EVENT_NAME] as any, ...pack[EVENT_ARGS] as any );
                 } catch (e) {
+                    console.log( "ERROR-PARSE", original )
                     console.log( e );
                 }
             });
