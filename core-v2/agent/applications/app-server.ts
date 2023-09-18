@@ -28,16 +28,23 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
         this.appsConnections = {};
     }
 
-    closeApp( app:App ){
-        Object.entries( this.appsConnections ).filter( ([id, appSocket], index) => {
-            return appSocket.props().appName === app.name;
-        }).map( ([id, appSocket]) => appSocket )
-            .forEach( appSocket => {
+    closeApp( app:App ):Promise<AnchorSocket<any, any>[]>{
+        return new Promise( resolve => {
+            let sockets = Object.entries( this.appsConnections ).filter( ([id, appSocket], index) => {
+                return appSocket.props().appName === app.name;
+            }).map( ([id, appSocket]) => appSocket );
+            let iCounts = sockets.length;
+            sockets.forEach( appSocket => {
                 appSocket.props().appStatus = "stopped";
+                appSocket.on( "close", hadError => {
+                    iCounts--;
+                    if( iCounts === 0 ) return resolve( sockets);
+                });
                 appSocket.end( () => {
                     console.log( "application connection end", appSocket.props().appName );
                 });
             })
+        })
     }
 
 

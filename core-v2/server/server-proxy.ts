@@ -295,7 +295,8 @@ export function server( opts:ServerOptions){
                 Object.entries( agents ).forEach( ([ keyId, agent], index) => {
                     if( agent.agent === auth.agent ) return;
                     if( !agent.servers.includes( auth.agent ) ) return;
-                    agent.connection.send("remoteServerOpen", auth.agent );
+                    let apps = [ ];
+                    if( apps.length ) agent.connection.send("remoteServerOpen", auth.agent );
                 });
 
                 socket.on( "close", hadError => {

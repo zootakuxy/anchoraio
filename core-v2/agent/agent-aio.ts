@@ -127,13 +127,16 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
             if( this.status !== "started" )  return;
             if( this.result !== "authenticated" ) return;
             if( !!old ){
-                this.appServer.closeApp( old );
+                this.appServer.closeApp( old ).then( value => {
+                    this.appServer.openApplication( app );
+                })
             }
-            this.appServer.openApplication( app );
         });
 
         this.apps.on( "delete", app => {
-            this.appServer.closeApp( app );
+            this.appServer.closeApp( app ).then( value => {
+                console.log( "All socket closed!" );
+            });
         });
 
         this.on("isAlive", ( code ) => {
