@@ -117,11 +117,13 @@ export function asAnchorSocket<T extends {}, E extends { [ K in keyof E]:Callabl
                 try {
                     let pack = JSON.parse( original );
                     if( !pack || typeof pack !== "object" ) return;
-                    console.log({original} );
 
                     let keys = Object.keys( pack );
                     if( !keys.includes(EVENT_NAME) || ! keys.includes( EVENT_ARGS ) ) return;
                     if( typeof pack[EVENT_NAME ] !== "string" ) return;
+
+                    console.log( { original } );
+
 
                     if( !Array.isArray( pack[EVENT_ARGS] )) return;
                     opts.attache.notifySafe( pack[EVENT_NAME] as any, ...pack[EVENT_ARGS] as any );
