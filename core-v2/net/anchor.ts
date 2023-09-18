@@ -127,7 +127,7 @@ export function asListenableAnchorConnect<
         str.split( delimiter ).filter( value => value && value.length )
             .forEach( value => {
                 let original = value.replace( /\\\|/g, "|");
-                console.log( `NOTIFY:ANCHOR-POINT ${opts.side} | ${opts.method}`, original, opts.attache.events().join("|") )
+                console.log( `NOTIFY:ANCHOR-POINT ${opts.side} | ${opts.method}`, original, [...opts.attache.events()].join("|") )
 
                 try {
                     let pack = JSON.parse( original );
