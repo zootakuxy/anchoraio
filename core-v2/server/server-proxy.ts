@@ -351,6 +351,7 @@ export function server( opts:ServerOptions){
         });
 
         socket.eventListener().on( "appServerRelease", (opts) => {
+            console.log( "server:appServerRelease->enter", opts )
             let auth = socket.props();
             let notify = [];
             Object.entries( agents ).forEach( ([ keyId, agent], index) => {
@@ -368,6 +369,7 @@ export function server( opts:ServerOptions){
         });
 
         socket.eventListener().on( "appServerClosed", ( opts) => {
+            console.log( "server:appServerClosed->enter", opts )
             let auth = socket.props();
             let notify = [];
             Object.entries( agents ).forEach( ([ keyId, agent], index) => {
