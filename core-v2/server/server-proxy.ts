@@ -164,6 +164,8 @@ export function server( opts:ServerOptions){
             //Modo waitResponse server
             let redirect:RequestGetawayAuth = JSON.parse( str );
 
+            console.log( redirect );
+
 
             let auth = Object.entries( agents )
                 .map( value => value[1])
