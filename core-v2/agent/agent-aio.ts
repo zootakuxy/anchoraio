@@ -217,6 +217,8 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
                 apps: new Set()
             });
             remote.apps.add( opts.app );
+            console.log( "agent:appServerRelease", opts )
+
         });
 
         this.on("appServerClosed", opts => {
@@ -225,6 +227,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
                 name: opts.server,
                 apps: new Set()
             });
+            console.log( "agent:appServerClosed", opts )
             remote.apps.delete( opts.app )
         });
         this.init = ()=>{};
