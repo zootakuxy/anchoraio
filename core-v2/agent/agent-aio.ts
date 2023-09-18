@@ -197,7 +197,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
             console.log( "agent:onAppRelease", app );
             this.serverAuthConnection.send("appServerRelease", {
                 server: this.identifier,
-                app: app.name,
+                application: app.name,
                 grants: app.grants||[ ]
             } );
         });
@@ -206,7 +206,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
             console.log( "agent:onAppClosed", app );
             this.serverAuthConnection.send( "appServerClosed", {
                 server: this.identifier,
-                app: app.name,
+                application: app.name,
                 grants: app.grants||[ ]
             });
         });
@@ -217,7 +217,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
                 name: opts.server,
                 apps: new Set()
             });
-            remote.apps.add( opts.app );
+            remote.apps.add( opts.application );
             console.log( "agent:appServerRelease", opts )
 
         });
@@ -229,7 +229,8 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
                 apps: new Set()
             });
             console.log( "agent:appServerClosed", opts )
-            remote.apps.delete( opts.app )
+            remote.apps.delete( opts.application );
+            this.agentProxy.closeGetaway( opts );
         });
         this.init = ()=>{};
     }

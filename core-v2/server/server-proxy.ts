@@ -361,7 +361,7 @@ export function server( opts:ServerOptions){
                 if( !grants ) return;
                 notify.push( agent.agent );
                 agent.connection.send( "appServerRelease", {
-                    app: opts.app,
+                    application: opts.application,
                     grants: opts.grants,
                     server: auth.agent
                 } );
@@ -377,7 +377,7 @@ export function server( opts:ServerOptions){
                 agent.connection.send( "appServerClosed", {
                     grants: opts.grants,
                     server: auth.agent,
-                    app: opts.app
+                    application: opts.application
                 });
             });
 

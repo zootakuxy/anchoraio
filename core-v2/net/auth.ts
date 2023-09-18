@@ -6,7 +6,7 @@ export type AuthResult = {
 
 export type ServerReleaseOptions = {
     server:string,
-    app:string,
+    application:string,
     grants:string[]
 }
 export interface AuthSocketListener {

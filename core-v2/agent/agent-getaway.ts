@@ -63,8 +63,12 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
     private opts:AgentProxyOptions;
     private anchor:AIOServer;
     private _connectionListener:<T>( socket:AnchorSocket<T> ) => void
-    private readonly getawaysConnections: {
-        [p:string]:AnchorSocket<{}>
+    private readonly requestConnections: {
+        [p:string]:AnchorSocket<{
+            server?:string,
+            application?:string
+            address?:string
+        }>
     };
 
     private readonly needGetAway : {
@@ -100,7 +104,7 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
         this.anchor = new AIOServer({
             safe: true
         });
-        this.getawaysConnections = {};
+        this.requestConnections = {};
 
         this.getaway = new Proxy({},{
             get(target: {}, server: string | symbol, receiver: any): any {
@@ -145,11 +149,11 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
 
     private listen(){
         this._connectionListener = _so => {
-            let request = asAnchorConnect( _so, {
+            let request:typeof this.requestConnections[number] = asAnchorConnect( _so, {
                 side: "server",
                 method: "REQ",
             } );
-            this.getawaysConnections[ request.id() ] = request;
+            this.requestConnections[ request.id() ] = request;
             const remoteAddressParts = request.address()["address"].split( ":" );
             const address =  remoteAddressParts[ remoteAddressParts.length-1 ];
             // console.log( "NEW REQUEST ON AGENT IN ADDRESS", address );
@@ -176,7 +180,7 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
             }
             request.on("data", dataListen );
             request.on("close", hadError => {
-                delete this.getawaysConnections[ request.id() ];
+                delete this.requestConnections[ request.id() ];
             })
 
             //get server and app by address
@@ -186,6 +190,12 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
             request.on( "error", err => {
                 console.log( "request-error", err.message );
             });
+
+            request.props({
+                server: resolved.server,
+                application: resolved.application,
+                address: resolved.address
+            })
 
             if( resolved.identifier === this.aio.identifier && this.opts.directConnection === "on" ){
                 return this.directConnect( request, {
@@ -421,7 +431,7 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
     stop(){
         this.status = "stopped";
         this.anchor.off( "connection", this._connectionListener );
-        Object.entries( this.getawaysConnections ).forEach( ([key, request], index) => {
+        Object.entries( this.requestConnections ).forEach( ([key, request], index) => {
             request.end();
         });
         this.anchor.close( err => {
@@ -429,4 +439,18 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
             else console.log( "Anchor server stop with success!" );
         });
     }
+
+    closeGetaway( opts: CloseGetawayOptions) {
+        let needGetAway = this.needGetAway[ opts.server ][ opts.application ];
+        needGetAway.hasRequest = false;
+        if(needGetAway.timeout ) clearTimeout( needGetAway.timeout )
+        Object.entries( this.getaway[ opts.server ] [ opts.application ] ).forEach( ([key, getaway]) => {
+            getaway.connection.end();
+        })
+    }
+}
+
+export type CloseGetawayOptions = {
+    application:string,
+    server:string
 }
