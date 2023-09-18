@@ -128,7 +128,6 @@ export function asListenableAnchorConnect<
                 let original = value.replace( /\\\|/g, "|");
                 console.log( `NOTIFY:ANCHOR-POINT ${opts.side} | ${opts.method}`, original )
 
-
                 try {
                     let pack = JSON.parse( original );
                     if( !pack || typeof pack !== "object" ) return;
@@ -136,8 +135,6 @@ export function asListenableAnchorConnect<
                     let keys = Object.keys( pack );
                     if( !keys.includes(EVENT_NAME) || ! keys.includes( EVENT_ARGS ) ) return;
                     if( typeof pack[EVENT_NAME ] !== "string" ) return;
-
-
 
                     if( !Array.isArray( pack[EVENT_ARGS] )) return;
                     console.log( `NOTIFY:ANCHOR-POINT ${opts.side} | ${opts.method}`, pack[ EVENT_NAME ], pack[ EVENT_ARGS ] )
