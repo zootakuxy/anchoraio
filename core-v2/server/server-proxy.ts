@@ -3,14 +3,13 @@ import {nanoid} from "nanoid";
 import {TokenService} from "../services";
 import {TokenOptions} from "../../aio/opts/opts-token";
 import {
-    createAnchorConnect,
     AnchorSocket,
     anchor,
     asListenableAnchorConnect,
     asAnchorConnect,
     ListenableAnchorSocket
 } from "../net";
-import {AuthAgent, AuthSocketListener, RequestGetawayAuth, ApplicationGetawayAuth} from "../net";
+import { AuthSocketListener, RequestGetawayAuth, ApplicationGetawayAuth} from "../net";
 export type ServerOptions = TokenOptions & {
     responsePort:number,
     requestPort:number
@@ -366,7 +365,6 @@ export function server( opts:ServerOptions){
                     server: auth.agent
                 } );
             });
-            console.log( "server:appServerRelease", opts, notify.join("|"))
         });
 
         socket.eventListener().on( "appServerClosed", ( opts) => {
@@ -375,8 +373,6 @@ export function server( opts:ServerOptions){
             Object.entries( agents ).forEach( ([ keyId, agent], index) => {
                 if( agent.agent === auth.agent ) return;
                 if( !agent.servers.includes( auth.agent ) ) return;
-                if( !opts.grants.includes( "*" ) || !opts.grants.includes( agent.agent ) ) return;
-                notify.push( agent.agent );
                 agent.connection.send( "appServerClosed", {
                     grants: opts.grants,
                     server: auth.agent,
@@ -384,7 +380,6 @@ export function server( opts:ServerOptions){
                 });
             });
 
-            console.log( "server:appServerClosed", opts, notify.join("|"))
         });
 
 
