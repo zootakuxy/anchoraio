@@ -1,13 +1,12 @@
 import {AgentGetaway,AgentProxyOptions} from "./agent-getaway";
 import {TokenService} from "../services";
 import {TokenOptions} from "../../aio/opts/opts-token";
-import net from "net";
 import {BaseEventEmitter} from "kitres";
 import {AioResolver} from "../dns";
 import {ApplicationAIO} from "./applications";
 import {Defaults} from "../defaults";
 import {AppServer} from "./applications";
-import {asAnchorSocket, AnchorSocket} from "../net";
+import {createListenableAnchorConnect, ListenableAnchorSocket} from "../net";
 import {AuthAgent, AuthResult, AuthSocketListener} from "../net";
 
 export type AgentAioOptions = AgentProxyOptions& TokenOptions& {
@@ -33,7 +32,7 @@ export type AvailableServer = {
 export class AgentAio extends BaseEventEmitter<AgentAioListener > {
     private readonly agentProxy:AgentGetaway;
     private token:TokenService;
-    private serverAuthConnection:AnchorSocket<{}, AgentAioListener>;
+    private serverAuthConnection:ListenableAnchorSocket<{}, AgentAioListener>;
     public opts:AgentAioOptions;
     public appServer:AppServer;
 
@@ -85,10 +84,9 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
     }
 
     private createAuthConnection(){
-        let connection = asAnchorSocket( net.connect({
+        let connection = createListenableAnchorConnect(  {
             port: this.opts.authPort,
-            host: this.opts.serverHost
-        }), {
+            host: this.opts.serverHost,
             side: "client",
             method: "AUTH",
             attache: this.listener()

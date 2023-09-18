@@ -2,7 +2,14 @@ import { createServer } from "net";
 import {nanoid} from "nanoid";
 import {TokenService} from "../services";
 import {TokenOptions} from "../../aio/opts/opts-token";
-import {asAnchorSocket, AnchorSocket, anchor} from "../net";
+import {
+    createAnchorConnect,
+    AnchorSocket,
+    anchor,
+    asListenableAnchorConnect,
+    asAnchorConnect,
+    ListenableAnchorSocket
+} from "../net";
 import {AuthAgent, AuthSocketListener, RequestGetawayAuth, ApplicationGetawayAuth} from "../net";
 export type ServerOptions = TokenOptions & {
     responsePort:number,
@@ -15,12 +22,12 @@ type ServerSlot<T> = {
     grants:string[],
     app:string|number,
     busy:boolean,
-    connect:AnchorSocket<T, any>
+    connect:AnchorSocket<T>
 };
 
 type WaitConnection<T> = {
     resolve:( slot:ServerSlot<T> )=>void;
-    connection:AnchorSocket<T, any>
+    connection:AnchorSocket<T>
     resolved?: boolean,
     id?:string,
     agent:string
@@ -31,7 +38,7 @@ type App = {
     grants:string[]
 }
 type AgentAuthenticate<T> = {
-    connection:AnchorSocket<T, AuthSocketListener >,
+    connection:ListenableAnchorSocket<T, AuthSocketListener >,
     id:string,
     referer:string,
     agent:string,
@@ -143,7 +150,7 @@ export function server( opts:ServerOptions){
     } = {}
 
     let requestGetawaySever = createServer(_so => {
-        let socket = asAnchorSocket( _so, {
+        let socket = asAnchorConnect( _so, {
             side: "server",
             method: "GET",
         });
@@ -196,7 +203,7 @@ export function server( opts:ServerOptions){
     });
 
     let responseGetawayApplication = createServer(_so => {
-        let socket = asAnchorSocket( _so, {
+        let socket = asAnchorConnect( _so, {
             side: "server",
             method: "SET",
         } );
@@ -240,7 +247,7 @@ export function server( opts:ServerOptions){
     let tokenService = new TokenService( opts );
 
     let serverAuth = createServer( _ns => {
-        let socket = asAnchorSocket<any, AuthSocketListener>( _ns, {
+        let socket = asListenableAnchorConnect<any, AuthSocketListener>( _ns, {
             side: "server",
             method: "AUTH",
         });

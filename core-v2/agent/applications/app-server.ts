@@ -2,7 +2,7 @@ import {App} from "./app";
 import net from "net";
 import {BaseEventEmitter} from "kitres/src/core/util";
 import {AgentAio} from "../agent-aio";
-import {asAnchorSocket, AnchorSocket, identifierOf, anchor, ApplicationGetawayAuth} from "../../net";
+import {createAnchorConnect, AnchorSocket, identifierOf, anchor, ApplicationGetawayAuth} from "../../net";
 import {Defaults} from "../../defaults";
 
 export interface AppProxyEvent{
@@ -18,7 +18,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             appPort: number,
             appStatus: "started"|"stopped",
             anchorPiped: boolean
-    }, any> };
+    }> };
     private aio:AgentAio;
 
     constructor( aio:AgentAio ) {
@@ -27,7 +27,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
         this.appsConnections = {};
     }
 
-    closeApp( app:App ):Promise<AnchorSocket<any, any>[]>{
+    closeApp( app:App ):Promise<AnchorSocket<any>[]>{
         return new Promise( resolve => {
             let sockets = Object.entries( this.appsConnections ).filter( ([id, appSocket], index) => {
                 return appSocket.props().appName === app.name;
@@ -61,12 +61,11 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
     }
 
     openApplication ( app:App ){
-        let responseGetaway = asAnchorSocket( net.connect( {
-            host: this.aio.opts.serverHost,
-            port: this.aio.opts.responsePort
-        }), {
+        let responseGetaway = createAnchorConnect(  {
             side: "client",
             method: "SET",
+            host: this.aio.opts.serverHost,
+            port: this.aio.opts.responsePort,
             props: {
                 appName: app.name,
                 appAddress: app.address,
@@ -104,22 +103,20 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             responseGetaway.on( "data", listenData );
             responseGetaway.once( "data", busy => {
                 try {
-                    let appConnection = asAnchorSocket(net.connect({
+                    let appConnection = createAnchorConnect( {
                         host: app.address,
-                        port: app.port
-                    }), {
+                        port: app.port,
                         side: "client",
                         method: "RESP",
                     });
                     appConnection.on( "connect", () => {
                         anchor( `${app.name}.${ this.aio.identifier }`, "AGENT-SERVER", responseGetaway, appConnection, datas, [] );
                         responseGetaway.off( "data", listenData );
-                        responseGetaway.props().anchorPiped = true;
                         console.log( `new connection with ${ "any" } established for ${ app.name }` );
                     });
                     appConnection.on( "error", err => {
                         console.log("app-server-error", err.message );
-                        if( !responseGetaway.props().anchorPiped ){
+                        if( !responseGetaway.anchored() ){
                             responseGetaway.end();
                         }
                     });
