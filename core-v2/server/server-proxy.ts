@@ -128,7 +128,6 @@ export function server( opts:ServerOptions){
             next.busy = true;
             delete serverSlots[server][app][ next.connect.id() ];
             wait.resolve( next );
-            // console.log( "CALLBACK APPLIED!")
             return;
         }
         waitConnections[server][app][ wait.connection.id() ] = wait;
@@ -156,7 +155,6 @@ export function server( opts:ServerOptions){
             let str = data.toString();
 
             //Modo waitResponse server
-            // console.log( "ON SERVER REDIRECT", data.toString() );
             let redirect:RequestGetawayAuth = JSON.parse( str );
 
 
@@ -167,12 +165,9 @@ export function server( opts:ServerOptions){
                     && agentAuth.agent === redirect.origin
                     && agentAuth.machine === redirect.machine
             })
-            console.log( {
-                auth:!!auth
-            });
             if(!auth ) return end();
             let resolverApp = agents?.[ redirect.server ]?.apps?.[ redirect.app ];
-            
+
             console.log( {
                 resolverApp
             })
@@ -214,7 +209,6 @@ export function server( opts:ServerOptions){
         } );
         socket.once( "data", data => {
             let str = data.toString();
-            // console.log( "ON RELEASE IN SERVER", str );
             let pack:ApplicationGetawayAuth = JSON.parse( str );
 
             let end = ()=>{
@@ -236,7 +230,6 @@ export function server( opts:ServerOptions){
                 grants: pack.grants,
                 name: pack.app
             }
-            // console.log( "NEW SERVER RELEASE AUTH" );
             release( {
                 app: pack.app,
                 server: pack.server,
@@ -244,7 +237,6 @@ export function server( opts:ServerOptions){
                 busy: false,
                 connect: socket,
             });
-            // console.log( "ON SERVER AGENT READY")
         });
 
         socket.on( "error", err => {
@@ -307,7 +299,6 @@ export function server( opts:ServerOptions){
                     availableServers: servers
                 } );
 
-                console.log( Object.values( agents ).map( value => value.agent ))
                 Object.entries( agents ).forEach( ([ keyId, agent], index) => {
                     if( agent.agent === auth.agent ) return;
                     if( !agent.servers.includes( auth.agent ) ) return;
