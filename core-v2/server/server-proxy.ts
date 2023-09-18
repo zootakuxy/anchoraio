@@ -351,10 +351,10 @@ export function server( opts:ServerOptions){
         });
 
         socket.eventListener().on( "appServerRelease", (opts) => {
-            console.log( "server:appServerRelease->enter", opts )
             let auth = socket.props();
             let notify = [];
             Object.entries( agents ).forEach( ([ keyId, agent], index) => {
+                console.log( "notifyClientApplicationOnline",  agent.agent );
                 if( agent.agent === auth.agent ) return;
                 if( !agent.servers.includes( auth.agent ) ) return;
                 if( !opts.grants.includes( "*" ) || !opts.grants.includes( agent.agent ) ) return;
@@ -369,7 +369,6 @@ export function server( opts:ServerOptions){
         });
 
         socket.eventListener().on( "appServerClosed", ( opts) => {
-            console.log( "server:appServerClosed->enter", opts )
             let auth = socket.props();
             let notify = [];
             Object.entries( agents ).forEach( ([ keyId, agent], index) => {
