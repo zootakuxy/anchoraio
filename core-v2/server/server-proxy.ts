@@ -251,7 +251,7 @@ export function server( opts:ServerOptions){
             side: "server",
             method: "AUTH",
         });
-        socket.eventListener().on( "auth", auth => {
+        socket.eventListener().once( "auth", auth => {
             let end = ( code?:string, message?:string )=>{
                 socket.write( JSON.stringify({
                     event:"authFailed",
@@ -326,6 +326,7 @@ export function server( opts:ServerOptions){
             }, 5000 );
 
             let listenResponse;
+
             current.connection.eventListener().once( "isAlive", listenResponse = (code, referer) => {
                 if( code === checkAliveCode && referer === current.referer ){
                     timeoutCheck = ()=>{};
@@ -334,7 +335,7 @@ export function server( opts:ServerOptions){
                 }
             });
 
-            current.connection.eventListener().on( "appServerRelease", (opts) => {
+            socket.eventListener().on( "appServerRelease", (opts) => {
                 let notify = [];
                 Object.entries( agents ).forEach( ([ keyId, agent], index) => {
                     if( agent.agent === auth.agent ) return;
@@ -350,7 +351,7 @@ export function server( opts:ServerOptions){
                 console.log( "server:appServerRelease", opts, notify.join("|"))
             });
 
-            current.connection.eventListener().on( "appServerClosed", ( opts) => {
+            socket.eventListener().on( "appServerClosed", ( opts) => {
                 let notify = [];
                 Object.entries( agents ).forEach( ([ keyId, agent], index) => {
                     if( agent.agent === auth.agent ) return;
