@@ -86,8 +86,6 @@ export function server( opts:ServerOptions){
         }
     } = createProxy();
 
-
-
     let release = ( slot:ServerSlot<{}> )=>  {
         console.log( `getaway response from ${ slot.server } to ${ slot.server} connected` );
 
@@ -174,6 +172,10 @@ export function server( opts:ServerOptions){
             });
             if(!auth ) return end();
             let resolverApp = agents?.[ redirect.server ]?.apps?.[ redirect.app ];
+            
+            console.log( {
+                resolverApp
+            })
             if( !resolverApp ) return end();
             let grants = resolverApp.grants.includes( "*" );
             if( !grants ) grants = resolverApp.grants.includes( redirect.origin );
