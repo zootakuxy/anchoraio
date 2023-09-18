@@ -37,8 +37,7 @@ type App = {
     name:string,
     grants:string[]
 }
-type AgentAuthenticate<T> = {
-    connection:ListenableAnchorSocket<T, AuthSocketListener >,
+type AgentAuthenticate = {
     id:string,
     referer:string,
     agent:string,
@@ -146,7 +145,9 @@ export function server( opts:ServerOptions){
     }
 
     let agents : {
-        [p:string]: AgentAuthenticate<{}>
+        [p:string]: AgentAuthenticate & {
+            connection:ListenableAnchorSocket<AgentAuthenticate, AuthSocketListener >,
+        }
     } = {}
 
     let requestGetawaySever = createServer(_so => {
@@ -251,6 +252,7 @@ export function server( opts:ServerOptions){
             side: "server",
             method: "AUTH",
         });
+
         socket.eventListener().once( "auth", auth => {
             let end = ( code?:string, message?:string )=>{
                 socket.write( JSON.stringify({
@@ -278,17 +280,20 @@ export function server( opts:ServerOptions){
                 socket[ "agentServer" ] = auth.agent;
                 if( !auth.servers ) auth.servers = [];
 
-                agents[ auth.agent ]  = {
+                let agentAuthenticate: AgentAuthenticate = {
                     id: socket.id(),
                     referer: referer,
-                    connection: socket,
                     agent: auth.agent,
                     servers: auth.servers,
                     machine: auth.machine,
                     apps:{}
                 };
+                socket.props( agentAuthenticate );
+                agents[ auth.agent ]  = Object.assign( agentAuthenticate, {
+                    connection: socket,
+                });
 
-                let servers = Object.keys( agents ).filter( value => auth.servers.includes( value ));
+                    let servers = Object.keys( agents ).filter( value => auth.servers.includes( value ));
                 // let authResponse:AuthResult = ;
 
                 socket.send("authResult", {
@@ -335,41 +340,6 @@ export function server( opts:ServerOptions){
                 }
             });
 
-            socket.eventListener().on( "appServerRelease", (opts) => {
-                let notify = [];
-                Object.entries( agents ).forEach( ([ keyId, agent], index) => {
-                    if( agent.agent === auth.agent ) return;
-                    if( !agent.servers.includes( auth.agent ) ) return;
-                    if( !opts.grants.includes( "*" ) || !opts.grants.includes( agent.agent ) ) return;
-                    notify.push( agent.agent );
-                    agent.connection.send( "appServerRelease", {
-                        app: opts.app,
-                        grants: opts.grants,
-                        server: auth.agent
-                    } );
-                });
-                console.log( "server:appServerRelease", opts, notify.join("|"))
-            });
-
-            socket.eventListener().on( "appServerClosed", ( opts) => {
-                let notify = [];
-                Object.entries( agents ).forEach( ([ keyId, agent], index) => {
-                    if( agent.agent === auth.agent ) return;
-                    if( !agent.servers.includes( auth.agent ) ) return;
-                    if( !opts.grants.includes( "*" ) || !opts.grants.includes( agent.agent ) ) return;
-                    notify.push( agent.agent );
-                    agent.connection.send( "appServerClosed", {
-                        grants: opts.grants,
-                        server: auth.agent,
-                        app: opts.app
-                    });
-                });
-
-                console.log( "server:appServerClosed", opts, notify.join("|"))
-            });
-
-
-
             let timeoutCheck = ()=>{
                 current.connection.eventListener().onceOff( "isAlive", listenResponse );
                 try { current.connection.destroy( new Error( "zombie socket" ) );
@@ -379,6 +349,42 @@ export function server( opts:ServerOptions){
 
             current.connection.send( "isAlive", checkAliveCode, null );
         });
+
+        socket.eventListener().on( "appServerRelease", (opts) => {
+            let auth = socket.props();
+            let notify = [];
+            Object.entries( agents ).forEach( ([ keyId, agent], index) => {
+                if( agent.agent === auth.agent ) return;
+                if( !agent.servers.includes( auth.agent ) ) return;
+                if( !opts.grants.includes( "*" ) || !opts.grants.includes( agent.agent ) ) return;
+                notify.push( agent.agent );
+                agent.connection.send( "appServerRelease", {
+                    app: opts.app,
+                    grants: opts.grants,
+                    server: auth.agent
+                } );
+            });
+            console.log( "server:appServerRelease", opts, notify.join("|"))
+        });
+
+        socket.eventListener().on( "appServerClosed", ( opts) => {
+            let auth = socket.props();
+            let notify = [];
+            Object.entries( agents ).forEach( ([ keyId, agent], index) => {
+                if( agent.agent === auth.agent ) return;
+                if( !agent.servers.includes( auth.agent ) ) return;
+                if( !opts.grants.includes( "*" ) || !opts.grants.includes( agent.agent ) ) return;
+                notify.push( agent.agent );
+                agent.connection.send( "appServerClosed", {
+                    grants: opts.grants,
+                    server: auth.agent,
+                    app: opts.app
+                });
+            });
+
+            console.log( "server:appServerClosed", opts, notify.join("|"))
+        });
+
 
         socket.on( "close", () => {
             let agentServer = socket[ "agentServer" ];
