@@ -354,8 +354,8 @@ export function server( opts:ServerOptions){
             let auth = socket.props();
             let notify = [];
             Object.entries( agents ).forEach( ([ keyId, agent], index) => {
-                console.log( "notifyClientApplicationOnline",  agent.agent );
                 if( agent.agent === auth.agent ) return;
+                console.log( "notifyClientApplicationOnline",  agent.agent );
                 if( !agent.servers.includes( auth.agent ) ) return;
                 if( !opts.grants.includes( "*" ) || !opts.grants.includes( agent.agent ) ) return;
                 notify.push( agent.agent );
