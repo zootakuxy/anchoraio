@@ -184,8 +184,10 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
 
             console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost } RECEIVED-REQUEST`);
             let resolveServer = this.aio.availableRemoteServers.find( value => {
-                return value.name === resolved.identifier
+                return value.server === resolved.identifier
             });
+
+            console.log( this.aio.availableRemoteServers, { resolveServer })
 
             //Servidor offline
             if( !resolveServer) {
@@ -358,7 +360,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
         let hasRequest = this.needGetAway[ opts.server ][ opts.application ].hasRequest;
         if( resolved.getawayReleaseOnDiscover ) hasRequest = true;
         let hasServerOnline = this.aio.availableRemoteServers.find(  value => {
-            return value.name === opts.server
+            return value.server === opts.server
                 && value.apps.has( resolved.application );
         } )
         let remotelyOnly = resolved.identifier === this.aio.identifier && this.opts.directConnection === "on";
