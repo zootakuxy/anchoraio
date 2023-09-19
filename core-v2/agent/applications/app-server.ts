@@ -1,13 +1,12 @@
 import {App} from "./app";
-import net from "net";
 import {BaseEventEmitter} from "kitres/src/core/util";
 import {AgentAio} from "../agent-aio";
-import {createAnchorConnect, AnchorSocket, identifierOf, anchor, ApplicationGetawayAuth} from "../../net";
+import {anchor, AnchorSocket, ApplicationGetawayAuth, createAnchorConnect, identifierOf} from "../../net";
 import {Defaults} from "../../defaults";
 
 export interface AppProxyEvent{
     onAppRelease( app:App ),
-    onAppClosed( app:App )
+    onAppClosed( application:string )
 }
 
 export class AppServer extends BaseEventEmitter<AppProxyEvent>{
@@ -27,10 +26,10 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
         this.appsConnections = {};
     }
 
-    closeApp( app:App ):Promise<AnchorSocket<any>[]>{
+    closeApp( application:string ):Promise<AnchorSocket<any>[]>{
         return new Promise( resolve => {
             let sockets = Object.entries( this.appsConnections ).filter( ([id, appSocket], index) => {
-                return appSocket.props().appName === app.name;
+                return appSocket.props().appName === application;
             }).map( ([id, appSocket]) => appSocket );
             let iCounts = sockets.length;
             sockets.forEach( appSocket => {
@@ -38,7 +37,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                 appSocket.on( "close", hadError => {
                     iCounts--;
                     if( iCounts === 0 ){
-                        this.notifySafe( "onAppClosed", app );
+                        this.notifySafe( "onAppClosed", application );
                         resolve( sockets );
                         return;
                     }
@@ -150,12 +149,14 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
         });
     }
 
+    closeAll() {
+        let apps = [...new Set(Object.entries( this.appsConnections ).map( ([key, appConnection], index) => {
+            return appConnection.props().appName;
+        }))];
+        apps.forEach( application => this.closeApp( application ))
+    }
+
     stop() {
-        Object.entries( this.appsConnections ).forEach( ([key, appConnection], index) => {
-            let appName = appConnection.props().appName;
-            appConnection.end( ()=>{
-                console.log( "application connection end", appName );
-            });
-        })
+        this.closeAll();
     }
 }

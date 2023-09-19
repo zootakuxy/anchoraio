@@ -4,6 +4,7 @@ import {BaseEventEmitter} from "kitres/src/core/util";
 import {Defaults} from "../../defaults";
 import {createAnchorConnect, AnchorSocket, identifierOf, anchor, RequestGetawayAuth, asAnchorConnect} from "../../net";
 import {AIOServer} from "../../net/server";
+import {application} from "express";
 
 export type AgentProxyOptions = {
     requestPort:number,
@@ -441,6 +442,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
     stop(){
         this.status = "stopped";
         this.anchor.off( "connection", this._connectionListener );
+        this.closeAll();
         Object.entries( this.requestConnections ).forEach( ([key, request], index) => {
             request.end();
         });
@@ -456,6 +458,17 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
         if(needGetAway.timeout ) clearTimeout( needGetAway.timeout )
         Object.entries( this.getaway[ opts.server ] [ opts.application ] ).forEach( ([key, getaway]) => {
             getaway.connection.end();
+        })
+    }
+
+    closeAll() {
+        Object.keys( this.getaway ).forEach( server => {
+            Object.keys( this.getaway[ server ] ).forEach( application => {
+                this.closeGetaway({
+                    application,
+                    server
+                })
+            })
         })
     }
 }

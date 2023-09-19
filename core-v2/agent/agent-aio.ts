@@ -104,8 +104,10 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
                 "this.status": this.status,
                 "this.result": this.result,
 
-            })
+            });
 
+            this.appServer.closeAll();
+            this.agentProxy.closeAll();
             if( (hadError && this.status !== "stopped" ) || ( this.result === "authenticated" && this.status === "started" )) setTimeout(()=>{
                 this.createAuthConnection();
             }, this.opts.restoreTimeout );
@@ -131,14 +133,14 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
             if( this.status !== "started" )  return;
             if( this.result !== "authenticated" ) return;
             if( !!old ){
-                this.appServer.closeApp( old ).then( value => {
+                this.appServer.closeApp( old.name ).then( value => {
                     this.appServer.releaseApplication( app );
                 })
             }
         });
 
         this.apps.on( "delete", app => {
-            this.appServer.closeApp( app ).then( value => {
+            this.appServer.closeApp( app.name ).then( value => {
                 console.log( "All socket closed!" );
             });
         });
@@ -204,12 +206,12 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
             } );
         });
 
-        this.appServer.on( "onAppClosed", app => {
-            console.log( "agent:onAppClosed", app );
+        this.appServer.on( "onAppClosed", application => {
+            console.log( "agent:onAppClosed", application );
             this.serverAuthConnection.send( "appServerClosed", {
                 server: this.identifier,
-                application: app.name,
-                grants: app.grants||[ ]
+                application: application,
+                grants: [ ]
             });
         });
 
