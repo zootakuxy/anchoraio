@@ -26,28 +26,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
         this.appsConnections = {};
     }
 
-    closeApp( application:string ):Promise<AnchorSocket<any>[]>{
-        return new Promise( resolve => {
-            let sockets = Object.entries( this.appsConnections ).filter( ([id, appSocket], index) => {
-                return appSocket.props().appName === application;
-            }).map( ([id, appSocket]) => appSocket );
-            let iCounts = sockets.length;
-            sockets.forEach( appSocket => {
-                appSocket.props().appStatus = "stopped";
-                appSocket.on( "close", hadError => {
-                    iCounts--;
-                    if( iCounts === 0 ){
-                        this.notifySafe( "onAppClosed", application );
-                        resolve( sockets );
-                        return;
-                    }
-                });
-                appSocket.end( () => {
-                    console.log( "application connection end", appSocket.props().appName );
-                });
-            })
-        })
-    }
+
 
     public releaseApplication( app:App ){
         console.log( "open-application", app.name, app.address, app.port )
@@ -143,10 +122,34 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             delete this.appsConnections[ responseGetaway.id() ];
             if( !responseGetaway.anchored() && this.aio.status === "started" && responseGetaway.props().appStatus === "started" ){
                 setTimeout(()=>{
+                    console.log( `RESTORE CONNECTION FOR: ${ app.name }` );
                     this.openApplication( app );
                 }, this.aio.opts.restoreTimeout)
             }
         });
+    }
+
+    closeApp( application:string ):Promise<AnchorSocket<any>[]>{
+        return new Promise( resolve => {
+            let sockets = Object.entries( this.appsConnections ).filter( ([id, appSocket], index) => {
+                return appSocket.props().appName === application;
+            }).map( ([id, appSocket]) => appSocket );
+            let iCounts = sockets.length;
+            sockets.forEach( appSocket => {
+                appSocket.props().appStatus = "stopped";
+                appSocket.on( "close", hadError => {
+                    iCounts--;
+                    if( iCounts === 0 ){
+                        this.notifySafe( "onAppClosed", application );
+                        resolve( sockets );
+                        return;
+                    }
+                });
+                appSocket.end( () => {
+                    console.log( "application connection end", appSocket.props().appName );
+                });
+            })
+        })
     }
 
     closeAll() {
