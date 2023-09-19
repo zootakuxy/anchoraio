@@ -1,5 +1,5 @@
 import {ResolveOptions} from "../../../aio/opts/opts-resolve";
-import {AioResolver, Resolved} from "../../dns";
+import {AioResolver, Resolved} from "../../agent/resolve";
 import fs from "fs";
 import Path from "path";
 import ini from "ini";

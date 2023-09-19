@@ -164,9 +164,6 @@ export function server( opts:ServerOptions){
             //Modo waitResponse server
             let redirect:RequestGetawayAuth = JSON.parse( str );
 
-            console.log( redirect );
-
-
             let auth = Object.entries( agents )
                 .map( value => value[1])
                 .find( (agentAuth, index) => {
@@ -177,8 +174,7 @@ export function server( opts:ServerOptions){
             if(!auth ) return end();
             let resolverApp = agents?.[ redirect.server ]?.apps?.[ redirect.app ];
             if( !resolverApp ) return end();
-            let grants = resolverApp.grants.includes( "*" );
-            if( !grants ) grants = resolverApp.grants.includes( redirect.origin );
+            let grants = [ "*", redirect.origin ].find( value => resolverApp.grants.includes( value ) )
             if( !grants ) return end();
 
             let datas = [];

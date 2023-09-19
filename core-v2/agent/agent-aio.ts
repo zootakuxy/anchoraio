@@ -1,8 +1,8 @@
-import {AgentGetaway,AgentProxyOptions} from "./agent-getaway";
+import {ResolverServer,AgentProxyOptions} from "./resolve/resolver-server";
 import {TokenService} from "../services";
 import {TokenOptions} from "../../aio/opts/opts-token";
 import {BaseEventEmitter} from "kitres";
-import {AioResolver} from "../dns";
+import {AioResolver} from "./resolve";
 import {ApplicationAIO} from "./applications";
 import {Defaults} from "../defaults";
 import {AppServer} from "./applications";
@@ -30,7 +30,7 @@ export type AvailableServer = {
 };
 
 export class AgentAio extends BaseEventEmitter<AgentAioListener > {
-    private readonly agentProxy:AgentGetaway;
+    private readonly agentProxy:ResolverServer;
     private token:TokenService;
     private serverAuthConnection:ListenableAnchorSocket<{}, AgentAioListener>;
     public opts:AgentAioOptions;
@@ -50,7 +50,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
         if( !opts.restoreTimeout ) opts.restoreTimeout = Defaults.restoreTimeout;
         this.opts = opts;
         this.token = new TokenService( opts );
-        this.agentProxy = new AgentGetaway( this, opts );
+        this.agentProxy = new ResolverServer( this, opts );
         this.aioResolve = new AioResolver( {
             etc: opts.etc,
             getawayRelease: opts.getawayRelease,
@@ -195,10 +195,12 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
 
         this.appServer.on("onAppRelease", app => {
             console.log( "agent:onAppRelease", app );
+            let grants = new Set( app.grants||[ ] );
+            grants.add( this.identifier );
             this.serverAuthConnection.send("appServerRelease", {
                 server: this.identifier,
                 application: app.name,
-                grants: app.grants||[ ]
+                grants: [...grants]
             } );
         });
 

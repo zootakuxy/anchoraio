@@ -1,9 +1,9 @@
-import {AgentAio} from "./agent-aio";
-import {Resolved} from "../dns";
+import {AgentAio} from "../agent-aio";
+import {Resolved} from "./index";
 import {BaseEventEmitter} from "kitres/src/core/util";
-import {Defaults} from "../defaults";
-import {createAnchorConnect, AnchorSocket, identifierOf, anchor, RequestGetawayAuth, asAnchorConnect} from "../net";
-import {AIOServer} from "../net/server";
+import {Defaults} from "../../defaults";
+import {createAnchorConnect, AnchorSocket, identifierOf, anchor, RequestGetawayAuth, asAnchorConnect} from "../../net";
+import {AIOServer} from "../../net/server";
 
 export type AgentProxyOptions = {
     requestPort:number,
@@ -59,7 +59,7 @@ interface AgentProxyListener{
 }
 
 
-export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
+export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
     private opts:AgentProxyOptions;
     private anchor:AIOServer;
     private _connectionListener:<T>( socket:AnchorSocket<T> ) => void
@@ -166,26 +166,43 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
                 return;
             }
 
-            console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost } RECEIVED-REQUEST`);
-            if( !this.aio.availableRemoteServers.find( value => {
-                return value.name === resolved.identifier
-                    && value.apps.has( resolved.application )
-            }) ) {
-                console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost } CANCELED | RESOLVE SERVER IS OFFLINE`);
-
-                request.end()
-            }
+            //get server and app by address
+            let requestData = [];
             let dataListen = data =>{
                 requestData.push( data );
             }
+
+
+            if( resolved.identifier === this.aio.identifier ){
+                return this.directConnect( request, {
+                    server: this.aio.identifier,
+                    application: resolved.application,
+                    dataListen: dataListen,
+                    requestData: requestData
+                })
+            }
+
+            console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost } RECEIVED-REQUEST`);
+            let resolveServer = this.aio.availableRemoteServers.find( value => {
+                return value.name === resolved.identifier
+            });
+
+            //Servidor offline
+            if( !resolveServer) {
+                console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost } CANCELED | RESOLVE SERVER IS OFFLINE`);
+                return  request.end()
+            }
+
+            //Permission dainet
+            if( !resolveServer.apps.has( resolved.application ) ) {
+                console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost } CANCELED | PERMISSION DINED FOR APPLICATION`);
+                return request.end()
+            }
+
             request.on("data", dataListen );
             request.on("close", hadError => {
                 delete this.requestConnections[ request.id() ];
             })
-
-            //get server and app by address
-            let requestData = [];
-
 
             request.on( "error", err => {
                 console.log( "request-error", err.message );
@@ -196,15 +213,6 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
                 application: resolved.application,
                 address: resolved.address
             })
-
-            if( resolved.identifier === this.aio.identifier && this.opts.directConnection === "on" ){
-                return this.directConnect( request, {
-                    server: this.aio.identifier,
-                    application: resolved.application,
-                    dataListen: dataListen,
-                    requestData: requestData
-                })
-            }
 
             this.releaseGetaways( resolved, request );
             this.connect( request, {
@@ -349,13 +357,13 @@ export class AgentGetaway extends BaseEventEmitter<AgentProxyListener>{
     public openGetAway ( opts:GetAwayOptions, resolved:Resolved ){
         let hasRequest = this.needGetAway[ opts.server ][ opts.application ].hasRequest;
         if( resolved.getawayReleaseOnDiscover ) hasRequest = true;
-        let includeServers = this.aio.availableRemoteServers.find(  value => {
+        let hasServerOnline = this.aio.availableRemoteServers.find(  value => {
             return value.name === opts.server
                 && value.apps.has( resolved.application );
         } )
         let remotelyOnly = resolved.identifier === this.aio.identifier && this.opts.directConnection === "on";
 
-        if(!includeServers) return;
+        if(!hasServerOnline) return;
         if(remotelyOnly) return;
         if(!hasRequest ) return;
 

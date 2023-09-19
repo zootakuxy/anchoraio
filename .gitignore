@@ -22,11 +22,11 @@ etc/*
 /core-v2/agent/applications/app-server.d.ts
 /core-v2/agent/applications/index.d.ts
 /core-v2/agent/agent-aio.d.ts
-/core-v2/agent/agent-getaway.d.ts
+/core-v2/agent/resolve/resolver-server.d.ts
 /core-v2/agent/index.d.ts
-/core-v2/dns/aio.resolve.d.ts
-/core-v2/dns/index.d.ts
-/core-v2/dns/localhost.d.ts
+/core-v2/agent/resolve/aio.resolve.d.ts
+/core-v2/agent/resolve/index.d.ts
+/core-v2/agent/resolve/localhost.d.ts
 /core-v2/net/anchor.d.ts
 /core-v2/net/auth.d.ts
 /core-v2/net/index.d.ts
