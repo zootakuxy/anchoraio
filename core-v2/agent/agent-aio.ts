@@ -214,16 +214,13 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
         });
 
         this.on("appServerRelease", (opts) => {
-            console.log( "agent:appServerRelease:init", this.availableRemoteServers );
-            let remote = this.availableRemoteServers.find( value => value.server );
+            let remote = this.availableRemoteServers.find( value => value.server == opts.server );
             if( !remote ) this.availableRemoteServers.push( remote = {
                 server: opts.server,
                 apps: new Set()
             });
             remote.apps.add( opts.application );
             console.log( this.availableRemoteServers );
-            console.log( "agent:appServerRelease:finaly", this.availableRemoteServers );
-
         });
 
         this.on("appServerClosed", opts => {
