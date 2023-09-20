@@ -188,8 +188,6 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
                 return value.server === resolved.identifier
             });
 
-            console.log( this.aio.availableRemoteServers, { resolveServer })
-
             //Servidor offline
             if( !resolveServer) {
                 console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost } CANCELED | RESOLVE SERVER IS OFFLINE`);
@@ -358,6 +356,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
 
 
     public openGetAway ( opts:GetAwayOptions, resolved:Resolved ){
+        console.log( "agent:openGetAway");
         let hasRequest = this.needGetAway[ opts.server ][ opts.application ].hasRequest;
         if( resolved.getawayReleaseOnDiscover ) hasRequest = true;
         let hasServerOnline = this.aio.availableRemoteServers.find(  value => {
@@ -369,6 +368,8 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
         if(!hasServerOnline) return;
         if(remotelyOnly) return;
         if(!hasRequest ) return;
+
+        console.log( "agent:openGetAway-accept", opts.server, opts.application );
 
         let connection = createAnchorConnect({
             host: this.opts.serverHost,
