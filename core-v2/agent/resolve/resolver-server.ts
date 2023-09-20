@@ -364,10 +364,19 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
                 && value.apps.has( resolved.application );
         } )
         let remotelyOnly = resolved.identifier === this.aio.identifier && this.opts.directConnection === "on";
+        
 
-        if(!hasServerOnline) return;
-        if(remotelyOnly) return;
-        if(!hasRequest ) return;
+        let openGetAwayDined = ()=>{
+            console.log( {
+                hasServerOnline: !hasServerOnline,
+                remotelyOnly: remotelyOnly,
+                hasRequest: !hasRequest,
+            });
+        }
+
+        if( !hasServerOnline ) return openGetAwayDined();
+        if( remotelyOnly ) return openGetAwayDined();
+        if( !hasRequest ) return openGetAwayDined();
 
         console.log( "agent:openGetAway-accept", opts.server, opts.application );
 
