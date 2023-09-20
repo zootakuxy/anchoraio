@@ -1,7 +1,14 @@
 import {App} from "./app";
-import {BaseEventEmitter} from "kitres/src/core/util";
+import {BaseEventEmitter, Listener} from "kitres/src/core/util";
 import {AgentAio} from "../agent-aio";
-import {anchor, AnchorSocket, ApplicationGetawayAuth, createAnchorConnect, identifierOf} from "../../net";
+import {
+    anchor,
+    AnchorSocket,
+    ApplicationGetawayAuth,
+    createAnchorConnect,
+    createListenableAnchorConnect,
+    identifierOf
+} from "../../net";
 import {Defaults} from "../../defaults";
 
 export interface AppProxyEvent{
@@ -9,23 +16,35 @@ export interface AppProxyEvent{
     onAppClosed( application:string )
 }
 
+export type AppController = {
+    status:"started"|"stopped",
+    name:string,
+    releases: number,
+    interval: ReturnType<typeof setInterval>
+}
+
+export type ApplicationSocketProps = {
+    appName: string,
+    appAddress: string,
+    appPort: number,
+    appStatus: "started"|"stopped",
+    anchorPiped: boolean,
+    busy:boolean
+}
 export class AppServer extends BaseEventEmitter<AppProxyEvent>{
     private readonly appsConnections:{
-        [ p:string ]:AnchorSocket<{
-            appName: string,
-            appAddress: string,
-            appPort: number,
-            appStatus: "started"|"stopped",
-            anchorPiped: boolean
-    }> };
+        [ p:string ]:AnchorSocket<ApplicationSocketProps> };
     private aio:AgentAio;
+    private readonly apps:  {
+      [appName:string]: AppController
+    };
 
     constructor( aio:AgentAio ) {
         super()
         this.aio = aio;
         this.appsConnections = {};
+        this.apps = { };
     }
-
 
 
     public releaseApplication( app:App ){
@@ -47,7 +66,12 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
     }
 
     openApplication ( app:App ){
-        let responseGetaway = createAnchorConnect(  {
+        let responseGetaway = createListenableAnchorConnect<
+            ApplicationSocketProps, {
+            busy( origin:string ),
+            auth( authData:ApplicationGetawayAuth )
+        }
+        >(  {
             side: "client",
             method: "SET",
             host: this.aio.opts.serverHost,
@@ -58,8 +82,18 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                 appPort: app.port,
                 appStatus: "started" as const,
                 anchorPiped: false,
+                busy: false
             }
         });
+
+        if( Object.entries( this.appsConnections ).map( ([key, value]) => value).filter( value => {
+            return !value.anchored()
+                && value.status() !== "connected"
+                && !value.props().busy
+        }).length >= app.releases ) return;
+
+        let appController = this.apps[ app.name ];
+        if( !appController ) return;
 
         this.appsConnections[ responseGetaway.id() ] = responseGetaway;
         responseGetaway.on( "close", hadError => {
@@ -70,7 +104,8 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             console.log( "open-getaway-application", app.name, app.address, app.port, "connected" );
             let grants = app.grants;
             if( !grants ) grants = ["*"];
-            let auth:ApplicationGetawayAuth = {
+
+            responseGetaway.send( "auth", {
                 server: identifierOf( this.aio.opts.identifier ),
                 app: app.name,
                 authReferer: this.aio.authReferer,
@@ -78,26 +113,29 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                 origin: identifierOf( this.aio.opts.identifier ),
                 machine: this.aio.machine(),
                 grants: grants
-            }
-            responseGetaway.write(  JSON.stringify(auth));
+            });
 
+            responseGetaway.eventListener().once("busy", ( origin )=>{
+                responseGetaway.props().busy = true;
+                this.openApplication( app );
 
-            let datas = [];
-            let listenData = data =>{
-                datas.push( data );
-            }
-            responseGetaway.on( "data", listenData );
-            responseGetaway.once( "data", busy => {
-                try {
+                let datas = [];
+                let listenData = data =>{
+                    datas.push( data );
+                }
+                responseGetaway.onRaw( listenData );
+                responseGetaway.onceRaw(  raw => {
                     let appConnection = createAnchorConnect( {
                         host: app.address,
                         port: app.port,
                         side: "client",
                         method: "RESP",
                     });
+
                     appConnection.on( "connect", () => {
                         anchor( `${app.name}.${ this.aio.identifier }`, "AGENT-SERVER", responseGetaway, appConnection, datas, [] );
-                        responseGetaway.off( "data", listenData );
+                        responseGetaway.offRaw( listenData );
+                        responseGetaway.stopListener();
                         console.log( `new connection with ${ "any" } established for ${ app.name }` );
                     });
                     appConnection.on( "error", err => {
@@ -106,12 +144,8 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                             responseGetaway.end();
                         }
                     });
-                    this.openApplication( app );
-                } catch (e) {
-                    responseGetaway.end();
-                    console.error( e )
-                }
-            });
+                });
+            })
         });
 
         responseGetaway.on( "error", err => {
@@ -120,7 +154,13 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
 
         responseGetaway.on("close", ( error) => {
             delete this.appsConnections[ responseGetaway.id() ];
-            if( !responseGetaway.anchored() && this.aio.status === "started" && responseGetaway.props().appStatus === "started" ){
+            console.log( responseGetaway.props() );
+            if(
+                !responseGetaway.anchored()
+                && this.aio.status === "started"
+                && responseGetaway.props().appStatus === "started"
+                && this.apps?.[ responseGetaway.props().appName ]?.status === "started"
+            ){
                 setTimeout(()=>{
                     console.log( `RESTORE CONNECTION FOR: ${ app.name }` );
                     this.openApplication( app );
@@ -131,6 +171,10 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
 
     closeApp( application:string ):Promise<AnchorSocket<any>[]>{
         return new Promise( resolve => {
+            if( this.apps[ application ] ){
+                this.apps[ application ].status = "stopped";
+            }
+
             let sockets = Object.entries( this.appsConnections ).filter( ([id, appSocket], index) => {
                 return appSocket.props().appName === application;
             }).map( ([id, appSocket]) => appSocket );

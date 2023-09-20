@@ -6,7 +6,7 @@ import {AioResolver} from "./resolve";
 import {ApplicationAIO} from "./applications";
 import {Defaults} from "../defaults";
 import {AppServer} from "./applications";
-import {createListenableAnchorConnect, ListenableAnchorSocket} from "../net";
+import {createListenableAnchorConnect, ListenableAnchorListener, ListenableAnchorSocket} from "../net";
 import {AuthAgent, AuthResult, AuthSocketListener} from "../net";
 
 export type AgentAioOptions = AgentProxyOptions& TokenOptions& {
@@ -29,7 +29,7 @@ export type AvailableServer = {
     apps:Set<string>
 };
 
-export class AgentAio extends BaseEventEmitter<AgentAioListener > {
+export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAioListener> > {
     private readonly agentProxy:ResolverServer;
     private token:TokenService;
     private serverAuthConnection:ListenableAnchorSocket<{}, AgentAioListener>;
@@ -179,7 +179,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
                 })
             });
 
-            if( this.opts.directConnection === "off" ) this.availableRemoteServers.push( {
+            if( this.opts.directConnection === "off" ) this.availableRemoteServers.push({
                 server: this.identifier,
                 apps: new Set( this.apps.applications().map( value => value.name ) )
             });
@@ -211,7 +211,7 @@ export class AgentAio extends BaseEventEmitter<AgentAioListener > {
             this.serverAuthConnection.send( "appServerClosed", {
                 server: this.identifier,
                 application: application,
-                grants: [ ]
+                grants: []
             });
         });
 

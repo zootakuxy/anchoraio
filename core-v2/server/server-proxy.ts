@@ -21,7 +21,10 @@ type ServerSlot<T> = {
     grants:string[],
     app:string|number,
     busy:boolean,
-    connect:AnchorSocket<T>
+    connect:ListenableAnchorSocket<T, {
+        busy( origin:string ),
+        auth( authData:ApplicationGetawayAuth )
+    }>
 };
 
 type WaitConnection<T> = {
@@ -191,6 +194,7 @@ export function server( opts:ServerOptions){
                     anchor( `${redirect.app}.${redirect.server}`, "CENTRAL", socket, slot.connect, datas, [ ] );
                     socket.off( "data", listen );
                     socket.write("ready" );
+                    slot.connect.send( "busy", auth.agent );
                 }
             })
         });
@@ -201,14 +205,15 @@ export function server( opts:ServerOptions){
     });
 
     let responseGetawayApplication = createServer(_so => {
-        let socket = asAnchorConnect( _so, {
+        let socket = asListenableAnchorConnect<any,{
+            busy( origin:string ),
+            auth( authData:ApplicationGetawayAuth )
+        }>( _so, {
             side: "server",
             method: "SET",
-        } );
-        socket.once( "data", data => {
-            let str = data.toString();
-            let pack:ApplicationGetawayAuth = JSON.parse( str );
+        });
 
+        socket.eventListener().once( "auth", pack => {
             let end = ()=>{
                 socket.end();
             }
@@ -228,6 +233,7 @@ export function server( opts:ServerOptions){
                 grants: pack.grants,
                 name: pack.app
             }
+
             release( {
                 app: pack.app,
                 server: pack.server,

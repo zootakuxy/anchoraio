@@ -21,8 +21,8 @@ export function identifierOf( identifier:string ){
 
 export interface ListenableAnchorSocket<
     PROPS,
-    LISTEN extends {
-        [K in keyof LISTEN]: CallableFunction;
+    L extends {
+        [K in keyof L]: CallableFunction;
     }
 > extends AnchorSocket< PROPS >{
     /**
@@ -31,16 +31,23 @@ export interface ListenableAnchorSocket<
      * @param event - O evento para o qual registrar o callback.
      * @param callback - O callback a ser registrado.
      */
-    listen<K extends keyof LISTEN>(method:"on"| "once", event: K, callback: LISTEN[K]): void;
+    listen<K extends keyof L>(method:"on"| "once", event: K, callback: L[K]): void;
     /**
      * Notifica os ouvintes registrados para um evento específico.
      * @param event - O evento para o qual notificar os ouvintes.
      * @param args - Argumentos a serem passados para os callbacks dos ouvintes.
      * @returns Uma matriz de objetos que representam os ouvintes notificados.
      */
-    send<K extends keyof LISTEN>(event: K, ...args: LISTEN[K] extends (...args: infer P) => any ? P : never[]);
+    send<K extends keyof L>(event: K, ...args: L[K] extends (...args: infer P) => any ? P : never[]);
 
-    eventListener():Listener<LISTEN>
+    eventListener():Listener<ListenableAnchorListener<L>>
+
+    onRaw( callback:( message:string ) => void )
+    onceRaw( callback:( message:string ) => void )
+    offRaw( callback:( message:string ) => void )
+    onceOffRaw(callback:(message:string ) => void )
+    startListener()
+    stopListener()
 }
 
 
@@ -67,11 +74,11 @@ export function asAnchorConnect<P extends {} >( socket:net.Socket, opts:AsAnchor
         _socket["_status"]= "connected"
     }
 
-    _socket.on( "close", hadError => {
+    _socket.on( "close", () => {
         _socket[ "_status"] = "disconnected";
     });
 
-    _socket.on("error", err => {
+    _socket.on("error", () => {
         _socket.end();
     });
 
@@ -93,9 +100,14 @@ export function asAnchorConnect<P extends {} >( socket:net.Socket, opts:AsAnchor
 
 
 export type AsListenableAnchorConnectOptions< P extends object, E extends { [ K in keyof E]:CallableFunction} > = AsAnchorConnect< P > & {
-    attache?:Listener<E>,
+    attache?:Listener< ListenableAnchorListener<E>>,
 }
 
+
+export type  ListenableAnchorListener <L extends {
+    [K in keyof L]: CallableFunction;
+}> = L & {
+}
 export function asListenableAnchorConnect<
     P extends object,
     L extends {
@@ -108,7 +120,7 @@ export function asListenableAnchorConnect<
     const EVENT_NAME="aio.send.eventName"  as const;
     const EVENT_ARGS="aio.send.args"  as const;
 
-    if( !opts.attache ) opts.attache = new Listener<L>();
+    if( !opts.attache ) opts.attache = new Listener<ListenableAnchorListener<L>>();
     _socket.send = ( event, ...args)=>{
         let pack =  {
             [EVENT_NAME]: event,
@@ -119,18 +131,41 @@ export function asListenableAnchorConnect<
     }
 
     _socket.listen = ( method, event, callback) => {
-        opts.attache[method]( event, callback );
+        opts.attache[method]( event, callback as any );
     };
 
-    _socket.on("data", data => {
+
+    let rawListener:Listener<{
+        raw( data:string )
+    }> = new Listener();
+
+    _socket.onRaw= callback => rawListener.on( "raw", callback );
+    _socket.onceRaw = callback => rawListener.once( "raw", callback );
+    _socket.offRaw = callback => rawListener.off( "raw", callback );
+    _socket.onceOffRaw = callback => rawListener.onceOff( "raw", callback );
+
+    let dataListener = ( data:Buffer )=>{
         let str:string = data.toString();
         str.split( delimiter ).filter( value => value && value.length )
             .forEach( value => {
-                let original = value.replace( /\\\|/g, "|");
-                console.log( `NOTIFY:ANCHOR-POINT ${opts.side} | ${opts.method}`, original, [...opts.attache.events()].join("|") )
+                let raw:string = value.replace( /\\\|/g, "|");
+                console.log( `NOTIFY:ANCHOR-POINT ${opts.side} | ${opts.method}`, raw, [...opts.attache.events()].join("|") )
+                rawListener.notifySafe( "raw", raw );
+
+                let notify = ( pack ) =>{
+                    let args = pack[ EVENT_ARGS ];
+                    let event = pack[ EVENT_NAME ];
+                    // @ts-ignore
+                    console.log( `NOTIFY:ANCHOR-POINT ${opts.side} | ${opts.method}`, event );
+                    opts.attache.notify( event as any, ...args as any );
+                    notify = ()=> { }
+                }
+
+                if( raw.charAt(0) !== "{" ) return;
+                if( raw.charAt( raw.length-1 ) !== "}" ) return;
 
                 try {
-                    let pack = JSON.parse( original );
+                    let pack = JSON.parse( raw );
                     if( !pack || typeof pack !== "object" ) return;
 
                     let keys = Object.keys( pack );
@@ -138,19 +173,28 @@ export function asListenableAnchorConnect<
                     if( typeof pack[EVENT_NAME ] !== "string" ) return;
 
                     if( !Array.isArray( pack[EVENT_ARGS] )) return;
-                    console.log( `NOTIFY:ANCHOR-POINT ${opts.side} | ${opts.method}`, pack[ EVENT_NAME ], pack[ EVENT_ARGS ] )
-                    opts.attache.notify( pack[EVENT_NAME] as any, ...pack[EVENT_ARGS] as any );
+                    return notify( pack );
                 } catch (e) {
-                    console.log( "ERROR-PARSE", original )
+                    console.log( "ERROR-PARSE", raw )
                     console.log( e );
+                    return;
                 }
             });
-    });
+    }
+
+    _socket.startListener = () =>{
+        socket.off( "data", dataListener );
+        socket.on( "data", dataListener );
+    }
+
+    _socket.stopListener = ()=>{
+        _socket.off( "data", dataListener )
+    }
 
     _socket.eventListener = ( )=>{
         return opts.attache;
     }
-
+    _socket.startListener();
     return  _socket;
 }
 
