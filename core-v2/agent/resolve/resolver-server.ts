@@ -4,7 +4,7 @@ import {BaseEventEmitter} from "kitres/src/core/util";
 import {Defaults} from "../../defaults";
 import {createAnchorConnect, AnchorSocket, identifierOf, anchor, RequestGetawayAuth, asAnchorConnect} from "../../net";
 import {AIOServer} from "../../net/server";
-import {application} from "express";
+import {application, response} from "express";
 
 export type AgentProxyOptions = {
     requestPort:number,
@@ -213,7 +213,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
                 server: resolved.server,
                 application: resolved.application,
                 address: resolved.address
-            })
+            });
 
             this.releaseGetaways( resolved, request );
             this.connect( request, {
@@ -368,7 +368,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
 
 
         let openGetAwayDined = ()=>{
-            console.log( "openGetAwayDined-message", {
+            console.log( "openGetAwayDined", {
                 hasServerOnline: !hasServerOnline,
                 remotelyOnly: remotelyOnly,
                 hasRequest: !hasRequest,
@@ -378,8 +378,6 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
         if( !hasServerOnline ) return openGetAwayDined();
         if( remotelyOnly ) return openGetAwayDined();
         if( !hasRequest ) return openGetAwayDined();
-
-        console.log( "agent:openGetAway-accept", opts.server, opts.application );
 
         let connection = createAnchorConnect({
             host: this.opts.serverHost,
@@ -424,6 +422,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
     }
 
     private connect ( request, opts:ConnectionOptions, resolved:Resolved ){
+        console.log( `agent:connect | application = "${ resolved.application }" server = "${ resolved.identifier }"` );
         this.onGetAway( opts.server, opts.application,  resolved, request,getAway => {
             anchor( `${opts.application}.${ opts.server }`, "AGENT-CLIENT", request, getAway.connection, opts.requestData, []);
 
