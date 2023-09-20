@@ -236,6 +236,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
 
     private releaseGetaways( resolved:Resolved, request:AnchorSocket<{}> ){
         let needGetAway = this.needGetAway[ resolved.identifier ][ resolved.application ];
+        console.log( "releaseGetaways|needGetAway.hasRequest", needGetAway.hasRequest )
         if( !needGetAway.hasRequest ) {
             console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost }  REQUIRING GETAWAY`)
             if(needGetAway.timeout ) clearTimeout( needGetAway.timeout )
