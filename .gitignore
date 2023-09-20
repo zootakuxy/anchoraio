@@ -55,3 +55,4 @@ etc/*
 /test.d.ts
 /yarn.lock
 /yarn-error.log
+/debug.log
