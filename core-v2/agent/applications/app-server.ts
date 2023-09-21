@@ -164,6 +164,12 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                         responseGetaway.stopListener();
                         console.log( `new connection with ${ "any" } established for ${ app.name }` );
                     });
+
+                    appConnection.on( "data", data => {
+                        console.log( "===========================")
+                       console.log( data.toString() );
+                        console.log( "===========================")
+                    });
                     appConnection.on( "error", err => {
                         console.log("app-server-error", err.message );
                         if( !responseGetaway.anchored() ){
