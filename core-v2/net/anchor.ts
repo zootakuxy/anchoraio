@@ -205,12 +205,6 @@ export function createAnchorConnect<P extends {} >( opts:CreateAnchorConnect<P> 
     let socket = net.connect( {
         host: opts.host,
         port: opts.port,
-        onread:{
-            buffer: Buffer.alloc( 1024 * 1024 ),
-            callback(bytesWritten: number, buf: Uint8Array):boolean {
-                return undefined;
-            }
-        }
         // writableHighWaterMark: 1024 * 1024,
         // readableHighWaterMark : 1024 * 1024
     });
@@ -235,7 +229,10 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
     let hasRequestData = requestData.length? "WITH DATA": "NO DATA";
 
     let __anchor = (_left:AnchorSocket<T>, _right:AnchorSocket<T> ) => {
-        _left.pipe( _right );
+        _left.on( "data", data => {
+           _left.write( data );
+        });
+        // _left.pipe( _right );
         _left.on( "close", () => {
             _right.end();
         });
