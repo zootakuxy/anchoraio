@@ -59,6 +59,16 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
 
         let releases =app.releases;
         if( !releases ) releases = Defaults.serverRelease||1;
+
+        if( !this.apps[ app.name ] ) {
+            this.apps[ app.name ] = {
+                releases: app.releases,
+                name: app.name,
+                interval: null,
+                status: "started"
+            }
+        }
+
         for ( let i = 0 ; i< releases; i++ ){
             this.openApplication( app )
         }
