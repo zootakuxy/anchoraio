@@ -195,7 +195,7 @@ export function server( opts:ServerOptions){
                     anchor( `${redirect.app}.${redirect.server}`, "CENTRAL", socket, slot.connect, datas, [ ] );
                     socket.off( "data", listen );
                     socket.write("ready" );
-                    slot.connect.send( "busy", auth.agent );
+                    // slot.connect.send( "busy", auth.agent );
                 }
             })
         });
@@ -215,6 +215,7 @@ export function server( opts:ServerOptions){
         });
 
         socket.eventListener().once( "auth", pack => {
+            socket.stopListener();
             let end = ()=>{
                 socket.end();
             }

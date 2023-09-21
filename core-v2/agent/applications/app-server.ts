@@ -130,18 +130,20 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                 machine: this.aio.machine(),
                 grants: grants
             });
+            responseGetaway.stopListener();
 
-            responseGetaway.eventListener().once("busy", ( origin )=>{
+            let datas = [];
+            let listenData = data =>{
+                datas.push( data );
+            }
+            responseGetaway.on( "data", listenData );
+
+            responseGetaway.once("data", ( origin )=>{
                 console.log( `agent.openApplication:busy application = "${ app.name }"`)
-                responseGetaway.props().busy = true;
                 this.openApplication( app );
+                // responseGetaway.onceRaw(  raw => {
+                    responseGetaway.props().busy = true;
 
-                let datas = [];
-                let listenData = data =>{
-                    datas.push( data );
-                }
-                responseGetaway.onRaw( listenData );
-                responseGetaway.onceRaw(  raw => {
                     console.log( `agent.openApplication:work application = "${ app.name }"`)
                     let appConnection = createAnchorConnect( {
                         host: app.address,
@@ -162,7 +164,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                             responseGetaway.end();
                         }
                     });
-                });
+                // });
             })
         });
 
