@@ -95,7 +95,7 @@ export function server( opts:ServerOptions){
     } = createProxy();
 
     let release = ( slot:ServerSlot<{}> )=>  {
-        console.log( `getaway response from ${ slot.server } to ${ slot.server} connected` );
+        console.log( `server.release getaway response for application = "${slot.app}" server = "${ slot.server}" connected` );
 
         let next = Object.entries( waitConnections[slot.server][slot.app]).find( ([key, wait], index) => {
             return !wait.resolved
