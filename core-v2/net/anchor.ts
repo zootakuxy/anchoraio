@@ -67,8 +67,6 @@ export function asAnchorConnect<P extends {} >( socket:net.Socket, opts:AsAnchor
 
     _socket[ "_id" ] = `${ opts.method }:${ nanoid( 16 ) }`;
 
-    _socket.bufferSize = 1024 * 1024;
-
     if( opts.side === "client" ){
         _socket.on( "connect", () => {
             _socket[ "_status" ] = "connected";
