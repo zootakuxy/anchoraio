@@ -87,14 +87,19 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             }
         });
 
+        let cansel = ( message:string)=>{
+            console.log( `agent.openApplication:cansel message = "${ message }"`)
+
+        }
+
         if( Object.entries( this.appsConnections ).map( ([key, value]) => value).filter( value => {
             return !value.anchored()
                 && value.status() !== "connected"
                 && !value.props().busy
-        }).length >= app.releases ) return;
+        }).length >= app.releases ) return cansel( "All application slots opened" );
 
         let appController = this.apps[ app.name ];
-        if( !appController ) return;
+        if( !appController ) return cansel( "No application controller defined!" );
 
         this.appsConnections[ responseGetaway.id() ] = responseGetaway;
         responseGetaway.on( "close", hadError => {
