@@ -158,7 +158,8 @@ export function server( opts:ServerOptions){
             method: "GET",
         });
         socket.once( "data", (data) => {
-            let end = ()=>{
+            let end = ( message:string )=>{
+                console.log( `server.requestGetawaySever:end massage = "${message}"`)
                 socket.end();
             }
 
@@ -174,11 +175,11 @@ export function server( opts:ServerOptions){
                     && agentAuth.agent === redirect.origin
                     && agentAuth.machine === redirect.machine
             })
-            if(!auth ) return end();
+            if(!auth ) return end( "Agent not authenticated" );
             let resolverApp = agents?.[ redirect.server ]?.apps?.[ redirect.app ];
-            if( !resolverApp ) return end();
+            if( !resolverApp ) return end( "Resolved application not found");
             let grants = [ "*", redirect.origin ].find( value => resolverApp.grants.includes( value ) )
-            if( !grants ) return end();
+            if( !grants ) return end( "Permission dined for application");
 
             let datas = [];
             let listen = data =>{
