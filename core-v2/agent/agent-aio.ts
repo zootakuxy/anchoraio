@@ -196,7 +196,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
         });
 
         this.appServer.on("onAppRelease", app => {
-            console.log( "agent:onAppRelease", app );
+            console.log( `agent:onAppRelease application ="${app.name}"` );
             let grants = new Set( app.grants||[ ] );
             grants.add( this.identifier );
             this.serverAuthConnection.send("appServerRelease", {
@@ -207,7 +207,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
         });
 
         this.appServer.on( "onAppClosed", application => {
-            console.log( "agent:onAppClosed", application );
+            console.log( `agent:onAppClosed application ="${application}"` );
             this.serverAuthConnection.send( "appServerClosed", {
                 server: this.identifier,
                 application: application,
