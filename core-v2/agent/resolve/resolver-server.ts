@@ -366,19 +366,19 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
             return value.server === opts.server
                 && value.apps.has( resolved.application );
         } )
-        let remotelyOnly = resolved.identifier === this.aio.identifier && this.opts.directConnection === "on";
+        // let remotelyOnly = resolved.identifier === this.aio.identifier && this.opts.directConnection === "on";
 
 
         let openGetAwayDined = ()=>{
-            console.log( "openGetAwayDined", {
-                hasServerOnline: !hasServerOnline,
-                remotelyOnly: remotelyOnly,
-                hasRequest: !hasRequest,
+            console.log( "agent.openGetAway:openGetAwayDined", {
+                hasServerOnline: !!hasServerOnline,
+                // remotelyOnly: remotelyOnly,
+                hasRequest: !!hasRequest,
             });
         }
 
         if( !hasServerOnline ) return openGetAwayDined();
-        if( remotelyOnly ) return openGetAwayDined();
+        // if( remotelyOnly ) return openGetAwayDined();
         if( !hasRequest ) return openGetAwayDined();
 
         let connection = createAnchorConnect({
