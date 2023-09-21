@@ -207,8 +207,8 @@ export function createAnchorConnect<P extends {} >( opts:CreateAnchorConnect<P> 
         port: opts.port,
     });
 
-    socket.readableHighWaterMark=1024 * 1024;
-    socket.writableHighWaterMark =1024 * 1024;
+    socket._readableState.highWaterMark = 1024 * 1024;
+    socket._writable.highWaterMark = 1024 * 1024;
     return asAnchorConnect( socket, opts );
 }
 
