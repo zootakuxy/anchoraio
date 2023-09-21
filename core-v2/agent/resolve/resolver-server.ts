@@ -328,7 +328,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
     }
 
     private onGetAway(server:string, application:string, resolved:Resolved, request:AnchorSocket<{}>, callback:(getAway:GetAway )=>void ){
-        console.log( `agent:onGetAway server = "${server}" application="${application}"`)
+        console.log( `agent.onGetAway server = "${server}" application="${application}"`)
         let next = Object.entries( this.getaway[ server ][application]).find( ([, getAway], index) => {
             return !getAway.busy
                 && !!getAway.connection.props().readyToAnchor;
@@ -359,7 +359,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
 
 
     public openGetAway ( opts:GetAwayOptions, resolved:Resolved ){
-        console.log( "agent:openGetAway");
+        console.log( "agent.openGetAway");
         let hasRequest = this.needGetAway[ opts.server ][ opts.application ].hasRequest;
         if( resolved.getawayReleaseOnDiscover ) hasRequest = true;
         let hasServerOnline = this.aio.availableRemoteServers.find(  value => {
@@ -392,6 +392,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
         });
 
         connection.on( "connect", () => {
+            console.log( "agent.openGetAway:connect" );
 
             //MODO wait response SERVSER
             let redirect:RequestGetawayAuth = {
@@ -405,6 +406,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
 
             connection.write( JSON.stringify( redirect ) );
             connection.once( "data", ( data ) => {
+                console.log( "agent.openGetAway:ready" );
                 connection.props().readyToAnchor = true;
                 this.registerGetAway( opts, connection );
             });
@@ -424,7 +426,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
     }
 
     private connect ( request, opts:ConnectionOptions, resolved:Resolved ){
-        console.log( `agent:connect | application = "${ resolved.application }" server = "${ resolved.identifier }"` );
+        console.log( `agent.connect | application = "${ resolved.application }" server = "${ resolved.identifier }"` );
         this.onGetAway( opts.server, opts.application,  resolved, request,getAway => {
             anchor( `${opts.application}.${ opts.server }`, "AGENT-CLIENT", request, getAway.connection, opts.requestData, []);
 
