@@ -161,7 +161,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
         });
 
         this.on( "remoteServerClosed", server => {
-            console.log( "serverClose", server );
+            console.log( `agent:remoteServerClosed server = "${server}"` );
             let index = this.availableRemoteServers.findIndex( value => value.server === server );
             if( index === -1 ) return;
             this.availableRemoteServers.splice( index, 1 );
@@ -222,7 +222,6 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
                 apps: new Set()
             });
             remote.apps.add( opts.application );
-            console.log( this.availableRemoteServers );
         });
 
         this.on("appServerClosed", opts => {

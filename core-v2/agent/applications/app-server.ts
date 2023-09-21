@@ -154,7 +154,6 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
 
         responseGetaway.on("close", ( error) => {
             delete this.appsConnections[ responseGetaway.id() ];
-            console.log( responseGetaway.props() );
             if(
                 !responseGetaway.anchored()
                 && this.aio.status === "started"
