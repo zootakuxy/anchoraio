@@ -230,12 +230,13 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
 
     let __anchor = (_left:AnchorSocket<T>, _right:AnchorSocket<T> ) => {
         _left.on( "data", data => {
-           _left.write( data );
+           _right.write( data ); 
         });
         // _left.pipe( _right );
         _left.on( "close", () => {
             _right.end();
         });
+
         _left.anchored  = () =>  true;
     }
 
