@@ -286,6 +286,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
         server?:string
         readyToAnchor:boolean
     }> ){
+        console.log( `agent:registerGetAway server = "${opts.server}" application = "${opts.application}"`)
         let [key, next ] = Object.entries( this.getawayListener[ opts.server ][ opts.application ] )
             .find( ([, getawayListener], index) => {
                 return !getawayListener.busy
@@ -327,6 +328,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
     }
 
     private onGetAway(server:string, application:string, resolved:Resolved, request:AnchorSocket<{}>, callback:(getAway:GetAway )=>void ){
+        console.log( `agent:onGetAway server = "${server}" application="${application}"`)
         let next = Object.entries( this.getaway[ server ][application]).find( ([, getAway], index) => {
             return !getAway.busy
                 && !!getAway.connection.props().readyToAnchor;
