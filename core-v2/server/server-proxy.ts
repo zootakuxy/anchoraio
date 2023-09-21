@@ -115,13 +115,13 @@ export function server( opts:ServerOptions){
         });
         serverSlots[ slot.server ][ slot.app ][ slot.connect.id() ] = slot;
         slot.connect.on( "close", hadError => {
-            console.log( `getaway response from ${ slot.server } to ${ slot.server} CLOSED` );
+            console.log( `server.release getaway response for application = "${slot.app}" server = "${ slot.server}" CLOSED` );
             delete serverSlots[ slot.server ][ slot.app ][ slot.connect.id() ];
         });
     }
 
     let resolver = ( server:string, app:string|number, wait:WaitConnection<{}> )=>{
-        console.log( `getaway request from ${ wait.agent } to ${ app}.${ server } connected` );
+        console.log( `server.resolver getaway request from ${ wait.agent } to ${ app}.${ server } connected` );
 
         let entry = Object.entries( serverSlots[server][app] ).find( ([ key, value]) => {
             if( !value ) return false;
@@ -140,7 +140,7 @@ export function server( opts:ServerOptions){
         }
         waitConnections[server][app][ wait.connection.id() ] = wait;
         wait.connection.on( "close", hadError => {
-            console.log( `getaway request from ${ wait.agent } to ${ app}.${ server } CLOSED` );
+            console.log( `server.resolver getaway request from ${ wait.agent } to ${ app}.${ server } CLOSED` );
             delete waitConnections[server][app][ wait.connection.id()  ];
             if( hadError ) console.log( `detached wait connection for ${ app }.${ server } because remittent connection ${ wait.connection.id() } is closed!`)
         });
