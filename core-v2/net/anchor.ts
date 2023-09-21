@@ -149,14 +149,12 @@ export function asListenableAnchorConnect<
         str.split( delimiter ).filter( value => value && value.length )
             .forEach( value => {
                 let raw:string = value.replace( /\\\|/g, "|");
-                console.log( `NOTIFY:ANCHOR-POINT ${opts.side} | ${opts.method}`, raw, [...opts.attache.events()].join("|") )
                 rawListener.notifySafe( "raw", raw );
 
                 let notify = ( pack ) =>{
                     let args = pack[ EVENT_ARGS ];
                     let event = pack[ EVENT_NAME ];
                     // @ts-ignore
-                    console.log( `NOTIFY:ANCHOR-POINT ${opts.side} | ${opts.method}`, event );
                     opts.attache.notify( event as any, ...args as any );
                     notify = ()=> { }
                 }
