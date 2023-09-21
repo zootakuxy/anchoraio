@@ -205,10 +205,12 @@ export function createAnchorConnect<P extends {} >( opts:CreateAnchorConnect<P> 
     let socket = net.connect( {
         host: opts.host,
         port: opts.port,
+        // writableHighWaterMark: 1024 * 1024,
+        // readableHighWaterMark : 1024 * 1024
     });
 
     socket._readableState.highWaterMark = 1024 * 1024;
-    socket._writable.highWaterMark = 1024 * 1024;
+    socket._writableState.highWaterMark = 1024 * 1024;
     return asAnchorConnect( socket, opts );
 }
 
