@@ -130,14 +130,16 @@ export function server( opts:ServerOptions){
                 && !value.busy
         });
 
-
         if( entry && entry[1] ){
+            console.log( `server.resolver:RESOLVER_IMMEDIATELY ` )
             let next = entry[1];
             next.busy = true;
             delete serverSlots[server][app][ next.connect.id() ];
             wait.resolve( next );
             return;
         }
+        console.log( `server.resolver:RESOLVER_WAIT` )
+
         waitConnections[server][app][ wait.connection.id() ] = wait;
         wait.connection.on( "close", hadError => {
             console.log( `server.resolver getaway request from ${ wait.agent } to ${ app}.${ server } CLOSED` );
