@@ -204,8 +204,11 @@ export type CreateAnchorConnect<P  extends object> = AsAnchorConnect<P> &  {
 export function createAnchorConnect<P extends {} >( opts:CreateAnchorConnect<P> ){
     let socket = net.connect( {
         host: opts.host,
-        port: opts.port
+        port: opts.port,
     });
+
+    socket.readableHighWaterMark=1024 * 1024;
+    socket.writableHighWaterMark =1024 * 1024;
     return asAnchorConnect( socket, opts );
 }
 
