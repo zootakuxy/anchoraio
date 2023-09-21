@@ -233,11 +233,14 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
     }
 
     bused( busy: SlotBusy ) {
-        console.log( `agent.busy origin = "${busy.origin}" application = "${busy.application}"` );
+        console.log( `agent.busy origin = "${busy.origin}" application = "${busy.application} slotId = "${ busy.slotId }"` );
+        let cansel = ( message )=>{
+            console.log( `agent.busy:cansel message = "${message}"` );
+        }
         let connection = this.appsConnections[ busy.slotId ];
-        if( !connection ) return;
-        if( connection.props().busy ) return;
-        if( connection.anchored() ) return;
+        if( !connection ) return cansel( `No connection for busy`);
+        if( connection.props().busy ) return cansel( `Connection already bused!`);
+        if( connection.anchored() ) return cansel( "Connection already anchored");
         connection.props().busy = true;
         this.openApplication( connection.props().app )
     }
