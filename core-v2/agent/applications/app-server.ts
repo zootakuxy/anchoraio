@@ -233,6 +233,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
     }
 
     bused( busy: SlotBusy ) {
+        console.log( `agent.busy origin = "${busy.origin}" application = "${busy.application}"` );
         let connection = this.appsConnections[ busy.slotId ];
         if( !connection ) return;
         if( connection.props().busy ) return;
