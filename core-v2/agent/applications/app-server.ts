@@ -121,6 +121,10 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             let grants = app.grants;
             if( !grants ) grants = ["*"];
 
+            responseGetaway.onRaw( message => {
+                console.log( message );
+            });
+
             responseGetaway.send( "auth", {
                 server: identifierOf( this.aio.opts.identifier ),
                 app: app.name,
