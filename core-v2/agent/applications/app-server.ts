@@ -165,11 +165,11 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                         console.log( `new connection with ${ "any" } established for ${ app.name }` );
                     });
 
-                    appConnection.on( "data", data => {
-                        console.log( "=================== [ AGENT:RESPONSE FOR APPLICATION SERVER ] ===================")
-                        console.log( data.toString() );
-                        console.log( "=================== [                                       ] ===================")
-                    });
+                    // appConnection.on( "data", data => {
+                    //     console.log( "=================== [ AGENT:RESPONSE FOR APPLICATION SERVER ] ===================")
+                    //     console.log( data.toString() );
+                    //     console.log( "=================== [                                       ] ===================")
+                    // });
                     appConnection.on( "error", err => {
                         console.log("app-server-error", err.message );
                         if( !responseGetaway.anchored() ){

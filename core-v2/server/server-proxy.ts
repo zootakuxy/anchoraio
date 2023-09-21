@@ -222,11 +222,11 @@ export function server( opts:ServerOptions){
         });
 
         socket.eventListener().once( "auth", pack => {
-            socket.on( "data", data => {
-                console.log( "=================== [ SERVER:RESPONSE FOR APPLICATION GETAWAY ] ===================")
-                console.log( data.toString() );
-                console.log( "=================== [                                         ] ===================")
-            });
+            // socket.on( "data", data => {
+            //     console.log( "=================== [ SERVER:RESPONSE FOR APPLICATION GETAWAY ] ===================")
+            //     console.log( data.toString() );
+            //     console.log( "=================== [                                         ] ===================")
+            // });
             socket.stopListener();
             let end = ()=>{
                 socket.end();

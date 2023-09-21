@@ -424,11 +424,11 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
     private connect ( request, opts:ConnectionOptions, resolved:Resolved ){
         console.log( `agent.connect | application = "${ resolved.application }" server = "${ resolved.identifier }"` );
         this.onGetAway( opts.server, opts.application,  resolved, request,getAway => {
-            getAway.connection.on( "data", data => {
-                console.log( "=================== [ AGENT:RESPONSE FOR REQUEST GETAWAY ] ===================")
-                console.log( data.toString() );
-                console.log( "=================== [                                    ] ===================")
-            });
+            // getAway.connection.on( "data", data => {
+            //     console.log( "=================== [ AGENT:RESPONSE FOR REQUEST GETAWAY ] ===================")
+            //     console.log( data.toString() );
+            //     console.log( "=================== [                                    ] ===================")
+            // });
             anchor( `${opts.application}.${ opts.server }`, "AGENT-CLIENT", request, getAway.connection, opts.requestData, []);
 
             request.off( "data", opts.dataListen );
