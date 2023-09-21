@@ -7,7 +7,7 @@ import {
     ApplicationGetawayAuth,
     createAnchorConnect,
     createListenableAnchorConnect,
-    identifierOf
+    identifierOf, SlotBusy
 } from "../../net";
 import {Defaults} from "../../defaults";
 
@@ -29,7 +29,8 @@ export type ApplicationSocketProps = {
     appPort: number,
     appStatus: "started"|"stopped",
     anchorPiped: boolean,
-    busy:boolean
+    busy:boolean,
+    app: App
 }
 export class AppServer extends BaseEventEmitter<AppProxyEvent>{
     private readonly appsConnections:{
@@ -93,13 +94,13 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                 appPort: app.port,
                 appStatus: "started" as const,
                 anchorPiped: false,
-                busy: false
+                busy: false,
+                app: app
             }
         });
 
         let cansel = ( message:string)=>{
             console.log( `agent.openApplication:cansel message = "${ message }"`)
-
         }
 
         if( Object.entries( this.appsConnections ).map( ([key, value]) => value).filter( value => {
@@ -132,7 +133,8 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                 authId: responseGetaway.id(),
                 origin: identifierOf( this.aio.opts.identifier ),
                 machine: this.aio.machine(),
-                grants: grants
+                grants: grants,
+                slotId: responseGetaway.id()
             });
             responseGetaway.stopListener();
 
@@ -228,5 +230,14 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
 
     stop() {
         this.closeAll();
+    }
+
+    bused( busy: SlotBusy ) {
+        let connection = this.appsConnections[ busy.slotId ];
+        if( !connection ) return;
+        if( connection.props().busy ) return;
+        if( connection.anchored() ) return;
+        connection.props().busy = true;
+        this.openApplication( connection.props().app )
     }
 }

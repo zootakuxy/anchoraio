@@ -9,6 +9,12 @@ export type ServerReleaseOptions = {
     application:string,
     grants:string[]
 }
+export type SlotBusy = {
+    application:string,
+    slotId:string,
+    origin:string
+}
+
 export interface AuthSocketListener {
     auth( auth:AuthAgent )
     authResult(auth:AuthResult )
@@ -17,7 +23,8 @@ export interface AuthSocketListener {
     remoteServerOpen( server:string ),
     remoteServerClosed( server:string ),
     appServerRelease( opts:ServerReleaseOptions ),
-    appServerClosed( opts:ServerReleaseOptions )
+    appServerClosed( opts:ServerReleaseOptions ),
+    busy( busy:SlotBusy )
 }
 
 
@@ -31,7 +38,8 @@ export type AuthIO = {
 }
 
 export type ApplicationGetawayAuth = AuthIO& {
-    grants:string[]
+    grants:string[],
+    slotId: string
 }
 
 export type RequestGetawayAuth = AuthIO& {

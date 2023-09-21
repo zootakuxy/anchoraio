@@ -167,6 +167,10 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             this.availableRemoteServers.splice( index, 1 );
         });
 
+        this.on( "busy", busy => {
+            this.appServer.bused( busy );
+        });
+
         this.on("authResult", auth => {
             this.result = "authenticated";
             this._auth = auth;

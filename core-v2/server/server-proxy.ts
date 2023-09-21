@@ -21,6 +21,7 @@ type ServerSlot<T> = {
     grants:string[],
     app:string|number,
     busy:boolean,
+    slotId:string
     connect:ListenableAnchorSocket<T, {
         busy( origin:string ),
         auth( authData:ApplicationGetawayAuth )
@@ -194,10 +195,14 @@ export function server( opts:ServerOptions){
                 connection: socket,
                 agent: auth.agent,
                 resolve( slot ){
-                    anchor( `${redirect.app}.${redirect.server}`, "CENTRAL", socket, slot.connect, datas, [ ] );
+                    anchor( `${redirect.app}.${redirect.server}`, "CENTRAL", socket, slot.connect, datas, [] );
                     socket.off( "data", listen );
                     socket.write("ready" );
-                    // slot.connect.send( "busy", auth.agent );
+                    agents[ slot.server ].connection.send( "busy", {
+                        application: redirect.app,
+                        slotId: slot.slotId,
+                        origin: redirect.origin
+                    });
                 }
             })
         });
@@ -244,6 +249,7 @@ export function server( opts:ServerOptions){
                 grants: pack.grants,
                 busy: false,
                 connect: socket,
+                slotId: pack.slotId
             });
         });
 
