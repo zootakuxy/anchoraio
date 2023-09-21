@@ -66,6 +66,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
     }
 
     openApplication ( app:App ){
+        console.log( `agent.openApplication application = "${ app.name }"`)
         let responseGetaway = createListenableAnchorConnect<
             ApplicationSocketProps, {
             busy( origin:string ),
@@ -101,7 +102,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
         });
 
         responseGetaway.on( "connect", () => {
-            console.log( "open-getaway-application", app.name, app.address, app.port, "connected" );
+            console.log( `agent.openApplication:connect application = "${ app.name }"`)
             let grants = app.grants;
             if( !grants ) grants = ["*"];
 
@@ -116,6 +117,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             });
 
             responseGetaway.eventListener().once("busy", ( origin )=>{
+                console.log( `agent.openApplication:busy application = "${ app.name }"`)
                 responseGetaway.props().busy = true;
                 this.openApplication( app );
 
@@ -125,6 +127,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                 }
                 responseGetaway.onRaw( listenData );
                 responseGetaway.onceRaw(  raw => {
+                    console.log( `agent.openApplication:work application = "${ app.name }"`)
                     let appConnection = createAnchorConnect( {
                         host: app.address,
                         port: app.port,
