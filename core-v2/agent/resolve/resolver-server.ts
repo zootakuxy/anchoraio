@@ -150,10 +150,19 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
 
     private listen(){
         this._connectionListener = _so => {
+            //get server and app by address
+            let requestData = [];
+            let dataListen = data =>{
+                requestData.push( data );
+            }
+            _so.on("data", dataListen );
+
+
             let request:typeof this.requestConnections[number] = asAnchorConnect( _so, {
                 side: "server",
                 method: "REQ",
-            } );
+            });
+
             this.requestConnections[ request.id() ] = request;
             const remoteAddressParts = request.address()["address"].split( ":" );
             const address =  remoteAddressParts[ remoteAddressParts.length-1 ];
@@ -166,13 +175,6 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
                 request.end();
                 return;
             }
-
-            //get server and app by address
-            let requestData = [];
-            let dataListen = data =>{
-                requestData.push( data );
-            }
-
 
             if( resolved.identifier === this.aio.identifier ){
                 return this.directConnect( request, {
@@ -200,7 +202,6 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
                 return request.end()
             }
 
-            request.on("data", dataListen );
             request.on("close", hadError => {
                 delete this.requestConnections[ request.id() ];
             })
