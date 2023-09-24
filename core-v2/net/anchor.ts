@@ -62,8 +62,8 @@ export type AsAnchorConnect<T extends object > = {
 
 const ANCHOR_SYMBOL = Symbol.for("asAnchorConnect");
 
-export function asAnchorConnect<P extends {} >( socket:net.Socket, opts:AsAnchorConnect<P> ){
-    if( socket[ ANCHOR_SYMBOL ]) return  socket;
+export function asAnchorConnect<P extends {} >( socket:net.Socket, opts:AsAnchorConnect<P> ):AnchorSocket<P>{
+    if( socket[ ANCHOR_SYMBOL ]) return  socket as AnchorSocket<P>;
     if( !opts?.side ) throw new Error( "Required side definition" );
     if( !opts?.method ) throw new Error( "Required method definition" );
     if( !opts.props ) opts.props = {} as any;
