@@ -344,9 +344,16 @@ export function server( opts:ServerOptions){
             //Check if is alive
             let checkAliveCode = nanoid(32 );
 
+            let timeoutCheck = ()=>{
+                current.connection.eventListener().onceOff( "isAlive", listenResponse );
+                try { current.connection.destroy( new Error( "zombie socket" ) );
+                } catch (e){ }
+                register();
+            }
+
             let timeoutCode = setTimeout(()=>{
                 timeoutCheck();
-            }, 5000 );
+            }, 10000 );
 
             let listenResponse;
 
@@ -358,12 +365,7 @@ export function server( opts:ServerOptions){
                 }
             });
 
-            let timeoutCheck = ()=>{
-                current.connection.eventListener().onceOff( "isAlive", listenResponse );
-                try { current.connection.destroy( new Error( "zombie socket" ) );
-                } catch (e){ }
-                register();
-            }
+
 
             current.connection.send( "isAlive", checkAliveCode, null );
         });
@@ -397,9 +399,7 @@ export function server( opts:ServerOptions){
                     application: opts.application
                 });
             });
-
         });
-
 
         socket.on( "close", () => {
             let agentServer = socket[ "agentServer" ];
@@ -409,7 +409,6 @@ export function server( opts:ServerOptions){
             if( !agent ) return;
             if( agent.connection.id() === socket.id() ) delete agents[ agentServer ]
         });
-
 
         socket.on( "error", err => {
             console.log( "server-auth-error", err.message )
