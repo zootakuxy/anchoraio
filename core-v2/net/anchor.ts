@@ -39,6 +39,7 @@ export interface ListenableAnchorSocket<
      * @returns Uma matriz de objetos que representam os ouvintes notificados.
      */
     send<K extends keyof L>(event: K, ...args: L[K] extends (...args: infer P) => any ? P : never[]);
+    output( str:string );
 
     eventListener():Listener<ListenableAnchorListener<L>>
 
@@ -59,7 +60,10 @@ export type AsAnchorConnect<T extends object > = {
     props?:T,
 }
 
+const ANCHOR_SYMBOL = Symbol.for("asAnchorConnect");
+
 export function asAnchorConnect<P extends {} >( socket:net.Socket, opts:AsAnchorConnect<P> ){
+    if( socket[ ANCHOR_SYMBOL ]) return  socket;
     if( !opts?.side ) throw new Error( "Required side definition" );
     if( !opts?.method ) throw new Error( "Required method definition" );
     if( !opts.props ) opts.props = {} as any;
@@ -96,6 +100,7 @@ export function asAnchorConnect<P extends {} >( socket:net.Socket, opts:AsAnchor
 
     _socket.anchored  = () =>  false;
 
+    socket[ ANCHOR_SYMBOL ] = true;
     return _socket;
 }
 
@@ -105,6 +110,7 @@ export type AsListenableAnchorConnectOptions< P extends object, E extends { [ K 
 }
 
 
+const LISTENABLE_ANCHOR_SYMBOL = Symbol.for("asListenableAnchorConnect");
 export type  ListenableAnchorListener <L extends {
     [K in keyof L]: CallableFunction;
 }> = L & {
@@ -115,21 +121,28 @@ export function asListenableAnchorConnect<
         [K in keyof L]: CallableFunction;
     }
 >( socket:net.Socket, opts:AsListenableAnchorConnectOptions<P, L> ) :ListenableAnchorSocket<P, L> {
+    if( socket[LISTENABLE_ANCHOR_SYMBOL]) return socket as any;
     let _socket = asAnchorConnect( socket, opts ) as ListenableAnchorSocket< P, L>;
     const scape = "\\|" as const;
-    const delimiter = "||"  as const;
+    const END = "||"  as const;
     const EVENT_NAME="aio.send.eventName"  as const;
     const EVENT_ARGS="aio.send.args"  as const;
 
     if( !opts.attache ) opts.attache = new Listener<ListenableAnchorListener<L>>();
+    let _output = ( str:string )=>{
+        socket.write( str.replace( /\|/g, scape ) +END )
+    }
+
     _socket.send = ( event, ...args)=>{
         let pack =  {
             [EVENT_NAME]: event,
             [EVENT_ARGS]: args
         };
         let _str = JSON.stringify( pack );
-        socket.write( _str.replace( /\|/g, scape ) +delimiter )
+        return _output( _str );
     }
+
+    _socket.output = _output;
 
     _socket.listen = ( method, event, callback) => {
         opts.attache[method]( event, callback as any );
@@ -145,9 +158,17 @@ export function asListenableAnchorConnect<
     _socket.offRaw = callback => rawListener.off( "raw", callback );
     _socket.onceOffRaw = callback => rawListener.onceOff( "raw", callback );
 
+    let preview = "";
+
     let dataListener = ( data:Buffer )=>{
-        let str:string = data.toString();
-        str.split( delimiter ).filter( value => value && value.length )
+        let str:string = preview+data.toString();
+        if( !str.includes( END ) ) return;
+        let parts = str.split( END );
+        if( !str.endsWith( END ) ){
+            preview = parts.pop();
+        }
+
+        parts.filter( value => value && value.length )
             .forEach( value => {
                 let raw:string = value.replace( /\\\|/g, "|");
                 rawListener.notifySafe( "raw", raw );
@@ -194,6 +215,7 @@ export function asListenableAnchorConnect<
         return opts.attache;
     }
     _socket.startListener();
+    socket[LISTENABLE_ANCHOR_SYMBOL] = true;
     return  _socket;
 }
 
