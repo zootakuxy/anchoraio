@@ -7,6 +7,7 @@ export type ConnectionMethod = "REQ"|"RESP"|"GET"|"SET"|"AUTH";
 
 export interface AnchorSocket<P> extends net.Socket {
     id():string,
+    endPoint():Endpoint
     status(): ConnectionStatus,
     anchored():boolean
     props( props?:P):P,
@@ -54,8 +55,11 @@ export interface ListenableAnchorSocket<
 
 export type AnchorPoint = "AGENT-CLIENT"|"AGENT-CLIENT-DIRECT"|"CENTRAL"|"AGENT-SERVER";
 
+type Endpoint = "client"|"server"|"auth-client"|"auth-server"|boolean
+
 export type AsAnchorConnect<T extends object > = {
     side: ConnectionSide
+    endpoint:Endpoint,
     method: ConnectionMethod
     props?:T,
 }
@@ -101,6 +105,10 @@ export function asAnchorConnect<P extends {} >( socket:net.Socket, opts:AsAnchor
         if( !! props ) _socket[ "_props" ] = props;
         return _socket[ "_props" ];
     };
+
+    _socket.endPoint =()=>{
+        return opts.endpoint;
+    }
 
     _socket.anchored  = () =>  false;
 
@@ -265,6 +273,11 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
 
 
         _left.on( "data", data => {
+
+            // console.log( data.toString() );
+            // return _right.write( data );
+
+
             let onComplet = ( _adata )=>{
 
                 const messageLength = _adata.length;
@@ -289,7 +302,6 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
                 // Leia os primeiros 4 bytes para obter o tamanho da mensagem
                 expectedLength = receivedData.readUInt32BE(0);
                 // Remova os 4 bytes lidos do início do buffer
-                receivedData = receivedData.slice(4);
             }
 
             console.log( { expectedLength, dataLength:receivedData.length,
@@ -313,8 +325,11 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
     }
 
     let __switchData = (side:AnchorSocket<T>, data:any[])=>{
+            console.log( "REDIRECT-DATA-AT", point, requestSide.endPoint() )
         while ( data.length ){
-            side.write( requestData.shift() );
+            let next  = requestData.shift();
+            console.log( next.toString() );
+            side.write( next );
         }
     }
 
