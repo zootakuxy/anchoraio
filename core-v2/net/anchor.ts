@@ -269,17 +269,16 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
 
     let endpoints:Endpoint[] = [ "server", "client" ];
     let redirect = ( from:AnchorSocket<T>, to:AnchorSocket<T>, data:Buffer )=>{
-        console.log( `REDIRECT FROM ${ from.endpoint()} to ${ to.endpoint() }` );
-        console.log( data.toString() );
-        if( endpoints.includes( to.endpoint() )){
-            to.write( data );
-            return;
+        let buffer = data;
+        if( !endpoints.includes( to.endpoint() )){
+            const messageLength = data.length;
+            const buffer = Buffer.alloc(4 + messageLength); // 4 bytes para armazenar o tamanho
+            buffer.writeUInt32BE(messageLength, 0);
+            data.copy( buffer, 4);
         }
 
-        const messageLength = data.length;
-        const buffer = Buffer.alloc(4 + messageLength); // 4 bytes para armazenar o tamanho
-        buffer.writeUInt32BE(messageLength, 0);
-        data.copy( buffer, 4);
+        console.log( `REDIRECT FROM ${ from.endpoint()} to ${ to.endpoint() }` );
+        console.log( buffer.toString() );
         to.write( buffer );
     }
 
