@@ -280,6 +280,14 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
 
             let onComplet = ( _adata )=>{
 
+                if( _right.endPoint() === "client" || _right.endPoint() === "server" ){
+                    _right.write( _adata )
+                    // Limpe o buffer e o tamanho esperado para a próxima mensagem
+                    receivedData = receivedData.slice(4 + expectedLength);
+                    expectedLength = 0;
+                    return;
+                }
+
                 const messageLength = _adata.length;
                 const buffer = Buffer.alloc(4 + messageLength); // 4 bytes para armazenar o tamanho
 
