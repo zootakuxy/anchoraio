@@ -289,7 +289,9 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
                 expectedLength = receivedData.readUInt32BE(0);
             }
 
-            console.log( { expectedLength, dataLength:receivedData.length })
+            console.log( { expectedLength, dataLength:receivedData.length,
+                message: receivedData.toString()
+            })
 
             // Verifique se recebemos a mensagem completa
             if (receivedData.length - 4 >= expectedLength) {
