@@ -294,7 +294,7 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
             let onComplete = ( _adata )=>{
                 redirect( _left, _right, _adata );
                 // Limpe o buffer e o tamanho esperado para a próxima mensagem
-                receivedData = receivedData.slice(4 + expectedLength);
+                receivedData = receivedData.slice( expectedLength);
                 expectedLength = 0;
             }
 
