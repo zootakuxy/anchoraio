@@ -315,7 +315,7 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
             if( endpoints.includes( _left.endPoint() ) ){
                 return onComplete( data );
             }
-            
+
             // Verifique se recebemos a mensagem completa
             if (receivedData.length - 4 >= expectedLength ) {
                 return onComplete( receivedData );
@@ -339,7 +339,7 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
     __anchor( requestSide, responseSide );
     __anchor( responseSide, requestSide );
 
-    __switchData( requestSide, responseData, requestData );
+    __switchData( requestSide, responseSide, requestData );
     __switchData( responseSide, requestSide, responseData );
 
     console.log( `REQUEST ${ requestSide.id()} TO ${ aioHost }  ANCHOR AT ${point} ${ hasRequestData }`)
