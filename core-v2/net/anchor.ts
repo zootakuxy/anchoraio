@@ -330,7 +330,7 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
             console.log( "REDIRECT-DATA-AT", point, requestSide.endPoint() )
         while ( data.length ){
             let next  = requestData.shift();
-            if( from === "server" ){
+            if( side.endPoint() === "server" ){
                 next = next.slice(4);
             }
             console.log( next.toString() );
