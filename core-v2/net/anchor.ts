@@ -293,14 +293,6 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
         _left.on( "data", data => {
 
             let onComplete = ( _adata )=>{
-                if( _right.endPoint() === "client" || _right.endPoint() === "server" ){
-                    _right.write( _adata )
-                    // Limpe o buffer e o tamanho esperado para a próxima mensagem
-                    receivedData = receivedData.slice(4 + expectedLength);
-                    expectedLength = 0;
-                    return;
-                }
-
                 redirect( _left, _right, _adata );
                 // Limpe o buffer e o tamanho esperado para a próxima mensagem
                 receivedData = receivedData.slice(4 + expectedLength);
@@ -314,8 +306,10 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
                 receivedData = receivedData.slice(4);
             }
 
+            //            if ( point === "AGENT-SERVER" || point === "AGENT-CLIENT" || point || "AGENT-CLIENT-DIRECT" )
+
             if( endpoints.includes( _left.endPoint() ) ){
-                return onComplete( data );
+                return onComplete( receivedData );
             }
 
             // Verifique se recebemos a mensagem completa
