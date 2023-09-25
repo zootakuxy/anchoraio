@@ -337,9 +337,24 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
             console.log( "REDIRECT-DATA-AT", point, requestSide.endPoint() )
         while ( data.length ){
             let next  = requestData.shift();
-            if( side.endPoint() === "server" ){
+            if( side.endPoint() === "server" || side.endPoint() === "client" ){
                 next = next.slice(4);
             }
+
+            if( from === "client" ){
+                const messageLength = next.length;
+                const buffer = Buffer.alloc(4 + messageLength); // 4 bytes para armazenar o tamanho
+
+                // Escreva o tamanho da mensagem no início do buffer
+                buffer.writeUInt32BE(messageLength, 0);
+
+                // Copie os dados do buffer "data" para o buffer "buffer" a partir da posição 4
+                next.copy(buffer, 4);
+                // Envie o buffer completo para o servidor
+                side.write( buffer );
+                return;
+            }
+
             console.log( next.toString() );
             side.write( next );
         }
