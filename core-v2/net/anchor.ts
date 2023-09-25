@@ -312,7 +312,7 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
             }
 
             // Verifique se recebemos a mensagem completa
-            if (receivedData.length - 4 >= expectedLength ) {
+            if (receivedData.length >= expectedLength ) {
                 return onComplete( receivedData );
             }
 
