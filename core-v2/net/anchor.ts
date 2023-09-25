@@ -7,7 +7,7 @@ export type ConnectionMethod = "REQ"|"RESP"|"GET"|"SET"|"AUTH";
 
 export interface AnchorSocket<P> extends net.Socket {
     id():string,
-    endPoint():Endpoint
+    endpoint():Endpoint
     status(): ConnectionStatus,
     anchored():boolean
     props( props?:P):P,
@@ -106,7 +106,7 @@ export function asAnchorConnect<P extends {} >( socket:net.Socket, opts:AsAnchor
         return _socket[ "_props" ];
     };
 
-    _socket.endPoint =()=>{
+    _socket.endpoint =()=>{
         return opts.endpoint;
     }
 
@@ -269,9 +269,9 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
 
     let endpoints:Endpoint[] = [ "server", "client" ];
     let redirect = ( from:AnchorSocket<T>, to:AnchorSocket<T>, data:Buffer )=>{
-        console.log( "REDIRECT TO ", to.endPoint() );
+        console.log( `REDIRECT FROM ${ from.endpoint()} to ${ to.endpoint() }` );
         console.log( data.toString() );
-        if( endpoints.includes( to.endPoint() )){
+        if( endpoints.includes( to.endpoint() )){
             to.write( data );
             return;
         }
@@ -306,9 +306,8 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
                 receivedData = receivedData.slice(4);
             }
 
-            //            if ( point === "AGENT-SERVER" || point === "AGENT-CLIENT" || point || "AGENT-CLIENT-DIRECT" )
 
-            if( endpoints.includes( _left.endPoint() ) ){
+            if( endpoints.includes( _left.endpoint() ) ){
                 return onComplete( receivedData );
             }
 
@@ -316,6 +315,8 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
             if (receivedData.length - 4 >= expectedLength ) {
                 return onComplete( receivedData );
             }
+
+            console.log( `REDIRECT FROM ${ _left.endpoint()} to ${ _left.endpoint() } WAIT MORE` );
         });
         // _left.pipe( _right );
         _left.on( "close", () => {
