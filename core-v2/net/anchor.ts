@@ -269,6 +269,8 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
 
     let endpoints:Endpoint[] = [ "server", "client" ];
     let redirect = ( from:AnchorSocket<T>, to:AnchorSocket<T>, data:Buffer )=>{
+        console.log( "REDIRECT TO ", to.endPoint() );
+        console.log( data.toString() );
         if( endpoints.includes( to.endPoint() )){
             to.write( data );
             return;
@@ -278,7 +280,7 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
         const buffer = Buffer.alloc(4 + messageLength); // 4 bytes para armazenar o tamanho
         buffer.writeUInt32BE(messageLength, 0);
         data.copy( buffer, 4);
-        to.write(buffer);
+        to.write( buffer );
     }
 
 
