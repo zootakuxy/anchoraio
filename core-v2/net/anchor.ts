@@ -290,7 +290,7 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
 
 
         _left.on( "data", data => {
-            redirect( _left, _left, data );
+            redirect( _left, _right, data );
 
             // let onComplete = ( _adata )=>{
             //     redirect( _left, _right, _adata );
