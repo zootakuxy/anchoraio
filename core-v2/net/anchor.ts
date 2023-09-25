@@ -266,6 +266,22 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
 
     let hasRequestData = requestData.length? "WITH DATA": "NO DATA";
 
+
+    let endpoints:Endpoint[] = [ "server", "client" ];
+    let redirect = ( from:AnchorSocket<T>, to:AnchorSocket<T>, data:Buffer )=>{
+        if( endpoints.includes( to.endPoint() )){
+            to.write( data );
+            return;
+        }
+
+        const messageLength = data.length;
+        const buffer = Buffer.alloc(4 + messageLength); // 4 bytes para armazenar o tamanho
+        buffer.writeUInt32BE(messageLength, 0);
+        data.copy( buffer, 4);
+        to.write(buffer);
+    }
+
+
     let __anchor = (_left:AnchorSocket<T>, _right:AnchorSocket<T> ) => {
 
         let receivedData = Buffer.alloc(0);
@@ -274,15 +290,7 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
 
         _left.on( "data", data => {
 
-            // console.log( data.toString() );
-            // return _right.write( data );
-
-
-            let onComplet = ( _adata )=>{
-
-                console.log( "====ADATA===SIDE", _right.endPoint() );
-                console.log( _adata.toString());
-
+            let onComplete = ( _adata )=>{
                 if( _right.endPoint() === "client" || _right.endPoint() === "server" ){
                     _right.write( _adata )
                     // Limpe o buffer e o tamanho esperado para a próxima mensagem
@@ -291,38 +299,26 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
                     return;
                 }
 
-                const messageLength = _adata.length;
-                const buffer = Buffer.alloc(4 + messageLength); // 4 bytes para armazenar o tamanho
-
-                // Escreva o tamanho da mensagem no início do buffer
-                buffer.writeUInt32BE(messageLength, 0);
-
-                // Copie os dados do buffer "data" para o buffer "buffer" a partir da posição 4
-                _adata.copy(buffer, 4);
-                // Envie o buffer completo para o servidor
-                _right.write(buffer);
-
+                redirect( _left, _right, _adata );
                 // Limpe o buffer e o tamanho esperado para a próxima mensagem
                 receivedData = receivedData.slice(4 + expectedLength);
                 expectedLength = 0;
             }
-            
+
             receivedData = Buffer.concat([receivedData, data]);
             // Se o tamanho esperado ainda não foi determinado
             if (expectedLength === 0 && receivedData.length >= 4) {
-                // Leia os primeiros 4 bytes para obter o tamanho da mensagem
                 expectedLength = receivedData.readUInt32BE(0);
-                // Remova os 4 bytes lidos do início do buffer
                 receivedData = receivedData.slice(4);
-
             }
 
-            if ( point === "AGENT-SERVER" || point === "AGENT-CLIENT" || point || "AGENT-CLIENT-DIRECT" )
-                return onComplet( receivedData );
-
+            if( endpoints.includes( _left.endPoint() ) ){
+                return onComplete( data );
+            }
+            
             // Verifique se recebemos a mensagem completa
             if (receivedData.length - 4 >= expectedLength ) {
-                return onComplet( receivedData );
+                return onComplete( receivedData );
             }
         });
         // _left.pipe( _right );
@@ -333,37 +329,18 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
         _left.anchored  = () =>  true;
     }
 
-    let __switchData = ( side:AnchorSocket<T>, data:any[], from:Endpoint )=>{
-            console.log( "REDIRECT-DATA-AT", point, requestSide.endPoint() )
+    let __switchData = ( from:AnchorSocket<T>, to:AnchorSocket<T>, data )=>{
         while ( data.length ){
             let next  = requestData.shift();
-            if( side.endPoint() === "server" || side.endPoint() === "client" ){
-                next = next.slice(4);
-            }
-
-            if( from === "client" ){
-                const messageLength = next.length;
-                const buffer = Buffer.alloc(4 + messageLength); // 4 bytes para armazenar o tamanho
-
-                // Escreva o tamanho da mensagem no início do buffer
-                buffer.writeUInt32BE(messageLength, 0);
-
-                // Copie os dados do buffer "data" para o buffer "buffer" a partir da posição 4
-                next.copy(buffer, 4);
-                // Envie o buffer completo para o servidor
-                side.write( buffer );
-                return;
-            }
-
-            console.log( next.toString() );
-            side.write( next );
+            redirect( from, to, next );
         }
     }
 
     __anchor( requestSide, responseSide );
     __anchor( responseSide, requestSide );
-    __switchData( responseSide, requestData, requestSide.endPoint() );
-    __switchData( requestSide, responseData, responseSide.endPoint() );
+
+    __switchData( requestSide, responseData, requestData );
+    __switchData( responseSide, requestSide, responseData );
 
     console.log( `REQUEST ${ requestSide.id()} TO ${ aioHost }  ANCHOR AT ${point} ${ hasRequestData }`)
 }
