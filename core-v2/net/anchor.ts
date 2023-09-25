@@ -288,6 +288,8 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
             if (expectedLength === 0 && receivedData.length >= 4) {
                 // Leia os primeiros 4 bytes para obter o tamanho da mensagem
                 expectedLength = receivedData.readUInt32BE(0);
+                // Remova os 4 bytes lidos do início do buffer
+                receivedData = receivedData.slice(4);
             }
 
             console.log( { expectedLength, dataLength:receivedData.length,
