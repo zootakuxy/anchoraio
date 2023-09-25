@@ -68,7 +68,7 @@ export function asAnchorConnect<P extends {} >( socket:net.Socket, opts:AsAnchor
     if( !opts?.method ) throw new Error( "Required method definition" );
     if( !opts.props ) opts.props = {} as any;
     let _socket:AnchorSocket<P> = socket as any;
-    
+
     console.log( {
         writableHighWaterMark: socket.writableHighWaterMark,
         readableHighWaterMark: socket.readableHighWaterMark,
@@ -268,20 +268,39 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
     let hasRequestData = requestData.length? "WITH DATA": "NO DATA";
 
     let __anchor = (_left:AnchorSocket<T>, _right:AnchorSocket<T> ) => {
-        _left.on( "data", data => {
-            // const messageLength = data.length;
-            // const buffer = Buffer.alloc(4 + messageLength); // 4 bytes para armazenar o tamanho
-            //
-            // // Escreva o tamanho da mensagem no início do buffer
-            // buffer.writeUInt32BE(messageLength, 0);
-            //
-            // // Escreva a mensagem no buffer a partir da posição 4
-            // data.copy(buffer, 4); // Copia o conteúdo do buffer "data" para o buffer "buffer" a partir da posição 4
-            //
-            // // Envie o buffer completo para o servidor
-            // _right.write( buffer );
 
-            _right.write(data)
+        let receivedData = Buffer.alloc(0);
+        let expectedLength = 0;
+
+
+        _left.on( "data", data => {
+            let onComplet = ( _adata )=>{
+                const messageLength = _adata.length;
+                const buffer = Buffer.alloc(4 + messageLength); // 4 bytes para armazenar o tamanho
+
+                // Escreva o tamanho da mensagem no início do buffer
+                buffer.writeUInt32BE(messageLength, 0);
+
+                // Copie os dados do buffer "data" para o buffer "buffer" a partir da posição 4
+                _adata.copy(buffer, 4);
+                // Envie o buffer completo para o servidor
+                _right.write(buffer);
+            }
+            
+            receivedData = Buffer.concat([receivedData, data]);
+            // Se o tamanho esperado ainda não foi determinado
+            if (expectedLength === 0 && receivedData.length >= 4) {
+                // Leia os primeiros 4 bytes para obter o tamanho da mensagem
+                expectedLength = receivedData.readUInt32BE(0);
+            }
+
+            // Verifique se recebemos a mensagem completa
+            if (receivedData.length - 4 >= expectedLength) {
+                onComplet( receivedData );
+                // Limpe o buffer e o tamanho esperado para a próxima mensagem
+                receivedData = receivedData.slice(4 + expectedLength);
+                expectedLength = 0;
+            }
         });
         // _left.pipe( _right );
         _left.on( "close", () => {
