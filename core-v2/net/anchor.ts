@@ -280,6 +280,9 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
 
             let onComplet = ( _adata )=>{
 
+                console.log( "====ADATA===SIDE", _right.endPoint() );
+                console.log( _adata.toString());
+
                 if( _right.endPoint() === "client" || _right.endPoint() === "server" ){
                     _right.write( _adata )
                     // Limpe o buffer e o tamanho esperado para a próxima mensagem
@@ -313,10 +316,6 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
                 receivedData = receivedData.slice(4);
 
             }
-
-            console.log( { expectedLength, dataLength:receivedData.length,
-                message: receivedData.toString()
-            })
 
             if ( point === "AGENT-SERVER" || point === "AGENT-CLIENT" || point || "AGENT-CLIENT-DIRECT" )
                 return onComplet( receivedData );
