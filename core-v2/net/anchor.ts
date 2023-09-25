@@ -234,6 +234,8 @@ export function createAnchorConnect<P extends {} >( opts:CreateAnchorConnect<P> 
         port: opts.port,
         // writableHighWaterMark: 1024 * 1024,
         // readableHighWaterMark : 1024 * 1024
+    }, () => {
+
     });
 
     return asAnchorConnect( socket, opts );
@@ -257,7 +259,17 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
 
     let __anchor = (_left:AnchorSocket<T>, _right:AnchorSocket<T> ) => {
         _left.on( "data", data => {
-           _right.write( data );
+            const messageLength = data.length;
+            const buffer = Buffer.alloc(4 + messageLength); // 4 bytes para armazenar o tamanho
+
+            // Escreva o tamanho da mensagem no início do buffer
+            buffer.writeUInt32BE(messageLength, 0);
+
+            // Escreva a mensagem no buffer a partir da posição 4
+            data.copy(buffer, 4); // Copia o conteúdo do buffer "data" para o buffer "buffer" a partir da posição 4
+
+            // Envie o buffer completo para o servidor
+            _right.write( buffer );
         });
         // _left.pipe( _right );
         _left.on( "close", () => {
