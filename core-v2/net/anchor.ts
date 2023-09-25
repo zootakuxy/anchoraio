@@ -69,15 +69,6 @@ export function asAnchorConnect<P extends {} >( socket:net.Socket, opts:AsAnchor
     if( !opts.props ) opts.props = {} as any;
     let _socket:AnchorSocket<P> = socket as any;
 
-    console.log( {
-        writableHighWaterMark: socket.writableHighWaterMark,
-        readableHighWaterMark: socket.readableHighWaterMark,
-        bytesRead: socket.bytesRead,
-        bytesWritten: socket.bytesWritten,
-        writableCorked: socket.writableCorked,
-        readableLength: socket.readableLength
-    })
-
     _socket.on("data", data => {
         console.log( "READING DATA LENGTH", data.length );
     });
@@ -293,7 +284,7 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
                 // Leia os primeiros 4 bytes para obter o tamanho da mensagem
                 expectedLength = receivedData.readUInt32BE(0);
             }
-            
+
             console.log( { expectedLength })
 
             // Verifique se recebemos a mensagem completa
