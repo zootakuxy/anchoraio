@@ -266,10 +266,7 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
 
         _left.on( "data", data => {
             let onComplet = ( _adata )=>{
-                console.log( {
-                    onComplete: _adata.toString(),
-                    onCompleteLength: _adata.toString().length,
-                })
+
                 const messageLength = _adata.length;
                 const buffer = Buffer.alloc(4 + messageLength); // 4 bytes para armazenar o tamanho
 
@@ -280,6 +277,10 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
                 _adata.copy(buffer, 4);
                 // Envie o buffer completo para o servidor
                 _right.write(buffer);
+
+                // Limpe o buffer e o tamanho esperado para a próxima mensagem
+                receivedData = receivedData.slice(4 + expectedLength);
+                expectedLength = 0;
             }
             
             receivedData = Buffer.concat([receivedData, data]);
@@ -293,12 +294,12 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
                 message: receivedData.toString()
             })
 
+            if ( point === "AGENT-SERVER" || point === "AGENT-CLIENT" || point || "AGENT-CLIENT-DIRECT" )
+                return onComplet( receivedData );
+
             // Verifique se recebemos a mensagem completa
-            if (receivedData.length - 4 >= expectedLength) {
-                onComplet( receivedData );
-                // Limpe o buffer e o tamanho esperado para a próxima mensagem
-                receivedData = receivedData.slice(4 + expectedLength);
-                expectedLength = 0;
+            if (receivedData.length - 4 >= expectedLength ) {
+                return onComplet( receivedData );
             }
         });
         // _left.pipe( _right );
