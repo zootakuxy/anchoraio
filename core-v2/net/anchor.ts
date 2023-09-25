@@ -316,7 +316,7 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
                 return onComplete( receivedData );
             }
 
-            console.log( `REDIRECT FROM ${ _left.endpoint()} to ${ _left.endpoint() } WAIT MORE` );
+            console.log( `REDIRECT FROM ${ _left.endpoint()} to ${ _left.endpoint() } WAIT MORE | receivedData.length = ${receivedData.length}; expectedLength = ${ expectedLength } at ${ point }` );
         });
         // _left.pipe( _right );
         _left.on( "close", () => {
