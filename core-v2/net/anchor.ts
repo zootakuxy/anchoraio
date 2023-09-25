@@ -290,33 +290,34 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
 
 
         _left.on( "data", data => {
+            redirect( _left, _left, data );
 
-            let onComplete = ( _adata )=>{
-                redirect( _left, _right, _adata );
-                // Limpe o buffer e o tamanho esperado para a próxima mensagem
-                receivedData = receivedData.slice( expectedLength );
-                expectedLength = 0;
-            }
-
-            receivedData = Buffer.concat([receivedData, data]);
-            // Se o tamanho esperado ainda não foi determinado
-            if (expectedLength === 0 && receivedData.length >= 4) {
-                expectedLength = data.readUInt32BE(0);
-                receivedData = receivedData.slice(4);
-            }
-
-
-            if( endpoints.includes( _left.endpoint() ) ){
-                return onComplete( receivedData );
-            }
-
-            // Verifique se recebemos a mensagem completa
-            if (receivedData.length >= expectedLength ) {
-                return onComplete( receivedData );
-            }
-
-            console.log( `REDIRECT FROM ${ _left.endpoint()} to ${ _left.endpoint() } WAIT MORE | receivedData.length = ${receivedData.length}; expectedLength = ${ expectedLength } at ${ point }` );
-            console.log( receivedData.toString( ) );
+            // let onComplete = ( _adata )=>{
+            //     redirect( _left, _right, _adata );
+            //     // Limpe o buffer e o tamanho esperado para a próxima mensagem
+            //     receivedData = receivedData.slice( expectedLength );
+            //     expectedLength = 0;
+            // }
+            //
+            // receivedData = Buffer.concat([receivedData, data]);
+            // // Se o tamanho esperado ainda não foi determinado
+            // if (expectedLength === 0 && receivedData.length >= 4) {
+            //     expectedLength = data.readUInt32BE(0);
+            //     receivedData = receivedData.slice(4);
+            // }
+            //
+            //
+            // if( endpoints.includes( _left.endpoint() ) ){
+            //     return onComplete( receivedData );
+            // }
+            //
+            // // Verifique se recebemos a mensagem completa
+            // if (receivedData.length >= expectedLength ) {
+            //     return onComplete( receivedData );
+            // }
+            //
+            // console.log( `REDIRECT FROM ${ _left.endpoint()} to ${ _left.endpoint() } WAIT MORE | receivedData.length = ${receivedData.length}; expectedLength = ${ expectedLength } at ${ point }` );
+            // console.log( receivedData.toString( ) );
         });
         // _left.pipe( _right );
         _left.on( "close", () => {
