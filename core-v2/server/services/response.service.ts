@@ -27,6 +27,7 @@ export class ResponseService extends BaseEventEmitter<ResponseServiceEvent>{
             }>( _so, {
                 side: "server",
                 method: "SET",
+                endpoint: false
             });
 
             socket.eventListener().once( "auth", pack => {

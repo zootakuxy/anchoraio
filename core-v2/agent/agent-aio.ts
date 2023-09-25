@@ -89,7 +89,8 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             host: this.opts.serverHost,
             side: "client",
             method: "AUTH",
-            attache: this.listener()
+            attache: this.listener(),
+            endpoint: "auth-client"
         } );
 
         this._auth = null;

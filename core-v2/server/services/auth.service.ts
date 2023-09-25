@@ -40,6 +40,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
             let socket = asListenableAnchorConnect<any, AuthSocketListener>( _ns, {
                 side: "server",
                 method: "AUTH",
+                endpoint: "auth-server",
             });
 
             socket.eventListener().once( "auth", auth => {

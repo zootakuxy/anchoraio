@@ -24,6 +24,7 @@ export class RequesterService extends BaseEventEmitter<RequesterServiceEvent>{
             let socket = asAnchorConnect( _so, {
                 side: "server",
                 method: "GET",
+                endpoint: false
             });
             socket.once( "data", ( data) => {
 

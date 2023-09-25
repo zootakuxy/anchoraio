@@ -88,6 +88,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             method: "SET",
             host: this.aio.opts.serverHost,
             port: this.aio.opts.responsePort,
+            endpoint: false,
             props: {
                 appName: app.name,
                 appAddress: app.address,
@@ -156,6 +157,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                         port: app.port,
                         side: "client",
                         method: "RESP",
+                        endpoint: "server"
                     });
 
                     appConnection.on( "connect", () => {

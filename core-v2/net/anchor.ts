@@ -302,6 +302,8 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
                 // Leia os primeiros 4 bytes para obter o tamanho da mensagem
                 expectedLength = receivedData.readUInt32BE(0);
                 // Remova os 4 bytes lidos do início do buffer
+                receivedData = receivedData.slice(4);
+
             }
 
             console.log( { expectedLength, dataLength:receivedData.length,
@@ -324,10 +326,13 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
         _left.anchored  = () =>  true;
     }
 
-    let __switchData = (side:AnchorSocket<T>, data:any[])=>{
+    let __switchData = ( side:AnchorSocket<T>, data:any[], from:Endpoint )=>{
             console.log( "REDIRECT-DATA-AT", point, requestSide.endPoint() )
         while ( data.length ){
             let next  = requestData.shift();
+            if( from !== "client" ){
+                next = next.slice(4);
+            }
             console.log( next.toString() );
             side.write( next );
         }
@@ -335,8 +340,8 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
 
     __anchor( requestSide, responseSide );
     __anchor( responseSide, requestSide );
-    __switchData( responseSide, requestData );
-    __switchData( requestSide, responseData );
+    __switchData( responseSide, requestData, requestSide.endPoint() );
+    __switchData( requestSide, responseData, responseSide.endPoint() );
 
     console.log( `REQUEST ${ requestSide.id()} TO ${ aioHost }  ANCHOR AT ${point} ${ hasRequestData }`)
 }

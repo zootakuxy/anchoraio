@@ -161,6 +161,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
             let request:typeof this.requestConnections[number] = asAnchorConnect( _so, {
                 side: "server",
                 method: "REQ",
+                endpoint: "client"
             });
 
             this.requestConnections[ request.id() ] = request;
@@ -277,7 +278,8 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
             host: app.address,
             port: app.port,
             side: "client",
-            method: "RESP"
+            method: "RESP",
+            endpoint: "server"
         });
         anchor( `${opts.application}.${ opts.server }`, "AGENT-CLIENT-DIRECT", request, response, opts.requestData, [ ]);
     }
@@ -383,6 +385,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
             port: this.opts.requestPort,
             side: "client",
             method:"SET",
+            endpoint: false,
             props: {
                 readyToAnchor: false
             }
