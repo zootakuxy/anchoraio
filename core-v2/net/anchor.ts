@@ -266,6 +266,10 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
 
         _left.on( "data", data => {
             let onComplet = ( _adata )=>{
+                console.log( {
+                    onComplete: _adata.toString(),
+                    onCompleteLength: _adata.toString().length,
+                })
                 const messageLength = _adata.length;
                 const buffer = Buffer.alloc(4 + messageLength); // 4 bytes para armazenar o tamanho
 
@@ -285,7 +289,7 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
                 expectedLength = receivedData.readUInt32BE(0);
             }
 
-            console.log( { expectedLength })
+            console.log( { expectedLength, dataLength:receivedData.length })
 
             // Verifique se recebemos a mensagem completa
             if (receivedData.length - 4 >= expectedLength) {
