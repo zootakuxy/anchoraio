@@ -181,13 +181,6 @@ export function asListenableAnchorConnect<
                 let raw:string = value.replace( /\\\|/g, "|");
                 rawListener.notifySafe( "raw", raw );
 
-                let notify = ( pack ) =>{
-                    let args = pack[ EVENT_ARGS ];
-                    let event = pack[ EVENT_NAME ];
-                    // @ts-ignore
-                    opts.attache.notify( event as any, ...args as any );
-                    notify = ()=> { }
-                }
 
                 if( raw.charAt(0) !== "{" ) return;
                 if( raw.charAt( raw.length-1 ) !== "}" ) return;
@@ -208,7 +201,10 @@ export function asListenableAnchorConnect<
                 if( typeof pack[EVENT_NAME ] !== "string" ) return;
 
                 if( !Array.isArray( pack[EVENT_ARGS] )) return;
-                return notify( pack );
+                let args = pack[ EVENT_ARGS ];
+                let event = pack[ EVENT_NAME ];
+                // @ts-ignore
+                opts.attache.notify( event as any, ...args as any );
 
             });
     }
