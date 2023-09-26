@@ -177,11 +177,11 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             this._auth = auth;
             this.authId = auth.id;
             this.availableRemoteServers = [];
-            auth.availableServers.forEach( value => {
+            Object.values( auth.availableServers ).forEach( value => {
                 this.availableRemoteServers.push({
-                    server: value,
-                    apps: new Set()
-                })
+                    server: value.server,
+                    apps: new Set( value.apps )
+                });
             });
 
             if( this.opts.directConnection === "off" ) this.availableRemoteServers.push({

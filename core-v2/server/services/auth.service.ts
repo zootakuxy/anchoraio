@@ -1,6 +1,12 @@
 import {ServerAio} from "../server-aio";
 import {createServer, Server } from "net";
-import {asListenableAnchorConnect, AuthAgent, AuthSocketListener, ServerReleaseOptions} from "../../net";
+import {
+    asListenableAnchorConnect,
+    AuthAgent,
+    AuthSocketListener,
+    AvailableServer,
+    ServerReleaseOptions
+} from "../../net";
 import {nanoid} from "nanoid";
 import {BaseEventEmitter} from "kitres/src/core/util";
 
@@ -88,8 +94,18 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                         connection: socket,
                     });
 
-                    let servers = Object.keys( this.saio.agents ).filter( value => auth.servers.includes( value ));
-                    // let authResponse:AuthResult = ;
+                    let servers:{
+                        [ server:string ]: AvailableServer
+                    } = {};
+                    Object.keys( this.saio.agents ).filter( value => auth.servers.includes( value ))
+                        .forEach( serverName => {
+                            let apps = Object.values( this.saio.agents[serverName].apps )
+                                .filter( value => value.grants.includes( "*" ) || value.grants.includes( auth.agent ) );
+                            servers[ serverName ] = {
+                                server: serverName,
+                                apps: apps.map( value => value.name )
+                            };
+                        });
 
                     socket.send("authResult", {
                         id: socket.id(),

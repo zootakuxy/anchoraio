@@ -1,7 +1,14 @@
+export type AvailableServer =  {
+    apps:string[],
+    server:string
+}
+
 export type AuthResult = {
     id:string,
     referer:string
-    availableServers:string[]
+    availableServers: {
+        [ server:string ]: AvailableServer
+    }
 }
 
 export type ServerReleaseOptions = {
