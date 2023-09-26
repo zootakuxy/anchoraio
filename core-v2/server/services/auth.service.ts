@@ -4,11 +4,11 @@ import {
     asListenableAnchorConnect,
     AuthAgent,
     AuthSocketListener,
-    AvailableServer,
     ServerReleaseOptions
 } from "../../net";
 import {nanoid} from "nanoid";
 import {BaseEventEmitter} from "kitres/src/core/util";
+import {AvailableServer} from "../../agent";
 
 export type App = {
     name:string,
@@ -103,7 +103,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                                 .filter( value => value.grants.includes( "*" ) || value.grants.includes( auth.agent ) );
                             servers[ serverName ] = {
                                 server: serverName,
-                                apps: apps.map( value => value.name )
+                                apps: new Set( apps.map( value => value.name ) )
                             };
                         });
 

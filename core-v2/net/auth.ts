@@ -1,7 +1,4 @@
-export type AvailableServer =  {
-    apps:string[],
-    server:string
-}
+import {AvailableServer} from "../agent";
 
 export type AuthResult = {
     id:string,

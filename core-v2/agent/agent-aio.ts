@@ -1,4 +1,4 @@
-import {ResolverServer,AgentProxyOptions} from "./resolve/resolver-server";
+import {ResolverServer,AgentProxyOptions} from "./resolve";
 import {TokenService} from "../services";
 import {TokenOptions} from "../../aio/opts/opts-token";
 import {BaseEventEmitter} from "kitres";
