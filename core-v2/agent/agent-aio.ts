@@ -173,12 +173,12 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
         });
 
         this.on("authResult", auth => {
+            console.log( "agent.authResult", auth );
             this.result = "authenticated";
             this._auth = auth;
             this.authId = auth.id;
             this.availableRemoteServers = [];
 
-            //h dfdbfd fdjfd
             Object.values( auth.availableServers ).forEach( value => {
                 this.availableRemoteServers.push({
                     server: value.server,
