@@ -192,21 +192,24 @@ export function asListenableAnchorConnect<
                 if( raw.charAt(0) !== "{" ) return;
                 if( raw.charAt( raw.length-1 ) !== "}" ) return;
 
+                let pack;
                 try {
-                    let pack = JSON.parse( raw );
-                    if( !pack || typeof pack !== "object" ) return;
-
-                    let keys = Object.keys( pack );
-                    if( !keys.includes(EVENT_NAME) || ! keys.includes( EVENT_ARGS ) ) return;
-                    if( typeof pack[EVENT_NAME ] !== "string" ) return;
-
-                    if( !Array.isArray( pack[EVENT_ARGS] )) return;
-                    return notify( pack );
+                    pack = JSON.parse( raw );
                 } catch (e) {
+                    pack = null;
                     console.log( "ERROR-PARSE", raw )
                     console.log( e );
                     return;
                 }
+
+                if( !pack || typeof pack !== "object" ) return;
+                let keys = Object.keys( pack );
+                if( !keys.includes(EVENT_NAME) || ! keys.includes( EVENT_ARGS ) ) return;
+                if( typeof pack[EVENT_NAME ] !== "string" ) return;
+
+                if( !Array.isArray( pack[EVENT_ARGS] )) return;
+                return notify( pack );
+
             });
     }
 
