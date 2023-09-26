@@ -73,10 +73,6 @@ export function asAnchorConnect<P extends {} >( socket:net.Socket, opts:AsAnchor
     if( !opts.props ) opts.props = {} as any;
     let _socket:AnchorSocket<P> = socket as any;
 
-    _socket.on("data", data => {
-        console.log( "READING DATA LENGTH", data.length );
-    });
-
     _socket[ "_id" ] = `${ opts.method }:${ nanoid( 16 ) }`;
 
     if( opts.side === "client" ){
