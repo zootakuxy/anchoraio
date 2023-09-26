@@ -44,6 +44,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
             });
 
             socket.eventListener().once( "auth", auth => {
+                console.log( "auth", auth );
                 let end = ( code?:string, message?:string )=>{
                     socket.write( JSON.stringify({
                         event:"authFailed",

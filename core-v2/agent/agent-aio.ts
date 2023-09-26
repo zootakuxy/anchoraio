@@ -153,7 +153,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
 
         this.on("remoteServerOpen", server => {
             console.log( "ServerOpen", server );
-            if( this.availableRemoteServers.find( value => value.server === server )){
+            if( !this.availableRemoteServers.find( value => value.server === server ) ){
                 this.availableRemoteServers.push( {
                     server: server,
                     apps: new Set( )
@@ -221,6 +221,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
         });
 
         this.on("appServerRelease", (opts) => {
+            console.log( `agent:appServerReleaseRemote server = "${opts.server}" application = "${opts.application}"` );
             let remote = this.availableRemoteServers.find( value => value.server === opts.server );
             if( !remote ) this.availableRemoteServers.push( remote = {
                 server: opts.server,
@@ -230,6 +231,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
         });
 
         this.on("appServerClosed", opts => {
+            console.log( `agent:appServerClosedRemote server = "${opts.server}" application = "${opts.application}"` );
             let remote = this.availableRemoteServers.find( value => value.server );
             if( !remote ) this.availableRemoteServers.push( remote = {
                 server: opts.server,
