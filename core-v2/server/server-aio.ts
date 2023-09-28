@@ -127,17 +127,21 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
 
     clientsOf(opts:{ server:string, application?:string }):ListenableAnchorSocket<AgentAuthenticate, AuthSocketListener >[]{
         let server = this.agents[ opts.server ];
+        console.log( "agente as server definition", server.connection.props())
         return  Object.entries(this.agents)
             .map(([keyId, client], index) => client.connection)
             .filter((client, index) => {
+                console.log( "check is client with", client.props() );
                 if (client.props().agent === opts.server) return false;
                 if (!client.props().servers.includes( opts.server )) return false;
-                let hasPermission = true;
                 if( opts.application ){
                     let app = server.apps[ opts.application ];
-                    hasPermission = app && ( app.grants.includes( "*" ) || app.grants.includes( client.props().agent ) );
+                    if( !app ) return false;
+                    let hasPermission = app.grants.includes( "*" )
+                        || app.grants.includes( client.props().agent ) ;
+                    if( !hasPermission ) return false;
                 }
-                return hasPermission;
+                return true;
             });
     }
 
