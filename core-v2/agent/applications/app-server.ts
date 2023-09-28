@@ -133,8 +133,8 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
 
             responseGetaway.once("data", ( origin )=>{
                 console.log( `agent.openApplication:busy application = "${ app.name }"`)
-                // responseGetaway.onceRaw(  raw => {
                     responseGetaway.props().busy = true;
+                    delete this.appsConnections[ responseGetaway.id() ];
                     this.restoreApplication( app );
 
                     console.log( `agent.openApplication:work application = "${ app.name }"`)
@@ -164,7 +164,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                             responseGetaway.end();
                         }
                     });
-                // });
+
             })
         });
 
@@ -174,18 +174,6 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
 
         responseGetaway.on("close", ( error) => {
             delete this.appsConnections[ responseGetaway.id() ];
-            // if(
-            //     !responseGetaway.anchored()
-            //     && this.aio.status === "started"
-            //     && responseGetaway.props().appStatus === "started"
-            //     && this.apps?.[ responseGetaway.props().appName ]?.status === "started"
-            // ){
-            //     setTimeout(()=>{
-            //         console.log( `RESTORE CONNECTION FOR: ${ app.name }` );
-            //         this.restoreApplication( app );
-            //     }, this.aio.opts.restoreTimeout );
-            // }
-
             setTimeout(()=>{
                 console.log( `RESTORE CONNECTION FOR: ${ app.name }` );
                 this.restoreApplication( app );
@@ -262,6 +250,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
         if( connection.props().busy ) return cansel( `Connection already bused!`);
         if( connection.anchored() ) return cansel( "Connection already anchored");
         connection.props().busy = true;
+        delete this.appsConnections[ connection.id() ];
         this.restoreApplication( connection.props().app );
     }
 }
