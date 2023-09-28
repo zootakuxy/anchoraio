@@ -110,7 +110,7 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
             wait.resolved = true;
             delete this.waitConnections[slot.server][slot.app][ wait.id ];
             wait.resolve ( slot );
-            console.log( `server.release getaway response for application = "${slot.app}" server = "${ slot.server}" APPLIED` );
+            console.log( `server.release getaway response for application = "${slot.app}" server = "${ slot.server}" CREATED & APPLIED` );
             return;
         }
         console.log( `server.release getaway response for application = "${slot.app}" server = "${ slot.server}" CREATED` );
