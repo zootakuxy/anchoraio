@@ -64,7 +64,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                 let register = ()=>{
                     console.log( `server.agent:auth agent = "${auth.agent}" OK!` );
                     console.log( "===============================================");
-                    console.log( `ID:           ${auth.id}`);
+                    console.log( `ID:           ${socket.id()}`);
                     console.log( `AGENT:        ${auth.agent}`);
                     console.log( `APPLICATIONS: ${Object.keys( auth.apps).join(", ")}`);
                     console.log( `SERVER:       ${auth.servers.join(", ")}`);
