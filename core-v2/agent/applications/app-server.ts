@@ -50,7 +50,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
     public releaseApplication( app:App ){
         console.log( "AppServer:releaseApplication", app.name, app.address, app.port )
 
-        let releases =app.releases;
+        let releases  =app.releases;
         if( !releases ) releases = Defaults.serverRelease||1;
 
         if( !this.apps[ app.name ] ) {
@@ -62,6 +62,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             }
         }
 
+        this.apps[ app.name ].status = "started";
         this.restoreApplication( app );
         this.notify("applicationReleased", app );
     }
@@ -188,6 +189,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                 && !value.props().busy
             );
 
+        console.log( app, pendentConnections );
         if( pendentConnections.length >= app.releases ) return;
 
         if( pendentConnections.length < app.releases ){
@@ -219,8 +221,13 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                 socket.end( () => {
                     if( !isFinally ) return false;
                 });
+                console.log( "application connection end", app.name, socket.id());
                 delete this.appsConnections[ socket.id() ]
+
             });
+
+            console.log( "application connection end", app.name, "[FINALIZED]");
+            this.notifySafe( "applicationStopped", app  );
         })
     }
 
