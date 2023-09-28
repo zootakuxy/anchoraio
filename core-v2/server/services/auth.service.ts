@@ -229,11 +229,10 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                     application: opts.application
                 };
                 let clients = this.saio.clientsOf({ server: auth.agent, application: opts.application });
-                console.log( "client of application", { server: auth.agent, application: opts.application },  clients.map( value => value.props( ) ))
-                    clients.forEach( client => {
-                        releaseOptions.grants = [ client.props().agent ];
-                        client.send( "applicationOffline", releaseOptions );
-                    });
+                clients.forEach( client => {
+                    releaseOptions.grants = [ client.props().agent ];
+                    client.send( "applicationOffline", releaseOptions );
+                });
 
                 this.notifySafe( "applicationOffline", opts )
                     .forEach( value => {
