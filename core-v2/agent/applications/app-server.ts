@@ -112,7 +112,6 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             let grants = app.grants;
             if( !grants ) grants = ["*"];
 
-
             responseGetaway.send( "auth", {
                 server: identifierOf( this.aio.opts.identifier ),
                 app: app.name,
@@ -229,11 +228,18 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
         })
     }
 
-    closeAll() {
-        let apps = [...new Set(Object.entries( this.appsConnections ).map( ([key, appConnection], index) => {
-            return appConnection.props();
-        }))];
-        apps.forEach( application => this.closeApp( application.app ))
+    closeAll():Promise<boolean> {
+        return new Promise( resolve => {
+            Promise.all(
+                this.aio.apps.applications().map( value => {
+                    return this.closeApp( value )
+                })
+            ).then( value => {
+                resolve( true );
+            }).catch( reason => {
+                resolve( false )
+            })
+        })
     }
 
     stop() {
