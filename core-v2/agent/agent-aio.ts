@@ -333,6 +333,14 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             console.log( `agent:applicationOffline server = "${ opts.server }" application = "${ opts.application }"` );
             remoteApplicationOffline( opts );
         });
+
+
+        this.on( "hasPendentRequest", pendentRequest => {
+            let app = this.apps.getApplication( pendentRequest.application );
+            if( !app ) return;
+            this.appServer.restoreApplication( app );
+        });
+
         this.init = ()=>{};
     }
 
