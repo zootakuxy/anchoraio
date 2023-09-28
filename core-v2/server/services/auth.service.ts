@@ -34,7 +34,6 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                 method: "AUTH",
                 endpoint: "auth-server",
             });
-
             socket.eventListener().once( "auth", auth => {
                 let end = ( code?:string, message?:string )=>{
                     console.log( `server.agent:auth agent = "${auth.agent}" REJECTED | code = "${code} message = "${message}"` );
