@@ -33,12 +33,12 @@ interface AgentAioListener extends AuthSocketListener {
 export type AvailableApplication = {
     name:string,
     status:"online"|"offline",
-    grants:Set<string>
+    grants:string[]
 }
 export type AvailableServer = {
     server:string,
     status:"online"|"offline"
-    grants:Set<string>
+    grants:string[]
     apps:{
         [ app:string ]:AvailableApplication
     }
@@ -105,7 +105,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             this.remotesAvailable[ server ] = {
                 status: "offline",
                 apps:{},
-                grants:new Set<string>(),
+                grants:[],
                 server
             }
         }
@@ -116,7 +116,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             if( !_server.apps[ application ]) {
                 _server.apps[ application ] = {
                     status: "offline",
-                    grants:new Set<string>(),
+                    grants:[],
                     name: application
                 };
             }
@@ -141,8 +141,8 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
         return !!status
             && !!status.server
             && !!status.application
-            && status.application.grants.has( this.identifier )
-            && status.server.grants.has( resolved.aioHost )
+            && status.application.grants.includes( this.identifier )
+            && status.server.grants.includes( resolved.aioHost )
     }
 
 
@@ -244,14 +244,14 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             this._auth = auth;
             this.authId = auth.id;
 
-            Object.values( auth.availableServers ).forEach( value => {
-                let server = this.remote( value.server ).server;
-                server.status = value.status;
-                Object.values( value.apps ).forEach( _app => {
+            Object.values( auth.availableServers ).forEach( _serv => {
+                let server = this.remote( _serv.server ).server;
+                server.status = _serv.status;
+                server.grants = _serv.grants;
+                Object.values( _serv.apps ).forEach( _app => {
                     let app = this.remote( server.server, _app.name ).application;
                     app.status = _app.status;
-                    app.grants.has( this.identifier );
-                    server.grants.add( `${app.name}.${server.server}` );
+                    app.grants = _app.grants
                 })
             });
 
@@ -260,8 +260,8 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
                     let local = this.remote( this.identifier, value.name );
                     local.server.status = "online";
                     local.application.status  = "online";
-                    local.server.grants.add( `${ value.name }.${ this.identifier }`);
-                    local.application.grants.add( this.identifier );
+                    local.server.grants.push( `${ value.name }.${ this.identifier }`);
+                    local.application.grants.push( this.identifier );
                 })
             }
 
@@ -325,8 +325,8 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             let status = this.remote( opts.server, opts.application );
             status.server.status = "online";
             status.application.status = "online";
-            status.application.grants.add( this.identifier );
-            status.server.grants.add( `${ opts.application }.${ opts.server }`);
+            status.application.grants.push( this.identifier );
+            status.server.grants.push( `${ opts.application }.${ opts.server }`);
         });
 
         this.on("applicationOffline", opts => {

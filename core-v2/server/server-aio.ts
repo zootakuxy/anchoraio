@@ -9,6 +9,7 @@ import {
 import {TokenService} from "../services";
 import {ServerOptions} from "./server-proxy";
 import {application} from "express";
+import {AvailableApplication, AvailableServer} from "../agent";
 
 interface ServerAioEvent {
 }
@@ -128,19 +129,32 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
 
     clientsOf(opts:{ server:string, application?:string }):ListenableAnchorSocket<AgentAuthenticate, AuthSocketListener >[]{
         let server = this.agents[ opts.server ];
-        return  Object.entries(this.agents)
-            .map(([keyId, client], index) => client.connection)
+        return  Object.values(this.agents)
+            .map((client, index) => client.connection)
             .filter((client, index) => {
                 if (client.props().agent === opts.server) return false;
                 if (!client.props().servers.includes( opts.server )) return false;
                 if( opts.application ){
                     let app = server.apps[ opts.application ];
                     if( !app ) return false;
-                    let hasPermission = app.grants.includes( "*" )
-                        || app.grants.includes( client.props().agent ) ;
-                    if( !hasPermission ) return false;
+                    if( app.grants.includes( "*" ) ) return true;
+                    return app.grants.includes( client.props().agent );
                 }
                 return true;
+            });
+    }
+
+    serverOf(opts:{ client:string }):ListenableAnchorSocket<AgentAuthenticate, AuthSocketListener >[]{
+        let client = this.agents[ opts.client ];
+        return  Object.values(this.agents)
+            .map((server, index) => server.connection)
+            .filter((server, index) => {
+                if (server.props().agent === opts.client) return false;
+                if (!client.servers.includes( server.props().agent ) ) return false;
+                return Object.values( server.props().apps ).find( value => {
+                    if(value.grants.includes( "*" )) return true;
+                    return value.grants.includes(client.agent);
+                });
             });
     }
 

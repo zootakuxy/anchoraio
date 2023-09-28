@@ -8,7 +8,7 @@ import {
 } from "../../net";
 import {nanoid} from "nanoid";
 import {BaseEventEmitter} from "kitres/src/core/util";
-import {AvailableServer} from "../../agent";
+import {AvailableApplication, AvailableServer} from "../../agent";
 
 
 
@@ -87,28 +87,32 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                     let servers:{
                         [ server:string ]: AvailableServer
                     } = {};
-                    Object.keys( this.saio.agents ).filter( value => auth.servers.includes( value ))
-                        .forEach( serverName => {
-                            let online: AvailableServer["apps"] = {};
-                            let grants = new Set<string>();
-                            Object.values( this.saio.agents[serverName].apps )
-                                .forEach( value => {
-                                    if( !(value.grants.includes("*") || value.grants.includes(auth.agent)) ) return;
-                                    online[ value.name ] = {
-                                        name: value.name,
-                                        grants: new Set<string>([ auth.agent ]),
-                                        status: value.status
-                                    }
-                                    grants.add( `${ value.name }.${ auth.agent }` );
-                                });
 
-                            servers[ serverName ] = {
-                                server: serverName,
-                                apps: online,
-                                grants: grants,
-                                status: this.saio.agents[serverName].status
+                    //Servidores disponiveis
+                    this.saio.serverOf({ client: auth.agent }).forEach( server => {
+                        let grants:Set<string> = new Set();
+                        let apps :{[p:string]:AvailableApplication} = {};
+                        let addGrant = ( server:string, app:AuthApplication )=>{
+                            apps[ app.name ] = {
+                                name: app.name,
+                                grants: [auth.agent],
+                                status: app.status
                             };
+                            grants.add( `${ app.name }.${ server }`);
+                        }
+                        Object.values( server.props().apps ).forEach( app => {
+                            if( app.grants.includes( "*" ) ) return addGrant( server.props().agent, app );
+                            if( app.grants.includes( auth.agent ) ) return addGrant( server.props().agent,  app );
+                            return false;
                         });
+                        if( !grants.size ) return;
+                        servers[ server.props().agent ] = {
+                            grants: [...grants],
+                            status: server.props().status,
+                            server: server.props().agent,
+                            apps: apps
+                        }
+                    });
 
                     socket.send("authResult", {
                         id: socket.id(),
