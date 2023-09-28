@@ -264,6 +264,8 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
     }
 
     statusOf(app: App) {
-        return this.apps[ app.name ].status;
+        let controller = this.apps[ app.name ];
+        if( !controller ) return "stopped";
+        return controller.status;
     }
 }
