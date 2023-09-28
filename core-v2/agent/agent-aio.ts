@@ -1,4 +1,4 @@
-import {ResolverServer,AgentProxyOptions} from "./resolve";
+import {ResolverServer, AgentProxyOptions, Resolved} from "./resolve";
 import {TokenService} from "../services";
 import {TokenOptions} from "../../aio/opts/opts-token";
 import {BaseEventEmitter} from "kitres";
@@ -6,8 +6,14 @@ import {AioResolver} from "./resolve";
 import {ApplicationAIO} from "./applications";
 import {Defaults} from "../defaults";
 import {AppServer} from "./applications";
-import {createListenableAnchorConnect, ListenableAnchorListener, ListenableAnchorSocket} from "../net";
-import {AuthAgent, AuthResult, AuthSocketListener} from "../net";
+import {
+    AgentAuthenticate, AuthApplication,
+    createListenableAnchorConnect,
+    ListenableAnchorListener,
+    ListenableAnchorSocket
+} from "../net";
+import { AuthResult, AuthSocketListener} from "../net";
+import {application} from "express";
 
 export type AgentAioOptions = AgentProxyOptions& TokenOptions& {
     authPort:number
@@ -24,9 +30,18 @@ interface AgentAioListener extends AuthSocketListener {
     agentStop()
 }
 
+export type AvailableApplication = {
+    name:string,
+    status:"online"|"offline",
+    grants:Set<string>
+}
 export type AvailableServer = {
     server:string,
-    apps:Set<string>
+    status:"online"|"offline"
+    grants:Set<string>
+    apps:{
+        [ app:string ]:AvailableApplication
+    }
 };
 
 export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAioListener> > {
@@ -41,7 +56,9 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
     public readonly aioResolve:AioResolver;
     public apps:ApplicationAIO;
     public authId:string;
-    public availableRemoteServers:AvailableServer[] = []
+    public remotesAvailable:{
+        [p:string]:AvailableServer
+    } = {}
     private _auth:AuthResult;
 
 
@@ -83,6 +100,53 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
         return [ ... new Set( servers )];
     }
 
+    remote( server:string, application?:string ){
+        if( !this.remotesAvailable[ server ] ) {
+            this.remotesAvailable[ server ] = {
+                status: "offline",
+                apps:{},
+                grants:new Set<string>(),
+                server
+            }
+        }
+        let _application:(typeof this.remotesAvailable)[string]["apps"][string];
+        let _server = this.remotesAvailable[ server ];
+            if( application ){
+
+            if( !_server.apps[ application ]) {
+                _server.apps[ application ] = {
+                    status: "offline",
+                    grants:new Set<string>(),
+                    name: application
+                };
+            }
+
+            _application = _server.apps[ application ];
+            if( _server.status === "offline" ) _application.status = "offline";
+        }
+        return { server:_server, application: _application }
+    }
+
+    isAioHostOnline(resolved:Resolved ){
+        let status = this.remote( resolved.identifier, resolved.application );
+        return !!status
+            && !!status.server
+            && status.server.status === "online"
+            && !!status.application
+            && status.application.status === "online"
+    }
+
+    hasPermission(resolved:Resolved ){
+        let status = this.remote( resolved.identifier, resolved.application );
+        return !!status
+            && !!status.server
+            && !!status.application
+            && status.application.grants.has( this.identifier )
+            && status.server.grants.has( resolved.aioHost )
+    }
+
+
+
     private createAuthConnection(){
         let connection = createListenableAnchorConnect(  {
             port: this.opts.authPort,
@@ -104,7 +168,6 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
                 hadError,
                 "this.status": this.status,
                 "this.result": this.result,
-
             });
 
             this.appServer.closeAll();
@@ -117,17 +180,33 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
 
         connection.once("connect", () => {
             let token = this.token.tokenOf( this.opts.identifier );
-            let auth:AuthAgent = {
+            let auth:AgentAuthenticate = {
                 agent: this.opts.identifier,
                 token: token.token.token,
                 servers: this.servers,
-                machine: this.machine()
+                machine: this.machine(),
+                referer:null,
+                apps: this.authApp(),
+
             }
             connection.send( "auth", auth );
         });
 
         this.serverAuthConnection = connection;
     }
+
+    authApp(): AgentAuthenticate["apps"] {
+        let apps:AgentAuthenticate["apps"] = {};
+        this.apps.applications().forEach( value => {
+            apps[ value.name ] = {
+                name: value.name,
+                grants: value.grants||[]
+            }
+        });
+        return  apps;
+    }
+
+
 
     private init(){
         this.apps.on("sets", (app, old) => {
@@ -151,21 +230,18 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
         });
 
 
-        this.on("remoteServerOpen", server => {
-            console.log( "ServerOpen", server );
-            if( !this.availableRemoteServers.find( value => value.server === server ) ){
-                this.availableRemoteServers.push( {
-                    server: server,
-                    apps: new Set( )
-                });
-            }
+        this.on("remoteServerOnline", ( server) => {
+            console.log( `agent:remoteServerOnline server = "${server}"` );
+            let status = this.remote( server );
+            status.server.status = "online";
+
         });
 
-        this.on( "remoteServerClosed", server => {
-            console.log( `agent:remoteServerClosed server = "${server}"` );
-            let index = this.availableRemoteServers.findIndex( value => value.server === server );
-            if( index === -1 ) return;
-            this.availableRemoteServers.splice( index, 1 );
+        this.on( "remoteServerOffline", server => {
+            console.log( `agent:remoteServerOffline server = "${server}"` );
+            let status = this.remote( server );
+            status.server.status = "offline";
+
         });
 
         this.on( "busy", busy => {
@@ -177,19 +253,27 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             this.result = "authenticated";
             this._auth = auth;
             this.authId = auth.id;
-            this.availableRemoteServers = [];
 
             Object.values( auth.availableServers ).forEach( value => {
-                this.availableRemoteServers.push({
-                    server: value.server,
-                    apps: new Set( value.apps )
-                });
+                let server = this.remote( value.server ).server;
+                server.status = value.status;
+                Object.values( value.apps ).forEach( _app => {
+                    let app = this.remote( server.server, _app.name ).application;
+                    app.status = _app.status;
+                    app.grants.has( this.identifier );
+                    server.grants.add( `${app.name}.${server.server}` );
+                })
             });
 
-            if( this.opts.directConnection === "off" ) this.availableRemoteServers.push({
-                server: this.identifier,
-                apps: new Set( this.apps.applications().map( value => value.name ) )
-            });
+            if( this.opts.directConnection === "off" ){
+                this.apps.applications().forEach( value => {
+                    let local = this.remote( this.identifier, value.name );
+                    local.server.status = "online";
+                    local.application.status  = "online";
+                    local.server.grants.add( `${ value.name }.${ this.identifier }`);
+                    local.application.grants.add( this.identifier );
+                })
+            }
 
             this._status = "started";
             this.apps.applications().forEach( application => {
@@ -206,7 +290,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             console.log( `agent:onAppRelease application ="${app.name}"` );
             let grants = new Set( app.grants||[ ] );
             grants.add( this.identifier );
-            this.serverAuthConnection.send("appServerRelease", {
+            this.serverAuthConnection.send("applicationOnline", {
                 server: this.identifier,
                 application: app.name,
                 grants: [...grants]
@@ -215,32 +299,27 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
 
         this.appServer.on( "onAppClosed", application => {
             console.log( `agent:onAppClosed application ="${application}"` );
-            this.serverAuthConnection.send( "appServerClosed", {
+            this.serverAuthConnection.send( "applicationOffline", {
                 server: this.identifier,
                 application: application,
                 grants: []
             });
         });
 
-        this.on("appServerRelease", (opts) => {
+        this.on("applicationOnline", (opts) => {
             console.log( `agent:appServerReleaseRemote server = "${opts.server}" application = "${opts.application}"` );
-            let remote = this.availableRemoteServers.find( value => value.server === opts.server );
-            if( !remote ) this.availableRemoteServers.push( remote = {
-                server: opts.server,
-                apps: new Set()
-            });
-            remote.apps.add( opts.application );
+            let status = this.remote( opts.server, opts.application );
+            status.server.status = "online";
+            status.application.status = "online";
+            status.application.grants.add( this.identifier );
+            status.server.grants.add( `${ opts.application }.${ opts.server }`);
         });
 
-        this.on("appServerClosed", opts => {
-            console.log( `agent:appServerClosedRemote server = "${opts.server}" application = "${opts.application}"` );
-            let remote = this.availableRemoteServers.find( value => value.server );
-            if( !remote ) this.availableRemoteServers.push( remote = {
-                server: opts.server,
-                apps: new Set()
-            });
-            console.log( "agent:appServerClosed", opts )
-            remote.apps.delete( opts.application );
+        this.on("applicationOffline", opts => {
+            console.log( `agent:remoteServerOffline server = "${ opts }" application = "${ opts.application }"` );
+            let status = this.remote( opts.server, opts.application );
+            status.server.status = "online";
+            status.application.status = "online";
             this.agentProxy.closeGetaway( opts );
         });
         this.init = ()=>{};

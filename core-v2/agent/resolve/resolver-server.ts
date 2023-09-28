@@ -187,21 +187,19 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
             }
 
             console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost } RECEIVED-REQUEST`);
-            let resolveServer = this.aio.availableRemoteServers.find( value => {
-                return value.server === resolved.identifier
-            });
+
+            //Permission dainet
+            if( !this.aio.hasPermission( resolved ) ) {
+                console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost } CANCELED | PERMISSION DINED FOR APPLICATION`);
+                return request.end()
+            }
 
             //Servidor offline
-            if( !resolveServer) {
+            if( !this.aio.isAioHostOnline( resolved )) {
                 console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost } CANCELED | RESOLVE SERVER IS OFFLINE`);
                 return  request.end()
             }
 
-            //Permission dainet
-            if( !resolveServer.apps.has( resolved.application ) ) {
-                console.log( `REQUEST ${ request.id() } TO ${ resolved.aioHost } CANCELED | PERMISSION DINED FOR APPLICATION`);
-                return request.end()
-            }
 
             request.on("close", hadError => {
                 delete this.requestConnections[ request.id() ];
@@ -365,10 +363,15 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
         console.log( "agent.openGetAway");
         let hasRequest = this.needGetAway[ opts.server ][ opts.application ].hasRequest;
         if( resolved.getawayReleaseOnDiscover ) hasRequest = true;
-        let hasServerOnline = this.aio.availableRemoteServers.find(  value => {
-            return value.server === opts.server
-                && value.apps.has( resolved.application );
-        } )
+
+        let status = this.aio.remote( resolved.identifier, resolved.application );
+
+
+        let hasServerOnline = !!status.server
+            && !!status.application
+            && status.server.status === "online"
+            && status.application.status === "online"
+        ;
         // let remotelyOnly = resolved.identifier === this.aio.identifier && this.opts.directConnection === "on";
 
 

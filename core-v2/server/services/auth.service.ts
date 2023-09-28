@@ -1,8 +1,8 @@
 import {ServerAio} from "../server-aio";
 import {createServer, Server } from "net";
 import {
-    asListenableAnchorConnect,
-    AuthAgent,
+    AgentAuthenticate,
+    asListenableAnchorConnect, AuthApplication,
     AuthSocketListener,
     ServerReleaseOptions
 } from "../../net";
@@ -10,25 +10,11 @@ import {nanoid} from "nanoid";
 import {BaseEventEmitter} from "kitres/src/core/util";
 import {AvailableServer} from "../../agent";
 
-export type App = {
-    name:string,
-    grants:string[]
-}
 
-export type AgentAuthenticate = {
-    id:string,
-    referer:string,
-    agent:string,
-    apps:{
-        [application:string]:App
-    }
-    machine:string
-    servers:string[],
-}
 
 
 interface AuthServiceEvent extends AuthSocketListener {
-    dined( code:string, message:string, auth:AuthAgent),
+    dined( code:string, message:string, auth:AgentAuthenticate),
     error( error:Error, event:keyof AuthSocketListener|"dined")
 }
 
@@ -43,7 +29,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
 
     private __init(){
         this.serverAuth = createServer( _ns => {
-            let socket = asListenableAnchorConnect<any, AuthSocketListener>( _ns, {
+            let socket = asListenableAnchorConnect< AgentAuthenticate, AuthSocketListener>( _ns, {
                 side: "server",
                 method: "AUTH",
                 endpoint: "auth-server",
@@ -81,16 +67,11 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                     socket[ "agentServer" ] = auth.agent;
                     if( !auth.servers ) auth.servers = [];
 
-                    let agentAuthenticate: AgentAuthenticate = {
-                        id: socket.id(),
-                        referer: referer,
-                        agent: auth.agent,
-                        servers: auth.servers,
-                        machine: auth.machine,
-                        apps:{}
-                    };
-                    socket.props( agentAuthenticate );
-                    this.saio.agents[ auth.agent ]  = Object.assign( agentAuthenticate, {
+                    auth.id = socket.id();
+                    auth.referer =  referer;
+                    socket.props( auth );
+
+                    this.saio.agents[ auth.agent ]  = Object.assign( auth, {
                         connection: socket,
                     });
 
@@ -99,11 +80,24 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                     } = {};
                     Object.keys( this.saio.agents ).filter( value => auth.servers.includes( value ))
                         .forEach( serverName => {
-                            let apps = Object.values( this.saio.agents[serverName].apps )
-                                .filter( value => value.grants.includes( "*" ) || value.grants.includes( auth.agent ) );
+                            let online: AvailableServer["apps"] = {};
+                            let grants = new Set<string>();
+                            Object.values( this.saio.agents[serverName].apps )
+                                .forEach( value => {
+                                    if( !(value.grants.includes("*") || value.grants.includes(auth.agent)) ) return;
+                                    online[ value.name ] = {
+                                        name: value.name,
+                                        grants: new Set<string>([ auth.agent ]),
+                                        status: value.status
+                                    }
+                                    grants.add( `${ value.name }.${ auth.agent }` );
+                                });
+
                             servers[ serverName ] = {
                                 server: serverName,
-                                apps: new Set( apps.map( value => value.name ) )
+                                apps: online,
+                                grants: grants,
+                                status: this.saio.agents[serverName].status
                             };
                         });
 
@@ -117,10 +111,10 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                         if( agent.agent === auth.agent ) return;
                         if( !agent.servers.includes( auth.agent ) ) return;
                         let apps = [ ];
-                        if( apps.length ) agent.connection.send("remoteServerOpen", auth.agent );
-                        this.notifySafe( "remoteServerOpen", auth.agent )
+                        if( apps.length ) agent.connection.send("remoteServerOnline", auth.agent );
+                        this.notifySafe( "remoteServerOnline", auth.agent )
                             .forEach( value => {
-                                if( value.error ) this.notifySafe( "error", value.error, "remoteServerOpen" );
+                                if( value.error ) this.notifySafe( "error", value.error, "remoteServerOnline" );
                             });
                     });
 
@@ -128,10 +122,10 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                         Object.entries( this.saio.agents ).forEach( ([ keyId, agent], index) => {
                             if( agent.agent === auth.agent ) return;
                             if( !agent.servers.includes( auth.agent ) ) return;
-                            agent.connection.send( "remoteServerClosed", auth.agent );
-                            this.notifySafe( "remoteServerClosed", auth.agent )
+                            agent.connection.send( "remoteServerOffline", auth.agent );
+                            this.notifySafe( "remoteServerOffline", auth.agent )
                                 .forEach( value => {
-                                    if( value.error ) this.notifySafe( "error", value.error, "remoteServerClosed" );
+                                    if( value.error ) this.notifySafe( "error", value.error, "remoteServerOffline" );
                                 });
 
                         });
@@ -174,44 +168,69 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                 current.connection.send( "isAlive", checkAliveCode, null );
             });
 
-            socket.eventListener().on( "appServerRelease", (opts) => {
-                let auth = socket.props();
+
+            socket.eventListener().on( "applicationOnline", (opts) => {
                 let notify = [];
-                Object.entries( this.saio.agents ).forEach( ([ keyId, agent], index) => {
-                    if( agent.agent === auth.agent ) return;
-                    if( !agent.servers.includes( auth.agent ) ) return;
-                    let grants = opts.grants.includes( "*" ) || opts.grants.includes( agent.agent )
-                    if( !grants ) return;
-                    notify.push( agent.agent );
-                    agent.connection.send( "appServerRelease", {
+                let auth = socket.props();
+                let app = auth.apps[ opts.application ];
+                if( !app ){
+                    app = {
+                        status: "online",
+                        grants: [...new Set<string>(opts.grants)],
+                        name: opts.application
+                    }
+                    auth.apps[ opts.application ] = app;
+                }
+
+                app.grants = [...new Set<string>(opts.grants)];
+                app.status = "online";
+
+                this.saio.clientsOf({
+                    application: opts.application,
+                    server: auth.agent
+                }).forEach( client => {
+                    client.send( "applicationOnline", {
                         application: opts.application,
-                        grants: opts.grants,
+                        grants: [ client.props().agent ],
                         server: auth.agent
-                    } );
+                    });
+                    notify.push( client.props() );
+
                 });
-                this.notifySafe( "appServerRelease", opts )
+
+                this.notifySafe( "applicationOnline", opts )
                     .forEach( value => {
-                        if( value.error ) this.notifySafe( "error", value.error, "appServerRelease" );
+                        if( value.error ) this.notifySafe( "error", value.error, "applicationOnline" );
                     })
             });
 
-            socket.eventListener().on( "appServerClosed", ( opts) => {
+            socket.eventListener().on( "applicationOffline", (opts) => {
                 let auth = socket.props();
-                Object.entries( this.saio.agents ).forEach( ([ keyId, agent], index) => {
-                    if( agent.agent === auth.agent ) return;
-                    if( !agent.servers.includes( auth.agent ) ) return;
-                    let releaseOptions:ServerReleaseOptions = {
-                        grants: opts.grants,
-                        server: auth.agent,
-                        application: opts.application
-                    };
+                let app = auth.apps[ opts.application ];
+                if( !app ){
+                    app = {
+                        status: "offline",
+                        grants: [...new Set<string>(opts.grants)],
+                        name: opts.application
+                    }
+                    auth.apps[ opts.application ] = app;
+                }
+                app.grants = [...new Set<string>(opts.grants)];
+                app.status = "offline";
 
-                    agent.connection.send( "appServerClosed", releaseOptions );
-                });
 
-                this.notifySafe( "appServerClosed", opts )
+                let releaseOptions:ServerReleaseOptions = {
+                    grants: [],
+                    server: auth.agent,
+                    application: opts.application
+                };
+                this.saio.clientsOf({ server: auth.agent, application: opts.application }).forEach( client => {
+                    client.send( "applicationOffline", releaseOptions );
+                })
+
+                this.notifySafe( "applicationOffline", opts )
                     .forEach( value => {
-                        if( value.error ) this.notifySafe( "error", value.error, "appServerClosed" );
+                        if( value.error ) this.notifySafe( "error", value.error, "applicationOffline" );
                     })
             });
 

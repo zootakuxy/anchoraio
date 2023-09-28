@@ -1,8 +1,13 @@
 import {BaseEventEmitter} from "kitres/src/core/util";
-import {AnchorSocket, ApplicationGetawayAuth, AuthSocketListener, ListenableAnchorSocket} from "../net";
+import {
+    AgentAuthenticate,
+    AnchorSocket,
+    ApplicationGetawayAuth,
+    AuthSocketListener,
+    ListenableAnchorSocket
+} from "../net";
 import {TokenService} from "../services";
 import {ServerOptions} from "./server-proxy";
-import {AgentAuthenticate} from "./services/auth.service";
 
 interface ServerAioEvent {
 }
@@ -114,6 +119,17 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
             console.log( `server.release getaway response for application = "${slot.app}" server = "${ slot.server}" CLOSED` );
             delete this.serverSlots[ slot.server ][ slot.app ][ slot.connect.id() ];
         });
+    }
+
+    clientsOf(opts:{ server:string, application:string}):ListenableAnchorSocket<AgentAuthenticate, AuthSocketListener >[]{
+
+        return  Object.entries(this.agents)
+            .map(([keyId, client], index) => client.connection)
+            .filter((client, index) => {
+                if (client.props().agent === opts.server) return false;
+                if (!client.props().servers.includes(opts.server)) return false;
+                return true;
+            });
     }
 
     public resolver ( server:string, app:string|number, wait:WaitConnection<{}> ){

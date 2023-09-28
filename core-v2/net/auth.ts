@@ -8,6 +8,10 @@ export type AuthResult = {
     }
 }
 
+export type RemoteServerNotifyOptions = {
+    server:string,
+    application:string,
+}
 export type ServerReleaseOptions = {
     server:string,
     application:string,
@@ -20,14 +24,16 @@ export type SlotBusy = {
 }
 
 export interface AuthSocketListener {
-    auth( auth:AuthAgent )
+    auth( auth:AgentAuthenticate )
     authResult(auth:AuthResult )
     authFailed( code:string, message:string )
     isAlive( code:string, referer ),
-    remoteServerOpen( server:string ),
-    remoteServerClosed( server:string ),
-    appServerRelease( opts:ServerReleaseOptions ),
-    appServerClosed( opts:ServerReleaseOptions ),
+
+    remoteServerOnline( server:string ),
+    remoteServerOffline( server:string ),
+
+    applicationOnline(opts:ServerReleaseOptions ),
+    applicationOffline(opts:ServerReleaseOptions ),
     busy( busy:SlotBusy )
 }
 
@@ -49,9 +55,22 @@ export type ApplicationGetawayAuth = AuthIO& {
 export type RequestGetawayAuth = AuthIO& {
 }
 
-export type AuthAgent = {
-    agent:string,
-    token:string,
-    servers:string[],
-    machine: string,
+export type AuthApplication = {
+    name:string,
+    grants:string[],
+    status?:"offline"|"online"
 }
+
+export type AgentAuthenticate = {
+    id?:string,
+    token?:string
+    referer?:string,
+    agent:string,
+    apps:{
+        [application:string]:AuthApplication
+    }
+    machine:string
+    servers:string[],
+    status?:"online"|"offline"
+}
+

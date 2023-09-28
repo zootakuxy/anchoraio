@@ -49,14 +49,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
 
 
     public releaseApplication( app:App ){
-        console.log( "open-application", app.name, app.address, app.port )
-
-        let server = this.aio.availableRemoteServers.find( value => value.server === this.aio.identifier );
-        if( !server ) this.aio.availableRemoteServers.push( server = {
-            server: this.aio.identifier,
-            apps: new Set()
-        });
-        server.apps.add( app.name );
+        console.log( "AppServer:releaseApplication", app.name, app.address, app.port )
 
         let releases =app.releases;
         if( !releases ) releases = Defaults.serverRelease||1;
