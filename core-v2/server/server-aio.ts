@@ -130,7 +130,8 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
                 let hasPermission = true;
                 if( opts.application ){
                     let app = client.props().apps[opts.application];
-                    hasPermission = app.grants.includes( "*" ) || app.grants.includes( client.props().agent );
+                    hasPermission = app
+                        && ( app.grants.includes( "*" ) || app.grants.includes( client.props().agent ) );
                 }
                 return hasPermission;
             });
