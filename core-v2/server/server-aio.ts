@@ -110,9 +110,11 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
             wait.resolved = true;
             delete this.waitConnections[slot.server][slot.app][ wait.id ];
             wait.resolve ( slot );
-            console.log( `server.release getaway response for application = "${slot.app}" server = "${ slot.server}" RESOLVED` );
+            console.log( `server.release getaway response for application = "${slot.app}" server = "${ slot.server}" APPLIED` );
             return;
         }
+        console.log( `server.release getaway response for application = "${slot.app}" server = "${ slot.server}" CREATED` );
+
         slot.connect.on( "close", hadError => {
             delete this.serverSlots[ slot.server ][ slot.app ][ slot.connect.id() ];
         });
@@ -121,7 +123,6 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
             console.log( `server.release getaway response for application = "${slot.app}" server = "${ slot.server}" CLOSED` );
             delete this.serverSlots[ slot.server ][ slot.app ][ slot.connect.id() ];
         });
-        console.log( `server.release getaway response for application = "${slot.app}" server = "${ slot.server}" CREATED` );
     }
 
     clientsOf(opts:{ server:string, application?:string }):ListenableAnchorSocket<AgentAuthenticate, AuthSocketListener >[]{
