@@ -8,6 +8,7 @@ import {
 } from "../net";
 import {TokenService} from "../services";
 import {ServerOptions} from "./server-proxy";
+import {application} from "express";
 
 interface ServerAioEvent {
 }
@@ -143,13 +144,13 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
             });
     }
 
-    public resolver ( server:string, app:string|number, wait:WaitConnection ){
-        console.log( `server.resolver getaway request from ${ wait.agent } to ${ app}.${ server } connected` );
+    public resolver ( server:string, application:string, wait:WaitConnection ){
+        console.log( `server.resolver getaway request from ${ wait.agent } to ${ application}.${ server } connected` );
 
-        let entry = Object.entries( this.serverSlots[server][app] ).find( ([ key, value]) => {
+        let entry = Object.entries( this.serverSlots[server][application] ).find( ([ key, value]) => {
             if( !value ) return false;
             return value.server === server
-                && value.app === app
+                && value.app === application
                 && !value.busy
         });
 
@@ -157,17 +158,21 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
             console.log( `server.resolver:RESOLVER_IMMEDIATELY ` )
             let next = entry[1];
             next.busy = true;
-            delete this.serverSlots[server][app][ next.connect.id() ];
+            delete this.serverSlots[server][application][ next.connect.id() ];
             wait.resolve( next );
             return;
         }
         console.log( `server.resolver:RESOLVER_WAIT` )
-
-        this.waitConnections[server][app][ wait.connection.id() ] = wait;
+        this.waitConnections[server][application][ wait.connection.id() ] = wait;
         wait.connection.on( "close", hadError => {
-            console.log( `server.resolver getaway request from ${ wait.agent } to ${ app}.${ server } CLOSED` );
-            delete this.waitConnections[server][app][ wait.connection.id()  ];
-            if( hadError ) console.log( `detached wait connection for ${ app }.${ server } because remittent connection ${ wait.connection.id() } is closed!`)
+            console.log( `server.resolver getaway request from ${ wait.agent } to ${ application}.${ server } CLOSED` );
+            delete this.waitConnections[server][application][ wait.connection.id()  ];
+            if( hadError ) console.log( `detached wait connection for ${ application }.${ server } because remittent connection ${ wait.connection.id() } is closed!`)
         });
+        this.agents[ server ].connection.send( "hasPendentRequest", {
+            client: wait.agent,
+            server: server,
+            application: application
+        })
     }
 }

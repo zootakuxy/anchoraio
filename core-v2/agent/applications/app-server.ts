@@ -181,7 +181,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
         });
     }
 
-    private restoreApplication( app:App ){
+    public restoreApplication( app:App ){
         if( this.apps[ app.name ].status === "stopped" ) return;
         let pendentConnections = Object.values( this.appsConnections )
             .filter( value => value.status() === "connected"

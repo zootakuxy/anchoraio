@@ -23,6 +23,12 @@ export type SlotBusy = {
     origin:string
 }
 
+export type PendentRequest = {
+    client:string,
+    server:string,
+    application:string
+}
+
 export interface AuthSocketListener {
     auth( auth:AgentAuthenticate )
     authResult(auth:AuthResult )
@@ -34,7 +40,9 @@ export interface AuthSocketListener {
 
     applicationOnline(opts:ServerReleaseOptions ),
     applicationOffline(opts:ServerReleaseOptions ),
+
     busy( busy:SlotBusy )
+    hasPendentRequest( pendentRequest:PendentRequest )
 }
 
 
