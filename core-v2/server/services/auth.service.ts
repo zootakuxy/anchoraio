@@ -36,7 +36,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
             });
             socket.eventListener().once( "auth", auth => {
                 let end = ( code?:string, message?:string )=>{
-                    console.log( `server.agent:auth agent = "${auth.agent}" REJECTED | code = "${code} message = "${message}"` );
+                    console.log( `server.agent:auth agent = "${ auth.agent }" REJECTED | code = "${code} message = "${message}"` );
                     socket.write( JSON.stringify({
                         event:"authFailed",
                         args:[ code, message ]
@@ -62,7 +62,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
 
                 let register = ()=>{
                     console.log( `` );
-                    console.log( "====================== [NEW AGENT AUTHENTICATION] =========================");
+                    console.log( "====================== [NEW AGENT AUTHENTICATION] ========================");
                     console.log( `ID:           ${socket.id()}`);
                     console.log( `AGENT:        ${auth.agent}`);
                     console.log( `APPLICATIONS: ${Object.keys( auth.apps).join(", ")}`);
@@ -71,8 +71,6 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                     console.log( "==========================================================================");
 
                     let referer = `${nanoid(16 )}`;
-                    socket[ "referer" ] = referer;
-                    socket[ "agentServer" ] = auth.agent;
                     if( !auth.servers ) auth.servers = [];
 
                     auth.id = socket.id();

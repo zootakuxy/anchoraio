@@ -41,8 +41,7 @@ export class RequesterService extends BaseEventEmitter<RequesterServiceEvent>{
                     })
                 }
 
-                let auth = Object.entries( this.saio.agents )
-                    .map( value => value[1])
+                let auth = Object.values( this.saio.agents )
                     .find( (agentAuth, index) => {
                         return agentAuth.props().referer === redirect.authReferer
                             && agentAuth.props().agent === redirect.origin
