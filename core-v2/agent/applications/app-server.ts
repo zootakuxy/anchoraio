@@ -27,7 +27,6 @@ export type ApplicationSocketProps = {
     appName: string,
     appAddress: string,
     appPort: number,
-    appStatus: "started"|"stopped",
     anchorPiped: boolean,
     busy:boolean,
     app: App
@@ -63,9 +62,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             }
         }
 
-        for ( let i = 0 ; i< releases; i++ ){
-            this.openApplication( app )
-        }
+        this.restoreApplication( app );
         this.notify("applicationReleased", app );
     }
 
@@ -86,7 +83,6 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                 appName: app.name,
                 appAddress: app.address,
                 appPort: app.port,
-                appStatus: "started" as const,
                 anchorPiped: false,
                 busy: false,
                 app: app
@@ -137,9 +133,9 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
 
             responseGetaway.once("data", ( origin )=>{
                 console.log( `agent.openApplication:busy application = "${ app.name }"`)
-                this.openApplication( app );
                 // responseGetaway.onceRaw(  raw => {
                     responseGetaway.props().busy = true;
+                    this.restoreApplication( app );
 
                     console.log( `agent.openApplication:work application = "${ app.name }"`)
                     let appConnection = createAnchorConnect( {
@@ -178,32 +174,60 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
 
         responseGetaway.on("close", ( error) => {
             delete this.appsConnections[ responseGetaway.id() ];
-            if(
-                !responseGetaway.anchored()
-                && this.aio.status === "started"
-                && responseGetaway.props().appStatus === "started"
-                && this.apps?.[ responseGetaway.props().appName ]?.status === "started"
-            ){
-                setTimeout(()=>{
-                    console.log( `RESTORE CONNECTION FOR: ${ app.name }` );
-                    this.openApplication( app );
-                }, this.aio.opts.restoreTimeout)
-            }
+            // if(
+            //     !responseGetaway.anchored()
+            //     && this.aio.status === "started"
+            //     && responseGetaway.props().appStatus === "started"
+            //     && this.apps?.[ responseGetaway.props().appName ]?.status === "started"
+            // ){
+            //     setTimeout(()=>{
+            //         console.log( `RESTORE CONNECTION FOR: ${ app.name }` );
+            //         this.restoreApplication( app );
+            //     }, this.aio.opts.restoreTimeout );
+            // }
+
+            setTimeout(()=>{
+                console.log( `RESTORE CONNECTION FOR: ${ app.name }` );
+                this.restoreApplication( app );
+            }, this.aio.opts.restoreTimeout );
         });
+    }
+
+    private restoreApplication( app:App ){
+        if( this.apps[ app.name ].status === "stopped" ) return;
+        let pendentConnections = Object.values( this.appsConnections )
+            .filter( value => value.status() === "connected"
+                && !value.anchored()
+                && !value.props().busy
+            );
+
+        if( pendentConnections.length >= app.releases ) return;
+
+        if( pendentConnections.length < app.releases ){
+            for (let i = 0; i < app.releases - pendentConnections.length; i++) {
+                this.openApplication( app );
+            }
+        }
     }
 
     closeApp( app:App ):Promise<AnchorSocket<any>[]>{
         return new Promise( resolve => {
-            if( this.apps[ app.name ] ){
-                this.apps[ app.name ].status = "stopped";
+            if( !this.apps[ app.name ] ){
+                this.apps[ app.name ] ={
+                    status: "started",
+                    name: app.name,
+                    releases: app.releases,
+                    interval: null
+                }
             }
+
+            this.apps[ app.name ].status = "stopped";
 
             let sockets = Object.entries( this.appsConnections ).filter( ([id, appSocket], index) => {
                 return appSocket.props().appName === app.name;
             }).map( ([id, appSocket]) => appSocket );
             let iCounts = 0;
             sockets.forEach( appSocket => {
-                appSocket.props().appStatus = "stopped";
                 appSocket.end( () => {
                     iCounts++;
                     if( iCounts < sockets.length ) return;
@@ -237,6 +261,6 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
         if( connection.props().busy ) return cansel( `Connection already bused!`);
         if( connection.anchored() ) return cansel( "Connection already anchored");
         connection.props().busy = true;
-        this.openApplication( connection.props().app )
+        this.restoreApplication( connection.props().app );
     }
 }
