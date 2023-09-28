@@ -62,14 +62,14 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                 if( token.token.machine !== auth.machine ) return end( "1014", "Token viculado com outro servidor" );
 
                 let register = ()=>{
-                    console.log( `server.agent:auth agent = "${auth.agent}" OK!` );
-                    console.log( "===============================================");
+                    console.log( `` );
+                    console.log( "====================== [NEW AGENT AUTHENTICATION] =========================");
                     console.log( `ID:           ${socket.id()}`);
                     console.log( `AGENT:        ${auth.agent}`);
                     console.log( `APPLICATIONS: ${Object.keys( auth.apps).join(", ")}`);
                     console.log( `SERVER:       ${auth.servers.join(", ")}`);
                     console.log( `STATUS:       ${auth.status}`);
-                    console.log( "===============================================");
+                    console.log( "==========================================================================");
 
                     let referer = `${nanoid(16 )}`;
                     socket[ "referer" ] = referer;
