@@ -33,7 +33,7 @@ export type ApplicationSocketProps = {
 }
 export class AppServer extends BaseEventEmitter<AppProxyEvent>{
     private readonly appsConnections:{
-        [ p:string ]:AnchorSocket<ApplicationSocketProps> };
+        [ id:string ]:AnchorSocket<ApplicationSocketProps> };
     private aio:AgentAio;
     private readonly apps:  {
       [appName:string]: AppController
@@ -67,8 +67,8 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
         this.notify("applicationReleased", app );
     }
 
-    openApplication ( app:App ){
-        console.log( `agent.openApplication application = "${ app.name }"`)
+    openApplication ( app:App, free:number, index:number){
+        console.log( `agent.openApplication application = "${ app.name } release = "${app.releases}" free = "${ free }" index = "${index}"`)
         let responseGetaway = createListenableAnchorConnect<
             ApplicationSocketProps, {
             busy( origin:string ),
@@ -93,12 +93,6 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
         let cansel = ( message:string)=>{
             console.log( `agent.openApplication:cansel message = "${ message }"`)
         }
-
-        if( Object.entries( this.appsConnections ).map( ([key, value]) => value).filter( value => {
-            return !value.anchored()
-                && value.status() !== "connected"
-                && !value.props().busy
-        }).length >= app.releases ) return cansel( "All application slots opened" );
 
         let appController = this.apps[ app.name ];
         if( !appController ) return cansel( "No application controller defined!" );
@@ -153,11 +147,6 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                         console.log( `new connection with ${ "any" } established for ${ app.name }` );
                     });
 
-                    // appConnection.on( "data", data => {
-                    //     console.log( "=================== [ AGENT:RESPONSE FOR APPLICATION SERVER ] ===================")
-                    //     console.log( data.toString() );
-                    //     console.log( "=================== [                                       ] ===================")
-                    // });
                     appConnection.on( "error", err => {
                         console.log("app-server-error", err.message );
                         if( !responseGetaway.anchored() ){
@@ -182,19 +171,26 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
     }
 
     public restoreApplication( app:App ){
-        if( this.apps[ app.name ].status === "stopped" ) return;
+        let cansel = ( message:string, hint? )=>{
+            console.log( `agent.restoreApplication message = "${message}"` );
+            if ( hint === undefined ) return;
+            console.log( `agent.restoreApplication hint`, hint );
+        }
+
+        if( this.apps[ app.name ].status === "stopped" ) return cansel( "Application controller stopped");
         let pendentConnections = Object.values( this.appsConnections )
-            .filter( value => value.status() === "connected"
-                && !value.anchored()
-                && !value.props().busy
+            .filter( connections => connections.props().appName === app.name
+                && connections.status() === "connected"
+                && !connections.anchored()
+                && !connections.props().busy
             );
 
-        console.log( app, pendentConnections );
-        if( pendentConnections.length >= app.releases ) return;
+        if( pendentConnections.length >= app.releases ) return cansel( "All pendent slot released" );
 
         if( pendentConnections.length < app.releases ){
-            for (let i = 0; i < app.releases - pendentConnections.length; i++) {
-                this.openApplication( app );
+            let free = app.releases - pendentConnections.length;
+            for (let i = 0; i < free; i++) {
+                this.openApplication( app, free, i );
             }
         }
     }
@@ -246,7 +242,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
     }
 
     stop() {
-        this.closeAll();
+        return this.closeAll();
     }
 
     bused( busy: SlotBusy ) {
