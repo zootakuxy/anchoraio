@@ -201,21 +201,18 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             let sockets = Object.entries( this.appsConnections ).filter( ([id, appSocket], index) => {
                 return appSocket.props().appName === application;
             }).map( ([id, appSocket]) => appSocket );
-            let iCounts = sockets.length;
+            let iCounts = 0;
             sockets.forEach( appSocket => {
                 appSocket.props().appStatus = "stopped";
-                appSocket.on( "close", hadError => {
-                    iCounts--;
-                    if( iCounts === 0 ){
-                        this.notifySafe( "applicationStopped", application );
-                        resolve( sockets );
-                        return;
-                    }
-                });
                 appSocket.end( () => {
+                    iCounts++;
+                    if( iCounts < sockets.length ) return;
                     console.log( "application connection end", appSocket.props().appName );
+                    this.notifySafe( "applicationStopped", application );
+                    resolve( sockets );
                 });
-            })
+            });
+
         })
     }
 
