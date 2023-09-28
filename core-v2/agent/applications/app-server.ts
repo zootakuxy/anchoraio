@@ -13,7 +13,7 @@ import {Defaults} from "../../defaults";
 
 export interface AppProxyEvent{
     applicationReleased(app:App ),
-    applicationStopped(application:string )
+    applicationStopped(app:App )
 }
 
 export type AppController = {
@@ -192,14 +192,14 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
         });
     }
 
-    closeApp( application:string ):Promise<AnchorSocket<any>[]>{
+    closeApp( app:App ):Promise<AnchorSocket<any>[]>{
         return new Promise( resolve => {
-            if( this.apps[ application ] ){
-                this.apps[ application ].status = "stopped";
+            if( this.apps[ app.name ] ){
+                this.apps[ app.name ].status = "stopped";
             }
 
             let sockets = Object.entries( this.appsConnections ).filter( ([id, appSocket], index) => {
-                return appSocket.props().appName === application;
+                return appSocket.props().appName === app.name;
             }).map( ([id, appSocket]) => appSocket );
             let iCounts = 0;
             sockets.forEach( appSocket => {
@@ -208,7 +208,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                     iCounts++;
                     if( iCounts < sockets.length ) return;
                     console.log( "application connection end", appSocket.props().appName );
-                    this.notifySafe( "applicationStopped", application );
+                    this.notifySafe( "applicationStopped", app );
                     resolve( sockets );
                 });
             });
@@ -218,9 +218,9 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
 
     closeAll() {
         let apps = [...new Set(Object.entries( this.appsConnections ).map( ([key, appConnection], index) => {
-            return appConnection.props().appName;
+            return appConnection.props();
         }))];
-        apps.forEach( application => this.closeApp( application ))
+        apps.forEach( application => this.closeApp( application.app ))
     }
 
     stop() {

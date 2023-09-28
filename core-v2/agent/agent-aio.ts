@@ -214,7 +214,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             if( this.status !== "started" )  return;
             if( this.result !== "authenticated" ) return;
             if( !!old ){
-                this.appServer.closeApp( old.name ).then( value => {
+                this.appServer.closeApp( old ).then( value => {
                     this.appServer.releaseApplication( app );
                 });
                 return;
@@ -223,7 +223,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
         });
 
         this.apps.on( "delete", app => {
-            this.appServer.closeApp( app.name ).then( value => {
+            this.appServer.closeApp( app ).then( value => {
                 console.log( "All socket closed!" );
             });
         });
@@ -287,9 +287,8 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             } );
         });
 
-        this.appServer.on( "applicationStopped", application => {
+        this.appServer.on( "applicationStopped", app => {
             console.log( `agent:applicationStopped application ="${application}"` );
-            let app = this.apps.getApplication( application );
             this.serverAuthConnection.send( "applicationOffline", {
                 server: this.identifier,
                 application: app.name,

@@ -223,7 +223,6 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                 app.grants = [...new Set<string>(opts.grants)];
                 app.status = "offline";
 
-
                 let releaseOptions:ServerReleaseOptions = {
                     grants: [],
                     server: auth.agent,
