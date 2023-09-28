@@ -26,9 +26,11 @@ export type ServerSlot = {
     }>
 };
 
-export type WaitConnection<T> = {
+export type WaitConnection = {
     resolve:( slot:ServerSlot )=>void;
-    connection:AnchorSocket<T>
+    connection:AnchorSocket<{
+        client:string
+    }>
     resolved?: boolean,
     id?:string,
     agent:string
@@ -74,7 +76,7 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
     public waitConnections:{
         [server:string]:{
             [app:string]: {
-                [ connection:string ]:WaitConnection<{}>
+                [ connection:string ]:WaitConnection
             }
         }
     }
@@ -137,7 +139,7 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
             });
     }
 
-    public resolver ( server:string, app:string|number, wait:WaitConnection<{}> ){
+    public resolver ( server:string, app:string|number, wait:WaitConnection ){
         console.log( `server.resolver getaway request from ${ wait.agent } to ${ app}.${ server } connected` );
 
         let entry = Object.entries( this.serverSlots[server][app] ).find( ([ key, value]) => {

@@ -21,7 +21,7 @@ export class RequesterService extends BaseEventEmitter<RequesterServiceEvent>{
 
     private __init(){
         this.requestServer = createServer(_so => {
-            let socket = asAnchorConnect( _so, {
+            let socket: (typeof this.saio.waitConnections)[string][string][string]["connection"]= asAnchorConnect( _so, {
                 side: "server",
                 method: "GET",
                 endpoint: false
@@ -53,6 +53,8 @@ export class RequesterService extends BaseEventEmitter<RequesterServiceEvent>{
                 if( !resolverApp ) return end( "3002", "Resolved application not found");
                 let grants = [ "*", redirect.origin ].find( value => resolverApp.grants.includes( value ) )
                 if( !grants ) return end(  "3003", "Permission dined for application");
+
+                socket.props().client = auth.agent;
 
                 let datas = [];
                 let listen = data =>{
