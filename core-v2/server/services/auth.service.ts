@@ -107,11 +107,8 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                         availableServers: servers
                     } );
 
-                    Object.entries( this.saio.agents ).forEach( ([ keyId, agent], index) => {
-                        if( agent.agent === auth.agent ) return;
-                        if( !agent.servers.includes( auth.agent ) ) return;
-                        let apps = [ ];
-                        if( apps.length ) agent.connection.send("remoteServerOnline", auth.agent );
+                    this.saio.clientsOf( { server: auth.agent }).forEach( client => {
+                        client.send( "remoteServerOnline", auth.agent );
                         this.notifySafe( "remoteServerOnline", auth.agent )
                             .forEach( value => {
                                 if( value.error ) this.notifySafe( "error", value.error, "remoteServerOnline" );
@@ -119,17 +116,16 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                     });
 
                     socket.on( "close", hadError => {
-                        Object.entries( this.saio.agents ).forEach( ([ keyId, agent], index) => {
-                            if( agent.agent === auth.agent ) return;
-                            if( !agent.servers.includes( auth.agent ) ) return;
-                            agent.connection.send( "remoteServerOffline", auth.agent );
+                        this.saio.clientsOf( { server: auth.agent }).forEach( client => {
+                            client.send( "remoteServerOffline", auth.agent );
                             this.notifySafe( "remoteServerOffline", auth.agent )
                                 .forEach( value => {
                                     if( value.error ) this.notifySafe( "error", value.error, "remoteServerOffline" );
                                 });
-
                         });
+                        delete this.saio.agents[ auth.agent ];
                     });
+
                     this.notifySafe( "auth", auth )
                         .forEach( value => {
                             if( value.error ) this.notifySafe("error", value.error, "auth" )
@@ -185,18 +181,15 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                 app.grants = [...new Set<string>(opts.grants)];
                 app.status = "online";
 
-                this.saio.clientsOf({
-                    application: opts.application,
-                    server: auth.agent
-                }).forEach( client => {
-                    client.send( "applicationOnline", {
-                        application: opts.application,
-                        grants: [ client.props().agent ],
-                        server: auth.agent
+                this.saio.clientsOf({ server: auth.agent, application: opts.application})
+                    .forEach( client => {
+                        client.send( "applicationOnline", {
+                            application: opts.application,
+                            grants: [ client.props().agent ],
+                            server: auth.agent
+                        });
+                        notify.push( client.props() );
                     });
-                    notify.push( client.props() );
-
-                });
 
                 this.notifySafe( "applicationOnline", opts )
                     .forEach( value => {
@@ -224,7 +217,8 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                     server: auth.agent,
                     application: opts.application
                 };
-                this.saio.clientsOf({ server: auth.agent, application: opts.application }).forEach( client => {
+                this.saio.clientsOf({ server: auth.agent, application: opts.application })
+                    .forEach( client => {
                     client.send( "applicationOffline", releaseOptions );
                 })
 

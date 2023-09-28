@@ -121,14 +121,18 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
         });
     }
 
-    clientsOf(opts:{ server:string, application:string}):ListenableAnchorSocket<AgentAuthenticate, AuthSocketListener >[]{
-
+    clientsOf(opts:{ server:string, application?:string }):ListenableAnchorSocket<AgentAuthenticate, AuthSocketListener >[]{
         return  Object.entries(this.agents)
             .map(([keyId, client], index) => client.connection)
             .filter((client, index) => {
                 if (client.props().agent === opts.server) return false;
-                if (!client.props().servers.includes(opts.server)) return false;
-                return true;
+                if (!client.props().servers.includes( opts.server )) return false;
+                let hasPermission = true;
+                if( opts.application ){
+                    let app = client.props().apps[opts.application];
+                    hasPermission = app.grants.includes( "*" ) || app.grants.includes( client.props().agent );
+                }
+                return hasPermission;
             });
     }
 

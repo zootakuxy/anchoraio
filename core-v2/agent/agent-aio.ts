@@ -210,13 +210,16 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
 
     private init(){
         this.apps.on("sets", (app, old) => {
+            console.log( `agent:app.on.sets application = "${app.name}" change = "${!!old}"`)
             if( this.status !== "started" )  return;
             if( this.result !== "authenticated" ) return;
             if( !!old ){
                 this.appServer.closeApp( old.name ).then( value => {
                     this.appServer.releaseApplication( app );
-                })
+                });
+                return;
             }
+            this.appServer.releaseApplication( app );
         });
 
         this.apps.on( "delete", app => {
@@ -230,19 +233,6 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
         });
 
 
-        this.on("remoteServerOnline", ( server) => {
-            console.log( `agent:remoteServerOnline server = "${server}"` );
-            let status = this.remote( server );
-            status.server.status = "online";
-
-        });
-
-        this.on( "remoteServerOffline", server => {
-            console.log( `agent:remoteServerOffline server = "${server}"` );
-            let status = this.remote( server );
-            status.server.status = "offline";
-
-        });
 
         this.on( "busy", busy => {
             this.appServer.bused( busy );
@@ -286,8 +276,8 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             console.log( code, message );
         });
 
-        this.appServer.on("onAppRelease", app => {
-            console.log( `agent:onAppRelease application ="${app.name}"` );
+        this.appServer.on("applicationReleased", app => {
+            console.log( `agent:applicationReleased application ="${app.name}"` );
             let grants = new Set( app.grants||[ ] );
             grants.add( this.identifier );
             this.serverAuthConnection.send("applicationOnline", {
@@ -297,8 +287,8 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             } );
         });
 
-        this.appServer.on( "onAppClosed", application => {
-            console.log( `agent:onAppClosed application ="${application}"` );
+        this.appServer.on( "applicationStopped", application => {
+            console.log( `agent:applicationStopped application ="${application}"` );
             this.serverAuthConnection.send( "applicationOffline", {
                 server: this.identifier,
                 application: application,
@@ -307,7 +297,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
         });
 
         this.on("applicationOnline", (opts) => {
-            console.log( `agent:appServerReleaseRemote server = "${opts.server}" application = "${opts.application}"` );
+            console.log( `agent:applicationOnline server = "${opts.server}" application = "${opts.application}"` );
             let status = this.remote( opts.server, opts.application );
             status.server.status = "online";
             status.application.status = "online";
@@ -315,8 +305,21 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             status.server.grants.add( `${ opts.application }.${ opts.server }`);
         });
 
+        this.on("remoteServerOnline", ( server) => {
+            console.log( `agent:remoteServerOnline server = "${server}"` );
+            let status = this.remote( server );
+            status.server.status = "online";
+
+        });
+
+        this.on( "remoteServerOffline", server => {
+            console.log( `agent:remoteServerOffline server = "${server}"` );
+            let status = this.remote( server );
+            status.server.status = "offline";
+        });
+
         this.on("applicationOffline", opts => {
-            console.log( `agent:remoteServerOffline server = "${ opts }" application = "${ opts.application }"` );
+            console.log( `agent:applicationOffline server = "${ opts.server }" application = "${ opts.application }"` );
             let status = this.remote( opts.server, opts.application );
             status.server.status = "online";
             status.application.status = "online";

@@ -12,8 +12,8 @@ import {
 import {Defaults} from "../../defaults";
 
 export interface AppProxyEvent{
-    onAppRelease( app:App ),
-    onAppClosed( application:string )
+    applicationReleased(app:App ),
+    applicationStopped(application:string )
 }
 
 export type AppController = {
@@ -66,7 +66,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
         for ( let i = 0 ; i< releases; i++ ){
             this.openApplication( app )
         }
-        this.notify("onAppRelease", app );
+        this.notify("applicationReleased", app );
     }
 
     openApplication ( app:App ){
@@ -210,7 +210,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                 appSocket.on( "close", hadError => {
                     iCounts--;
                     if( iCounts === 0 ){
-                        this.notifySafe( "onAppClosed", application );
+                        this.notifySafe( "applicationStopped", application );
                         resolve( sockets );
                         return;
                     }
