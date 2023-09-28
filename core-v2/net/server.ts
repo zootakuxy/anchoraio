@@ -34,11 +34,11 @@ export class AIOServer extends BaseEventEmitter<ServerEvent>{
     listen( listener?:(  port:number )=> void, ...ports:number[]){
         (new Set( ports )).forEach( port => {
             let _server = net.createServer({
-                pauseOnConnect: this.opts.pauseOnConnect,
-                keepAlive: this.opts.keepAlive,
-                noDelay: this.opts.noDelay,
-                keepAliveInitialDelay: this.opts.keepAliveInitialDelay,
-                allowHalfOpen: this.opts.allowHalfOpen
+                // pauseOnConnect: this.opts.pauseOnConnect,
+                // keepAlive: this.opts.keepAlive,
+                // noDelay: this.opts.noDelay,
+                // keepAliveInitialDelay: this.opts.keepAliveInitialDelay,
+                // allowHalfOpen: this.opts.allowHalfOpen
             });
             SERVER_EVENTS_NAME.forEach( eventName => {
                 _server.on( eventName, (...args) => {
