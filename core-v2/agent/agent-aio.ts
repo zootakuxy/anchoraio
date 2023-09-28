@@ -289,10 +289,11 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
 
         this.appServer.on( "applicationStopped", application => {
             console.log( `agent:applicationStopped application ="${application}"` );
+            let app = this.apps.getApplication( application );
             this.serverAuthConnection.send( "applicationOffline", {
                 server: this.identifier,
-                application: application,
-                grants: []
+                application: app.name,
+                grants: app.grants
             });
         });
 
