@@ -36,8 +36,8 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
             });
 
             socket.eventListener().once( "auth", auth => {
-                console.log( "auth", auth );
                 let end = ( code?:string, message?:string )=>{
+                    console.log( `server.agent:auth agent = "${auth.agent}" REJECTED | code = "${code} message = "${message}"` );
                     socket.write( JSON.stringify({
                         event:"authFailed",
                         args:[ code, message ]
@@ -62,6 +62,15 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                 if( token.token.machine !== auth.machine ) return end( "1014", "Token viculado com outro servidor" );
 
                 let register = ()=>{
+                    console.log( `server.agent:auth agent = "${auth.agent}" OK!` );
+                    console.log( "===============================================");
+                    console.log( `ID:           ${auth.id}`);
+                    console.log( `AGENT:        ${auth.agent}`);
+                    console.log( `APPLICATIONS: ${Object.keys( auth.apps).join(", ")}`);
+                    console.log( `SERVER:       ${auth.servers.join(", ")}`);
+                    console.log( `STATUS:       ${auth.status}`);
+                    console.log( "===============================================");
+
                     let referer = `${nanoid(16 )}`;
                     socket[ "referer" ] = referer;
                     socket[ "agentServer" ] = auth.agent;
@@ -166,6 +175,8 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
 
 
             socket.eventListener().on( "applicationOnline", (opts) => {
+                console.log( `server.applicationOnline server = "${opts.server}" application = "${opts.application}"` );
+
                 let notify = [];
                 let auth = socket.props();
                 let app = auth.apps[ opts.application ];
@@ -198,6 +209,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
             });
 
             socket.eventListener().on( "applicationOffline", (opts) => {
+                console.log( `server.applicationOffline server = "${opts.server}" application = "${opts.application}"`)
                 let auth = socket.props();
                 let app = auth.apps[ opts.application ];
                 if( !app ){
@@ -229,6 +241,8 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
             });
 
             socket.on( "close", () => {
+                console.log( `server.agent:close agent = "${socket.props().agent}"`)
+
                 let auth = this.saio.agents[ socket.props().agent ];
                 if( !auth ) return;
                 if( auth.connection.id() === socket.id() ){
