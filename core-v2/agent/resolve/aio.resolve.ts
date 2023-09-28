@@ -2,7 +2,7 @@ import * as fs from "fs";
 import ini from "ini";
 import {Localhost} from "./localhost";
 import Path from "path";
-import {Detect, DirWatch} from "../../utils/dir-watch";
+import {Detect, DirWatch} from "../../utils";
 import {Defaults} from "../../defaults";
 import {AppProtocol} from "../../protocol/index";
 import {BaseEventEmitter, iniutil} from "kitres";
