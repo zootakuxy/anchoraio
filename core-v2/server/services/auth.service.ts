@@ -79,10 +79,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                     auth.id = socket.id();
                     auth.referer =  referer;
                     socket.props( auth );
-
-                    this.saio.agents[ auth.agent ]  = Object.assign( auth, {
-                        connection: socket,
-                    });
+                    this.saio.agents[ auth.agent ]  = socket;
 
                     let servers:{
                         [ server:string ]: AvailableServer
@@ -147,15 +144,14 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
 
                 let current = this.saio.agents[ auth.agent ];
                 if( !current ) return register();
-                if( current.connection["closed"] ) return register();
-                if( current.connection.status() !== "connected" ) return register();
+                if( current.status() !== "connected" ) return register();
 
                 //Check if is alive
                 let checkAliveCode = nanoid(32 );
 
                 let timeoutCheck = ()=>{
-                    current.connection.eventListener().onceOff( "isAlive", listenResponse );
-                    try { current.connection.destroy( new Error( "zombie socket" ) );
+                    current.eventListener().onceOff( "isAlive", listenResponse );
+                    try { current.destroy( new Error( "zombie socket" ) );
                     } catch (e){ }
                     register();
                 }
@@ -166,15 +162,15 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
 
                 let listenResponse;
 
-                current.connection.eventListener().once( "isAlive", listenResponse = (code, referer) => {
-                    if( code === checkAliveCode && referer === current.referer ){
+                current.eventListener().once( "isAlive", listenResponse = (code, referer) => {
+                    if( code === checkAliveCode && referer === current.props().referer ){
                         timeoutCheck = ()=>{};
                         clearTimeout( timeoutCode );
                         return end( "1014","Another agent instance is connected!" );
                     }
                 });
 
-                current.connection.send( "isAlive", checkAliveCode, null );
+                current.send( "isAlive", checkAliveCode, null );
             });
 
 
@@ -183,18 +179,15 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
 
                 let notify = [];
                 let auth = socket.props();
-                let app = auth.apps[ opts.application ];
-                if( !app ){
-                    app = {
+                if( !auth.apps[ opts.application ] ){
+                    auth.apps[ opts.application ] = {
                         status: "online",
                         grants: [...new Set<string>(opts.grants)],
                         name: opts.application
                     }
-                    auth.apps[ opts.application ] = app;
                 }
-
-                app.grants = [...new Set<string>(opts.grants)];
-                app.status = "online";
+                auth.apps[ opts.application ].grants = [...new Set<string>(opts.grants)];
+                auth.apps[ opts.application ].status = "online";
 
                 this.saio.clientsOf({  server: auth.agent, application: opts.application})
                     .forEach( client => {
@@ -249,16 +242,16 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
 
                 let auth = this.saio.agents[ socket.props().agent ];
                 if( !auth ) return;
-                if( auth.connection.id() === socket.id() ){
+                if( auth.id() === socket.id() ){
                     //Fechar todos os slots de conexão aberto inicializado pelo agente que acabou de encerar a ligação
-                    Object.values( this.saio.serverSlots[ auth.agent ] ).forEach( apps => {
+                    Object.values( this.saio.serverSlots[ auth.props().agent ] ).forEach( apps => {
                         Object.values( apps ).forEach( value => {
                             value.connect.end();
                         })
                     });
 
                     //Fechar todas as esperas de conexão aguardando pelo agente
-                    Object.values( this.saio.waitConnections[ auth.agent ]).forEach( apps => {
+                    Object.values( this.saio.waitConnections[ auth.props().agent ]).forEach( apps => {
                         Object.values( apps ).forEach( waitApp => {
                             waitApp.connection.end();
                         })
@@ -269,12 +262,12 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                         .forEach( servers => {
                             Object.values( servers ).forEach( apps => {
                                 Object.values( apps ).forEach( value => {
-                                    if( value.connection.props().client !== auth.agent ) return;
+                                    if( value.connection.props().client !== auth.props().agent ) return;
                                     value.connection.end();
                                 })
                             });
                         })
-                    delete this.saio.agents[ auth.agent ]
+                    delete this.saio.agents[ auth.props().agent ]
                 }
             });
 

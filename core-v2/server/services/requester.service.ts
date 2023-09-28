@@ -44,17 +44,17 @@ export class RequesterService extends BaseEventEmitter<RequesterServiceEvent>{
                 let auth = Object.entries( this.saio.agents )
                     .map( value => value[1])
                     .find( (agentAuth, index) => {
-                        return agentAuth.referer === redirect.authReferer
-                            && agentAuth.agent === redirect.origin
-                            && agentAuth.machine === redirect.machine
+                        return agentAuth.props().referer === redirect.authReferer
+                            && agentAuth.props().agent === redirect.origin
+                            && agentAuth.props().machine === redirect.machine
                     })
                 if(!auth ) return end( "3001","Agent not authenticated" );
-                let resolverApp = this.saio.agents?.[ redirect.server ]?.apps?.[ redirect.app ];
+                let resolverApp = this.saio.agents?.[ redirect.server ]?.props().apps?.[ redirect.app ];
                 if( !resolverApp ) return end( "3002", "Resolved application not found");
                 let grants = [ "*", redirect.origin ].find( value => resolverApp.grants.includes( value ) )
                 if( !grants ) return end(  "3003", "Permission dined for application");
 
-                socket.props().client = auth.agent;
+                socket.props().client = auth.props().agent;
 
                 let datas = [];
                 let listen = data =>{
@@ -69,12 +69,12 @@ export class RequesterService extends BaseEventEmitter<RequesterServiceEvent>{
                 this.saio.resolver( redirect.server, redirect.app, {
                     id: socket.id(),
                     connection: socket,
-                    agent: auth.agent,
+                    agent: auth.props().agent,
                     resolve: ( slot )=>{
                         anchor( `${redirect.app}.${redirect.server}`, "CENTRAL", socket, slot.connect, datas, [] );
                         socket.off( "data", listen );
                         socket.write("ready" );
-                        this.saio.agents[ slot.server ].connection.send( "busy", {
+                        this.saio.agents[ slot.server ].send( "busy", {
                             application: redirect.app,
                             slotId: slot.slotId,
                             origin: redirect.origin

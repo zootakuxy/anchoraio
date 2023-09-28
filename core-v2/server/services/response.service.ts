@@ -39,18 +39,18 @@ export class ResponseService extends BaseEventEmitter<ResponseServiceEvent>{
                             if( value.error ) this.notify( "error", value.error, "dined" );
                         })
                 }
-                let auth = Object.entries( this.saio.agents )
-                    .map( value => value[1] ).find( (agentAuth, index) => {
-                        if( agentAuth.referer === pack.authReferer
-                            && agentAuth.agent === pack.origin
-                            && agentAuth.machine === pack.machine
+                let auth = Object.values( this.saio.agents )
+                    .find( (agentAuth, index) => {
+                        if( agentAuth.props().referer === pack.authReferer
+                            && agentAuth.props().agent === pack.origin
+                            && agentAuth.props().machine === pack.machine
                         ) return agentAuth;
                         return null;
                     });
 
 
                 if(!auth ) return end( "2001", "Reference server is not authenticated!" );
-                auth.apps[ pack.app ] = {
+                auth.props().apps[ pack.app ] = {
                     grants: pack.grants,
                     name: pack.app,
                     status: "online"

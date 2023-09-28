@@ -8,8 +8,6 @@ import {
 } from "../net";
 import {TokenService} from "../services";
 import {ServerOptions} from "./server-proxy";
-import {application} from "express";
-import {AvailableApplication, AvailableServer} from "../agent";
 
 interface ServerAioEvent {
 }
@@ -86,9 +84,7 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
     public  tokenService;
 
     public agents : {
-        [p:string]: AgentAuthenticate & {
-            connection:ListenableAnchorSocket<AgentAuthenticate, AuthSocketListener >,
-        }
+        [p:string]: ListenableAnchorSocket<AgentAuthenticate, AuthSocketListener >
     }
 
     constructor( opts:ServerOptions ) {
@@ -130,12 +126,11 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
     clientsOf(opts:{ server:string, application?:string }):ListenableAnchorSocket<AgentAuthenticate, AuthSocketListener >[]{
         let server = this.agents[ opts.server ];
         return  Object.values(this.agents)
-            .map((client, index) => client.connection)
             .filter((client, index) => {
                 if (client.props().agent === opts.server) return false;
                 if (!client.props().servers.includes( opts.server )) return false;
                 if( opts.application ){
-                    let app = server.apps[ opts.application ];
+                    let app = server.props().apps[ opts.application ];
                     if( !app ) return false;
                     if( app.grants.includes( "*" ) ) return true;
                     return app.grants.includes( client.props().agent );
@@ -147,13 +142,12 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
     serverOf(opts:{ client:string }):ListenableAnchorSocket<AgentAuthenticate, AuthSocketListener >[]{
         let client = this.agents[ opts.client ];
         return  Object.values(this.agents)
-            .map((server, index) => server.connection)
             .filter((server, index) => {
                 if (server.props().agent === opts.client) return false;
-                if (!client.servers.includes( server.props().agent ) ) return false;
-                return Object.values( server.props().apps ).find( value => {
-                    if(value.grants.includes( "*" )) return true;
-                    return value.grants.includes(client.agent);
+                if (!client.props().servers.includes( server.props().agent ) ) return false;
+                return Object.values( server.props().apps ).find( app => {
+                    if( app.grants.includes( "*" )) return true;
+                    return app.grants.includes( client.props().agent );
                 });
             });
     }
@@ -183,7 +177,7 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
             delete this.waitConnections[server][application][ wait.connection.id()  ];
             if( hadError ) console.log( `detached wait connection for ${ application }.${ server } because remittent connection ${ wait.connection.id() } is closed!`)
         });
-        this.agents[ server ].connection.send( "hasPendentRequest", {
+        this.agents[ server ].send( "hasPendentRequest", {
             client: wait.agent,
             server: server,
             application: application
