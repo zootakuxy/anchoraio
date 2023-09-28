@@ -1,7 +1,7 @@
 import {ServerAio, ServerSlot} from "../server-aio";
 import {createServer, Server} from "net";
 import {anchor, asAnchorConnect, RequestGetawayAuth} from "../../net";
-import {BaseEventEmitter} from "kitres/src/core/util";
+import {BaseEventEmitter} from "kitres";
 
 export interface RequesterServiceEvent {
     dined( code:string, message:string )
