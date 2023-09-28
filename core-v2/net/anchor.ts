@@ -265,56 +265,11 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
     let endpoints:Endpoint[] = [ "server", "client" ];
     let redirect = ( from:AnchorSocket<T>, to:AnchorSocket<T>, data:Buffer )=>{
         to.write( data );
-
-        // let buffer = data;
-        // const length = data.length;
-        // if( !endpoints.includes( to.endpoint() )){
-        //     const buffer = Buffer.alloc(4 + length); // 4 bytes para armazenar o tamanho
-        //     buffer.writeUInt32BE(length, 0);
-        //     data.copy( buffer, 4);
-        // }
-        //
-        // console.log( `REDIRECT FROM ${ from.endpoint() || "@central"} to ${ to.endpoint()||"@central" } length = ${length}` );
-        // console.log( buffer.toString() );
-        // to.write( buffer );
     }
-
-
     let __anchor = (_left:AnchorSocket<T>, _right:AnchorSocket<T> ) => {
-
-        let receivedData = Buffer.alloc(0);
-        let expectedLength = 0;
-
 
         _left.on( "data", data => {
             redirect( _left, _right, data );
-
-            // let onComplete = ( _adata )=>{
-            //     redirect( _left, _right, _adata );
-            //     // Limpe o buffer e o tamanho esperado para a próxima mensagem
-            //     receivedData = receivedData.slice( expectedLength );
-            //     expectedLength = 0;
-            // }
-            //
-            // receivedData = Buffer.concat([receivedData, data]);
-            // // Se o tamanho esperado ainda não foi determinado
-            // if (expectedLength === 0 && receivedData.length >= 4) {
-            //     expectedLength = data.readUInt32BE(0);
-            //     receivedData = receivedData.slice(4);
-            // }
-            //
-            //
-            // if( endpoints.includes( _left.endpoint() ) ){
-            //     return onComplete( receivedData );
-            // }
-            //
-            // // Verifique se recebemos a mensagem completa
-            // if (receivedData.length >= expectedLength ) {
-            //     return onComplete( receivedData );
-            // }
-            //
-            // console.log( `REDIRECT FROM ${ _left.endpoint()} to ${ _left.endpoint() } WAIT MORE | receivedData.length = ${receivedData.length}; expectedLength = ${ expectedLength } at ${ point }` );
-            // console.log( receivedData.toString( ) );
         });
         // _left.pipe( _right );
         _left.on( "close", () => {

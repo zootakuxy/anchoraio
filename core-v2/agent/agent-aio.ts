@@ -1,4 +1,4 @@
-import {ResolverServer, AgentProxyOptions, Resolved} from "./resolve";
+import {ResolverServer, AgentProxyOptions, Resolved, CloseGetawayOptions} from "./resolve";
 import {TokenService} from "../services";
 import {TokenOptions} from "../../aio/opts/opts-token";
 import {BaseEventEmitter} from "kitres";
@@ -10,7 +10,7 @@ import {
     AgentAuthenticate, AuthApplication,
     createListenableAnchorConnect,
     ListenableAnchorListener,
-    ListenableAnchorSocket
+    ListenableAnchorSocket, ServerReleaseOptions
 } from "../net";
 import { AuthResult, AuthSocketListener} from "../net";
 import {application} from "express";
@@ -296,6 +296,30 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             });
         });
 
+        this.on("remoteServerOnline", ( server) => {
+            console.log( `agent:remoteServerOnline server = "${server}"` );
+            let status = this.remote( server );
+            status.server.status = "online";
+        });
+
+        let remoteApplicationOffline = ( opts:CloseGetawayOptions)=>{
+            let status = this.remote( opts.server, opts.application );
+            status.application.status = "offline";
+            this.agentProxy.closeGetaway( opts );
+        }
+
+        this.on( "remoteServerOffline", server => {
+            console.log( `agent:remoteServerOffline server = "${server}"` );
+            let status = this.remote( server );
+            status.server.status = "offline";
+            Object.values( this.remotesAvailable[ server ].apps ).forEach( app => {
+                remoteApplicationOffline( {
+                    server: server,
+                    application: app.name
+                });
+            });
+        });
+
         this.on("applicationOnline", (opts) => {
             console.log( `agent:applicationOnline server = "${opts.server}" application = "${opts.application}"` );
             let status = this.remote( opts.server, opts.application );
@@ -305,25 +329,9 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             status.server.grants.add( `${ opts.application }.${ opts.server }`);
         });
 
-        this.on("remoteServerOnline", ( server) => {
-            console.log( `agent:remoteServerOnline server = "${server}"` );
-            let status = this.remote( server );
-            status.server.status = "online";
-
-        });
-
-        this.on( "remoteServerOffline", server => {
-            console.log( `agent:remoteServerOffline server = "${server}"` );
-            let status = this.remote( server );
-            status.server.status = "offline";
-        });
-
         this.on("applicationOffline", opts => {
             console.log( `agent:applicationOffline server = "${ opts.server }" application = "${ opts.application }"` );
-            let status = this.remote( opts.server, opts.application );
-            status.server.status = "online";
-            status.application.status = "online";
-            this.agentProxy.closeGetaway( opts );
+            remoteApplicationOffline( opts );
         });
         this.init = ()=>{};
     }
