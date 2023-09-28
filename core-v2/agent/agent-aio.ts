@@ -32,7 +32,7 @@ interface AgentAioListener extends AuthSocketListener {
 
 export type AvailableApplication = {
     name:string,
-    status:"online"|"offline",
+    status: "online"|"offline",
     grants:string[]
 }
 export type AvailableServer = {
@@ -187,7 +187,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
                 machine: this.machine(),
                 referer:null,
                 apps: this.authApp(),
-
+                status: "online"
             }
             connection.send( "auth", auth );
         });
@@ -200,7 +200,8 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
         this.apps.applications().forEach( value => {
             apps[ value.name ] = {
                 name: value.name,
-                grants: value.grants||[]
+                grants: value.grants||[],
+                status: this.appServer.statusOf( value ) === "started"? "online": "offline"
             }
         });
         return  apps;

@@ -262,4 +262,8 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
         delete this.appsConnections[ connection.id() ];
         this.restoreApplication( connection.props().app );
     }
+
+    statusOf(app: App) {
+        return this.apps[ app.name ].status;
+    }
 }

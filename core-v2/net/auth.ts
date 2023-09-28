@@ -66,7 +66,7 @@ export type RequestGetawayAuth = AuthIO& {
 export type AuthApplication = {
     name:string,
     grants:string[],
-    status?:"offline"|"online"
+    status:"offline"|"online"
 }
 
 export type AgentAuthenticate = {
@@ -79,6 +79,6 @@ export type AgentAuthenticate = {
     }
     machine:string
     servers:string[],
-    status?:"online"|"offline"
+    status:"online"|"offline"
 }
 

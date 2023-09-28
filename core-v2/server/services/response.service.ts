@@ -50,10 +50,10 @@ export class ResponseService extends BaseEventEmitter<ResponseServiceEvent>{
 
 
                 if(!auth ) return end( "2001", "Reference server is not authenticated!" );
-
                 auth.apps[ pack.app ] = {
                     grants: pack.grants,
-                    name: pack.app
+                    name: pack.app,
+                    status: "online"
                 }
 
                 this.notifySafe("auth", pack )
