@@ -235,6 +235,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                     this.notifySafe( "applicationStopped", app );
                     resolve( sockets );
                 });
+                delete this.appsConnections[ appSocket.id() ]
             });
 
         })
