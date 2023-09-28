@@ -135,7 +135,7 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
             .filter((client, index) => {
                 let props = { ...server.connection.props() };
                 delete props[ "connection" ];
-                console.log( "check is client with", client.props() );
+                console.log( "check is client with", props);
                 if (client.props().agent === opts.server) return false;
                 if (!client.props().servers.includes( opts.server )) return false;
                 if( opts.application ){
