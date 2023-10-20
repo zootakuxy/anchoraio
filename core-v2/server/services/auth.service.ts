@@ -14,8 +14,8 @@ import {AvailableApplication, AvailableServer} from "../../agent";
 
 
 interface AuthServiceEvent extends AuthSocketListener {
-    dined( code:string, message:string, auth:AgentAuthenticate),
-    error( error:Error, event:keyof AuthSocketListener|"dined")
+    dined( code:string, message:string, auth:AgentAuthenticate):void
+    error( error:Error, event:keyof AuthSocketListener|"dined"):void
 }
 
 export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
