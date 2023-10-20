@@ -39,17 +39,17 @@ export interface ListenableAnchorSocket<
      * @param args - Argumentos a serem passados para os callbacks dos ouvintes.
      * @returns Uma matriz de objetos que representam os ouvintes notificados.
      */
-    send<K extends keyof L>(event: K, ...args: L[K] extends (...args: infer P) => any ? P : never[]);
-    output( str:string );
+    send<K extends keyof L>(event: K, ...args: L[K] extends (...args: infer P) => any ? P : never[]):void
+    output( str:string ):void
 
     eventListener():Listener<ListenableAnchorListener<L>>
 
-    onRaw( callback:( message:string ) => void )
-    onceRaw( callback:( message:string ) => void )
-    offRaw( callback:( message:string ) => void )
-    onceOffRaw(callback:(message:string ) => void )
-    startListener()
-    stopListener()
+    onRaw( callback:( message:string ) => void ):void
+    onceRaw( callback:( message:string ) => void ):void
+    offRaw( callback:( message:string ) => void ):void
+    onceOffRaw(callback:(message:string ) => void ):void
+    startListener():void
+    stopListener():void
 }
 
 

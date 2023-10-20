@@ -2,11 +2,11 @@ import {BaseEventEmitter} from "kitres";
 import net from "net";
 
 export interface ServerEvent {
-    connection( socket:net.Socket ),
-    listening(),
-    close(),
-    error( error:Error )
-    drop( data?:net.DropArgument )
+    connection( socket:net.Socket ):void,
+    listening():void,
+    close():void,
+    error( error:Error, server?:net.Server ):void
+    drop( data?:net.DropArgument ):void
 }
 
 const SERVER_EVENTS_NAME:(keyof ServerEvent)[] = [ "connection", "listening", "close", "error", "drop" ];
@@ -40,6 +40,10 @@ export class AIOServer extends BaseEventEmitter<ServerEvent>{
                 // keepAliveInitialDelay: this.opts.keepAliveInitialDelay,
                 // allowHalfOpen: this.opts.allowHalfOpen
             });
+            _server.on( "error", err => {
+                this.notify( "error", err, _server );
+            });
+
             SERVER_EVENTS_NAME.forEach( eventName => {
                 _server.on( eventName, (...args) => {
                     // @ts-ignore

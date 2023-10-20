@@ -4,7 +4,6 @@ import {BaseEventEmitter} from "kitres/src/core/util";
 import {Defaults} from "../../defaults";
 import {createAnchorConnect, AnchorSocket, identifierOf, anchor, RequestGetawayAuth, asAnchorConnect} from "../../net";
 import {AIOServer} from "../../net/server";
-import {application, response} from "express";
 
 export type AgentProxyOptions = {
     requestPort:number,

@@ -4,10 +4,10 @@ import {ApplicationGetawayAuth, asListenableAnchorConnect} from "../../net";
 import {BaseEventEmitter} from "kitres/src/core/util";
 
 export interface ResponseServiceEvent {
-    dined( code:string, message:string, pack:ApplicationGetawayAuth )
-    busy( origin:string ),
-    auth( authData:ApplicationGetawayAuth )
-    error( error:Error, event:"dined"|"busy"|"auth")
+    dined( code:string, message:string, pack:ApplicationGetawayAuth ):void
+    busy( origin:string ):void
+    auth( authData:ApplicationGetawayAuth ):void
+    error( error:Error, event:"dined"|"busy"|"auth"):void
 
 }
 export class ResponseService extends BaseEventEmitter<ResponseServiceEvent>{
@@ -22,8 +22,8 @@ export class ResponseService extends BaseEventEmitter<ResponseServiceEvent>{
     private __init(){
         this.responseServer = createServer(_so => {
             let socket = asListenableAnchorConnect<any,{
-                busy( origin:string ),
-                auth( authData:ApplicationGetawayAuth )
+                busy( origin:string ):void
+                auth( authData:ApplicationGetawayAuth ):void
             }>( _so, {
                 side: "server",
                 method: "SET",
@@ -74,6 +74,11 @@ export class ResponseService extends BaseEventEmitter<ResponseServiceEvent>{
             socket.on( "error", err => {
                 console.log( "serverDestine-error", err.message )
             })
+        });
+
+        this.responseServer.on( "error",err => {
+           console.log( `Response server error = "${err.message}"` );
+           console.error( err );
         });
     }
 

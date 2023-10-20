@@ -272,6 +272,11 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                 console.log( "server-auth-error", err.message )
             });
         });
+
+        this.serverAuth.on( "error", err => {
+            console.log( `Auth server error = "${ err?.message }"`);
+            console.error( err );
+        });
     }
 
     listen( port:number ){

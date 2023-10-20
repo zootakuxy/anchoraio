@@ -89,6 +89,11 @@ export class RequesterService extends BaseEventEmitter<RequesterServiceEvent>{
                 console.log( "clientOrigin-error", err.message )
             })
         });
+
+        this.requestServer.on( "error", err => {
+            console.log(  `Request server error = "${err?.message}"` );
+            console.error(  err );
+        });
     }
 
     public listen( port:number ){

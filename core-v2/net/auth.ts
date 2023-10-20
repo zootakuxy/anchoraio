@@ -30,19 +30,19 @@ export type PendentRequest = {
 }
 
 export interface AuthSocketListener {
-    auth( auth:AgentAuthenticate )
-    authResult(auth:AuthResult )
-    authFailed( code:string, message:string )
-    isAlive( code:string, referer ),
+    auth( auth:AgentAuthenticate ):void
+    authResult(auth:AuthResult ):void
+    authFailed( code:string, message:string ):void
+    isAlive( code:string, referer:string ):void
 
-    remoteServerOnline( server:string ),
-    remoteServerOffline( server:string ),
+    remoteServerOnline( server:string ):void
+    remoteServerOffline( server:string ):void
 
-    applicationOnline(opts:ServerReleaseOptions ),
-    applicationOffline(opts:ServerReleaseOptions ),
+    applicationOnline(opts:ServerReleaseOptions ):void
+    applicationOffline(opts:ServerReleaseOptions ):void
 
-    busy( busy:SlotBusy )
-    hasPendentRequest( pendentRequest:PendentRequest )
+    busy( busy:SlotBusy ):void
+    hasPendentRequest( pendentRequest:PendentRequest ):void
 }
 
 
