@@ -29,6 +29,7 @@ interface AgentAioListener extends AuthSocketListener {
     agentStarted():void,
     agentStop():void
     connection( error?:Error ):void
+    ready():void
 }
 
 export type AvailableApplication = {
@@ -254,6 +255,8 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             this.apps.applications().forEach( application => {
                 this.appServer.releaseApplication( application );
             });
+
+            this.notify("ready" );
         });
 
 
