@@ -34,7 +34,6 @@ export type WaitConnection = {
     resolved?: boolean,
     id?:string,
     agent:string,
-    timeout?: NodeJS.Timeout
 }
 
 let createProxy = ()=>{
@@ -107,7 +106,6 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
         if( !!next ) {
             let [ key, wait ] = next;
             wait.resolved = true;
-            if( wait.timeout ) clearTimeout( wait.timeout );
             delete this.waitConnections[slot.server][slot.app][ wait.id ];
             wait.resolve ( slot );
             console.log( `server.release getaway response for application = "${slot.app}" server = "${ slot.server}" CREATED & APPLIED` );
@@ -174,12 +172,6 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
         }
         console.log( `server.resolver:RESOLVER_WAIT` )
         this.waitConnections[server][application][ wait.connection.id() ] = wait;
-        wait.timeout = setTimeout( ()=>{
-            let __isAwait = this.waitConnections[server][application][ wait.connection.id() ];
-            if( !__isAwait ) return;
-            __isAwait.connection.end();
-            delete this.waitConnections?.[server]?.[application]?.[ wait.connection.id() ];
-        }, 1000 * 60 * 2.5 );
         wait.connection.on( "close", hadError => {
             console.log( `server.resolver getaway request from ${ wait.agent } to ${ application}.${ server } CLOSED` );
             delete this.waitConnections[server][application][ wait.connection.id()  ];
