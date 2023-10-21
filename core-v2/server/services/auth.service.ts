@@ -91,7 +91,8 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                     delete this.saio.waitConnections[ auth.agent ];
                     delete this.saio.serverSlots[ auth.agent ];
 
-                    let CHECK_TIMEOUT_LIVE = 1000 * 15;
+                    let CHECK_TIMEOUT_LIVE = 1000 * 10;
+                    let CHECK_TIMEOUT_LIVE_WAIT = 1000 * 4;
 
                     let checkAliveTimeOut = () =>{
                         console.log( `Check connection alive with ${ auth.agent }...` )
@@ -114,7 +115,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
 
                         let _timeout = setTimeout(()=>{
                             timeout();
-                        }, CHECK_TIMEOUT_LIVE);
+                        }, CHECK_TIMEOUT_LIVE_WAIT);
 
 
                         socket.eventListener().once( "isAlive", checkAliveListener = (code:string, referer:string) => {
@@ -122,7 +123,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                                 console.log( `Check connection alive with ${ auth.agent }... OK!` )
                                 setTimeout( ()=>{
                                     checkAliveTimeOut();
-                                }, )
+                                }, CHECK_TIMEOUT_LIVE )
                                 timeout = ()=>{ };
                                 clearTimeout( _timeout );
                             } else {
