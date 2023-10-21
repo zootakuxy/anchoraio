@@ -21,9 +21,11 @@ interface AuthServiceEvent extends AuthSocketListener {
 export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
     private saio:ServerAio;
     private serverAuth:Server;
+    lastAuth:{[p:string]:string}
     constructor( saio:ServerAio ) {
         super();
         this.saio = saio;
+        this.lastAuth  = {};
         this.__init();
     }
 
@@ -69,6 +71,8 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                     console.log( `SERVER:       ${auth.servers.join(", ")}`);
                     console.log( `STATUS:       ${auth.status}`);
                     console.log( "==========================================================================");
+                    this.saio.agents[ auth.agent ]  = socket;
+                    this.lastAuth[ auth.agent ] = socket.id();
 
                     let referer = `${nanoid(16 )}`;
                     if( !auth.servers ) auth.servers = [];
@@ -76,7 +80,6 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                     auth.id = socket.id();
                     auth.referer =  referer;
                     socket.props( auth );
-                    this.saio.agents[ auth.agent ]  = socket;
 
                     let servers:{
                         [ server:string ]: AvailableServer
@@ -235,11 +238,12 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
             });
 
             socket.on( "close", ( err) => {
-                console.log( `Sever> End connection with Agent = "${socket.props().agent}"  ID = ${ socket.id() } Error = ${err}`)
 
                 let auth = this.saio.agents[ socket.props().agent ];
+
+                console.log( `Sever> End connection with Agent = "${socket.props().agent}"  ID = ${ socket.id() } Error = ${err} Last = ${ auth.id() === socket.id() }`)
                 if( !auth ) return;
-                if( auth.id() === socket.id() ){
+                if( auth.id() === socket.id()){
                     //Fechar todos os slots de conexão aberto inicializado pelo agente que acabou de encerar a ligação
                     Object.values( this.saio.serverSlots[ auth.props().agent ] ).forEach( apps => {
                         Object.values( apps ).forEach( value => {
