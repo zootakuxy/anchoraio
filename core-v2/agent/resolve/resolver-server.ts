@@ -479,19 +479,34 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
         let needGetAway = this.needGetAway[ opts.server ][ opts.application ];
         needGetAway.hasRequest = false;
         if(needGetAway.timeout ) clearTimeout( needGetAway.timeout )
-        Object.entries( this.getaway[ opts.server ] [ opts.application ] ).forEach( ([key, getaway]) => {
-            getaway.connection.end();
+        return Object.entries( this.getaway[ opts.server ] [ opts.application ] ).map( ([key, getaway]) => {
+            return new Promise( (resolve) => {
+                delete this.getaway[ opts.server ][ opts.application ][ key ];
+                getaway.connection.end(() => {
+                    resolve( true )
+                });
+            })
         })
     }
 
     closeAll() {
-        Object.keys( this.getaway ).forEach( server => {
-            Object.keys( this.getaway[ server ] ).forEach( application => {
-                this.closeGetaway({
-                    application,
-                    server
-                })
+        return Object.keys( this.getaway ).map( server => {
+            return new Promise( resolve1 => {
+                let promises =  Object.keys( this.getaway[ server ] ).map( application => {
+                    return Promise.all(this.closeGetaway({
+                        application,
+                        server
+                    })).then( value => {
+
+                    }).catch( reason => {
+
+                    })
+                });
+                Promise.all( promises ).then( value => {
+                    resolve1( true )
+                }).catch( reason => resolve1( true ) )
             })
+
         })
     }
 }

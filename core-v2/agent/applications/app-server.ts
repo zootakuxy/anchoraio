@@ -214,12 +214,10 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             }
 
             this.apps[ app.name ].status = "stopped";
-            let sockets :AnchorSocket<any>[] = [];
             let isFinally= false;
             Object.values( this.appsConnections ).forEach( (socket, index, array) => {
                 isFinally = index+1 === array.length;
-                if( socket.props().app.name !== app.name ) return;
-                sockets.push( socket );
+                if( socket.props().appName !== app.name ) return;
                 socket.props().busy = true;
                 socket.end( () => {
                     if( !isFinally ) return false;

@@ -33,7 +33,7 @@ export interface AuthSocketListener {
     auth( auth:AgentAuthenticate ):void
     authResult(auth:AuthResult ):void
     authFailed( code:string, message:string ):void
-    isAlive( code:string, referer:string ):void
+    isAlive( code:string, referer?:string ):void
 
     remoteServerOnline( server:string ):void
     remoteServerOffline( server:string ):void
@@ -80,5 +80,6 @@ export type AgentAuthenticate = {
     machine:string
     servers:string[],
     status:"online"|"offline"
+    checkInterval?:NodeJS.Timeout
 }
 

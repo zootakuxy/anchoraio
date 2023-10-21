@@ -25,9 +25,10 @@ export type AgentAioOptions = AgentProxyOptions& TokenOptions& {
 
 
 interface AgentAioListener extends AuthSocketListener {
-    agentStart(),
-    agentStarted(),
-    agentStop()
+    agentStart():void,
+    agentStarted():void,
+    agentStop():void
+    connection( error?:Error ):void
 }
 
 export type AvailableApplication = {
@@ -163,6 +164,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
         connection.on( "error", err => {
             console.log( "server-auth-connection-error", err.message );
             this._lastTry = "error";
+            this.notify( "connection", err )
         });
 
         connection.on( "close", hadError => {
@@ -176,17 +178,18 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             this.agentProxy.closeAll();
             if( (hadError && this.status !== "stopped" ) || ( this.result === "authenticated" && this.status === "started" )) setTimeout(()=>{
                 this.createAuthConnection();
-            }, this.opts.restoreTimeout );
+            }, Defaults.restoreTimeout );
         });
 
 
         connection.once("connect", () => {
-            if ( this._lastTry === "error" ) {
-                this.stop();
-                setTimeout(()=>{
-                    this.start();
-                }, 1000 * 3 );
-            }
+            // if ( this._lastTry === "error" ) {
+            //     this.stop();
+            //     setTimeout(()=>{
+            //         this.start();
+            //     }, 1000 * 3 );
+            //     return;
+            // }
             this._lastTry = "connect";
             let token = this.token.tokenOf( this.opts.identifier );
             let auth:AgentAuthenticate = {
@@ -199,6 +202,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
                 status: "online"
             }
             connection.send( "auth", auth );
+            this.notify("connection" );
         });
 
         this.serverAuthConnection = connection;
