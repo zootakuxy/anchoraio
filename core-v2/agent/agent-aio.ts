@@ -56,6 +56,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
     public readonly aioResolve:AioResolver;
     public apps:ApplicationAIO;
     public authId:string;
+    private _lastTry:"error"|"connect";
     public remotesAvailable:{
         [p:string]:AvailableServer
     } = {}
@@ -161,6 +162,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
 
         connection.on( "error", err => {
             console.log( "server-auth-connection-error", err.message );
+            this._lastTry = "error";
         });
 
         connection.on( "close", hadError => {
@@ -179,6 +181,13 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
 
 
         connection.once("connect", () => {
+            if ( this._lastTry === "error" ) {
+                this.stop();
+                setTimeout(()=>{
+                    this.start();
+                }, 1000 * 3 );
+            }
+            this._lastTry = "connect";
             let token = this.token.tokenOf( this.opts.identifier );
             let auth:AgentAuthenticate = {
                 agent: this.opts.identifier,
