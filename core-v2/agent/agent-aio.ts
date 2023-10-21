@@ -318,6 +318,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             console.log( `agent:remoteServerOnline server = "${server}"` );
             let status = this.remote( server );
             status.server.status = "online";
+            console.log( status );
         });
 
         let remoteApplicationOffline = ( opts:CloseGetawayOptions)=>{
