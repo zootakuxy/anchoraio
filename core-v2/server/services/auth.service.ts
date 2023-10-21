@@ -99,6 +99,13 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                         let checkAliveListener:CallableFunction;
                         let checkAliveCode = nanoid(32 );
                         let timeout = ()=>{
+                            let _isSelf = this.saio.agents[ auth.agent ].id() === socket.id();
+                            clearInterval( socket.props().checkInterval )
+                            console.log( `Check connection alive with ${ auth.agent }... NO RESPONSE!` )
+                            socket.eventListener().onceOff("isAlive", checkAliveListener as any );
+                            socket.end();
+
+                            if( ! _isSelf ) return;
                             checkAliveTimeOut = ()=>{ }
                             this.saio.clientsOf( { server: auth.agent }).forEach( client => {
                                 client.send( "remoteServerOffline", auth.agent );
@@ -107,10 +114,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                                         if( value.error ) this.notifySafe( "error", value.error, "remoteServerOffline" );
                                     });
                             });
-                            clearInterval( socket.props().checkInterval )
-                            console.log( `Check connection alive with ${ auth.agent }... NO RESPONSE!` )
-                            socket.eventListener().onceOff("isAlive", checkAliveListener as any );
-                            socket.end();
+
                         }
 
                         let _timeout = setTimeout(()=>{
@@ -126,13 +130,13 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                                 }, CHECK_TIMEOUT_LIVE )
                                 timeout = ()=>{ };
                                 clearTimeout( _timeout );
-                                this.saio.clientsOf( { server: auth.agent }).forEach( client => {
-                                    client.send( "remoteServerOnline", auth.agent );
-                                    this.notifySafe( "remoteServerOnline", auth.agent )
-                                        .forEach( value => {
-                                            if( value.error ) this.notifySafe( "error", value.error, "remoteServerOffline" );
-                                        });
-                                });
+                                // this.saio.clientsOf( { server: auth.agent }).forEach( client => {
+                                //     client.send( "remoteServerOnline", auth.agent );
+                                //     this.notifySafe( "remoteServerOnline", auth.agent )
+                                //         .forEach( value => {
+                                //             if( value.error ) this.notifySafe( "error", value.error, "remoteServerOffline" );
+                                //         });
+                                // });
                             } else {
                                 timeout();
                                 timeout = ()=>{ };
