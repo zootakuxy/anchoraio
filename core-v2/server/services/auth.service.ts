@@ -96,12 +96,12 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                         let checkAliveListener:CallableFunction;
                         let checkAliveCode = nanoid(32 );
                         let timeout = ()=>{
+                            clearInterval( socket.props().checkInterval )
                             console.log( `Check connection alive with ${ auth.agent }... NO RESPONSE!` )
-
                             socket.eventListener().onceOff("isAlive", checkAliveListener as any );
                             socket.end();
-
                         }
+
                         let _timeout = setTimeout(()=>{
                             timeout();
                         }, 1000 * 5);
