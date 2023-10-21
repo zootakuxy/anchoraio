@@ -92,9 +92,12 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                     delete this.saio.serverSlots[ auth.agent ];
 
                     socket.props().checkInterval = setInterval(()=>{
+                        console.log( `Check connection alive with ${ auth.agent }...` )
                         let checkAliveListener:CallableFunction;
                         let checkAliveCode = nanoid(32 );
                         let timeout = ()=>{
+                            console.log( `Check connection alive with ${ auth.agent }... NO RESPONSE!` )
+
                             socket.eventListener().onceOff("isAlive", checkAliveListener as any );
                             socket.end();
 
@@ -106,6 +109,8 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
 
                         socket.eventListener().once( "isAlive", checkAliveListener = (code:string, referer:string) => {
                             if( code === checkAliveCode && referer === socket.props().referer ){
+                                console.log( `Check connection alive with ${ auth.agent }... OK!` )
+
                                 timeout = ()=>{ };
                                 clearTimeout( _timeout );
                             } else {
