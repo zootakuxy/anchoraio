@@ -68,11 +68,12 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
     }
 
     openApplication ( app:App, free:number, index:number){
+        console.trace( "CAPTURA" );
         console.log( `agent.openApplication application = "${ app.name } release = "${app.releases}" free = "${ free }" index = "${index}"`)
         let responseGetaway = createListenableAnchorConnect<
             ApplicationSocketProps, {
-            busy( origin:string ),
-            auth( authData:ApplicationGetawayAuth )
+            busy( origin:string ):void,
+            auth( authData:ApplicationGetawayAuth ):void
         }
         >(  {
             side: "client",
@@ -107,6 +108,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             let grants = app.grants;
             if( !grants ) grants = ["*"];
 
+            console.log( `Auth server with authReferer ${ this.aio.authReferer }`)
             responseGetaway.send( "auth", {
                 server: identifierOf( this.aio.opts.identifier ),
                 app: app.name,
@@ -163,8 +165,12 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
 
         responseGetaway.on("close", ( error) => {
             delete this.appsConnections[ responseGetaway.id() ];
+            if( !error ) return;
+            if( responseGetaway.anchored() ) return;
+            if( responseGetaway.props().busy ) return;
+
             setTimeout(()=>{
-                console.log( `RESTORE CONNECTION FOR: ${ app.name }` );
+                console.log( `RESTORE CONNECTION FOR: ${ app.name } ERROR = "${error}"` );
                 this.restoreApplication( app );
             }, this.aio.opts.restoreTimeout );
         });
@@ -178,9 +184,10 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
         }
 
         if( this.apps[ app.name ].status === "stopped" ) return cansel( "Application controller stopped");
+        console.log( this.appsConnections );
         let pendentConnections = Object.values( this.appsConnections )
             .filter( connections => connections.props().appName === app.name
-                && connections.status() === "connected"
+                && ( connections.status() === "connected" || !connections.status() || connections.connecting )
                 && !connections.anchored()
                 && !connections.props().busy
             );

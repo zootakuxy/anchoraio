@@ -172,7 +172,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
 
 
             socket.eventListener().on( "applicationOnline", (opts) => {
-                console.log( `server.applicationOnline server = "${opts.server}" application = "${opts.application}"` );
+                console.log( `Sever> applicationOnline server = "${opts.server}" application = "${opts.application}"` );
 
                 let notify = [];
                 let auth = socket.props();
