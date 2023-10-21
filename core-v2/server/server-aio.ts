@@ -156,6 +156,11 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
             });
     }
 
+    isLast( socket:ListenableAnchorSocket<AgentAuthenticate, AuthSocketListener >){
+        let auth = this.agents[ socket.props().agent ];
+        return auth.id() === socket.id();
+    }
+
     public resolver ( server:string, application:string, wait:WaitConnection ){
         console.log( `server.resolver getaway request from ${ wait.agent } to ${ application}.${ server } connected` );
 

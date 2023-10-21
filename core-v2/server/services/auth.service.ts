@@ -126,6 +126,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                     });
 
                     socket.on( "close", hadError => {
+                        if( !this.saio.isLast( socket ) ) return;
                         this.saio.clientsOf( { server: auth.agent }).forEach( client => {
                             client.send( "remoteServerOffline", auth.agent );
                             this.notifySafe( "remoteServerOffline", auth.agent )
@@ -133,7 +134,6 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                                     if( value.error ) this.notifySafe( "error", value.error, "remoteServerOffline" );
                                 });
                         });
-                        delete this.saio.agents[ auth.agent ];
                     });
 
                     this.notifySafe( "auth", auth )
@@ -240,36 +240,36 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
             socket.on( "close", ( err) => {
 
                 let auth = this.saio.agents[ socket.props().agent ];
+                let isLast = this.saio.isLast( socket );
 
-                console.log( `Sever> End connection with Agent = "${socket.props().agent}"  ID = ${ socket.id() } Error = ${err} Last = ${ auth.id() === socket.id() }`)
+                console.log( `Sever> End connection with Agent = "${socket.props().agent}"  ID = ${ socket.id() } Error = ${err} Last = ${isLast }`)
                 if( !auth ) return;
-                if( auth.id() === socket.id()){
-                    //Fechar todos os slots de conexão aberto inicializado pelo agente que acabou de encerar a ligação
-                    Object.values( this.saio.serverSlots[ auth.props().agent ] ).forEach( apps => {
-                        Object.values( apps ).forEach( value => {
-                            value.connect.end();
-                        })
-                    });
+                if( !isLast ) return;
+                //Fechar todos os slots de conexão aberto inicializado pelo agente que acabou de encerar a ligação
+                Object.values( this.saio.serverSlots[ auth.props().agent ] ).forEach( apps => {
+                    Object.values( apps ).forEach( value => {
+                        value.connect.end();
+                    })
+                });
 
-                    //Fechar todas as esperas de conexão aguardando pelo agente
-                    Object.values( this.saio.waitConnections[ auth.props().agent ]).forEach( apps => {
-                        Object.values( apps ).forEach( waitApp => {
-                            waitApp.connection.end();
-                        })
-                    });
+                //Fechar todas as esperas de conexão aguardando pelo agente
+                Object.values( this.saio.waitConnections[ auth.props().agent ]).forEach( apps => {
+                    Object.values( apps ).forEach( waitApp => {
+                        waitApp.connection.end();
+                    })
+                });
 
-                    //Fechar todas as esperas inicializada pelo agent que acabou-se de terminar a conexão
-                    Object.values( this.saio.waitConnections )
-                        .forEach( servers => {
-                            Object.values( servers ).forEach( apps => {
-                                Object.values( apps ).forEach( value => {
-                                    if( value.connection.props().client !== auth.props().agent ) return;
-                                    value.connection.end();
-                                })
-                            });
-                        })
-                    delete this.saio.agents[ auth.props().agent ]
-                }
+                //Fechar todas as esperas inicializada pelo agent que acabou-se de terminar a conexão
+                Object.values( this.saio.waitConnections )
+                    .forEach( servers => {
+                        Object.values( servers ).forEach( apps => {
+                            Object.values( apps ).forEach( value => {
+                                if( value.connection.props().client !== auth.props().agent ) return;
+                                value.connection.end();
+                            })
+                        });
+                    })
+                delete this.saio.agents[ auth.props().agent ]
             });
 
             socket.on( "error", err => {
