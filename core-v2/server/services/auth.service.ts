@@ -126,6 +126,13 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                                 }, CHECK_TIMEOUT_LIVE )
                                 timeout = ()=>{ };
                                 clearTimeout( _timeout );
+                                this.saio.clientsOf( { server: auth.agent }).forEach( client => {
+                                    client.send( "remoteServerOnline", auth.agent );
+                                    this.notifySafe( "remoteServerOnline", auth.agent )
+                                        .forEach( value => {
+                                            if( value.error ) this.notifySafe( "error", value.error, "remoteServerOffline" );
+                                        });
+                                });
                             } else {
                                 timeout();
                                 timeout = ()=>{ };
