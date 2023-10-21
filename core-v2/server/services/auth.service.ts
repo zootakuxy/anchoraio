@@ -235,7 +235,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
             });
 
             socket.on( "close", ( err) => {
-                console.log( `server.agent:close agent = "${socket.props().agent}" with error = ${err}`)
+                console.log( `Sever> End connection with Agent = "${socket.props().agent}"  ID = ${ socket.id() } Error = ${err}`)
 
                 let auth = this.saio.agents[ socket.props().agent ];
                 if( !auth ) return;
