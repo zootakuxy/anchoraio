@@ -12,8 +12,8 @@ import {
 import {Defaults} from "../../defaults";
 
 export interface AppProxyEvent{
-    applicationReleased(app:App ),
-    applicationStopped(app:App )
+    applicationReleased(app:App ):void,
+    applicationStopped(app:App ):void
 }
 
 export type AppController = {

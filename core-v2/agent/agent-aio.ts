@@ -210,35 +210,6 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
 
 
     private init(){
-        this.apps.on("sets", (app, old) => {
-            console.log( `agent:app.on.sets application = "${app.name}" change = "${!!old}"`)
-            if( this.status !== "started" )  return;
-            if( this.result !== "authenticated" ) return;
-            if( !!old ){
-                this.appServer.closeApp( old ).then( value => {
-                    this.appServer.releaseApplication( app );
-                });
-                return;
-            }
-            this.appServer.releaseApplication( app );
-        });
-
-        this.apps.on( "delete", app => {
-            this.appServer.closeApp( app ).then( value => {
-                console.log( "All socket closed!" );
-            });
-        });
-
-        this.on("isAlive", ( code ) => {
-            if( this.serverAuthConnection ) this.serverAuthConnection.send( "isAlive", code, this.authReferer )
-        });
-
-
-
-        this.on( "busy", busy => {
-            this.appServer.bused( busy );
-        });
-
         this.on("authResult", auth => {
             console.log( "agent.authResult", auth );
             this.result = "authenticated";
@@ -268,9 +239,39 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
 
             this._status = "started";
             this.apps.applications().forEach( application => {
-               this.appServer.releaseApplication( application );
+                this.appServer.releaseApplication( application );
             });
         });
+
+
+        this.apps.on("sets", (app, old) => {
+            console.log( `agent:app.on.sets application = "${app.name}" change = "${!!old}"`)
+            if( this.status !== "started" )  return;
+            if( this.result !== "authenticated" ) return;
+            if( !!old ){
+                this.appServer.closeApp( old ).then( value => {
+                    this.appServer.releaseApplication( app );
+                });
+                return;
+            }
+            this.appServer.releaseApplication( app );
+        });
+
+        this.apps.on( "delete", app => {
+            this.appServer.closeApp( app ).then( value => {
+                console.log( "All socket closed!" );
+            });
+        });
+
+        this.on("isAlive", ( code ) => {
+            if( this.serverAuthConnection ) this.serverAuthConnection.send( "isAlive", code, this.authReferer )
+        });
+
+        this.on( "busy", busy => {
+            this.appServer.bused( busy );
+        });
+
+
 
         this.on( "authFailed", (code, message) => {
             this.result = "failed"
@@ -285,7 +286,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
                 server: this.identifier,
                 application: app.name,
                 grants: [...grants]
-            } );
+            });
         });
 
         this.appServer.on( "applicationStopped", app => {

@@ -203,7 +203,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
             });
 
             socket.eventListener().on( "applicationOffline", (opts) => {
-                console.log( `server.applicationOffline server = "${opts.server}" application = "${opts.application}"`)
+                console.log( `Server> applicationOffline server = "${opts.server}" application = "${opts.application}"`)
                 let auth = socket.props();
                 let app = auth.apps[ opts.application ];
                 if( !app ){
@@ -234,8 +234,8 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                     })
             });
 
-            socket.on( "close", () => {
-                console.log( `server.agent:close agent = "${socket.props().agent}"`)
+            socket.on( "close", ( err) => {
+                console.log( `server.agent:close agent = "${socket.props().agent}" with error = ${err}`)
 
                 let auth = this.saio.agents[ socket.props().agent ];
                 if( !auth ) return;
