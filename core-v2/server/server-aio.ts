@@ -160,6 +160,7 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
 
     isLast( socket:ListenableAnchorSocket<AgentAuthenticate, AuthSocketListener >){
         let auth = this.agents[ socket.props().agent ];
+        if( !auth ) return false;
         return auth.id() === socket.id();
     }
 
