@@ -91,11 +91,14 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                     delete this.saio.waitConnections[ auth.agent ];
                     delete this.saio.serverSlots[ auth.agent ];
 
-                    socket.props().checkInterval = setInterval(()=>{
+                    let CHECK_TIMEOUT_LIVE = 1000 * 15;
+
+                    let checkAliveTimeOut = () =>{
                         console.log( `Check connection alive with ${ auth.agent }...` )
                         let checkAliveListener:CallableFunction;
                         let checkAliveCode = nanoid(32 );
                         let timeout = ()=>{
+                            checkAliveTimeOut = ()=>{ }
                             this.saio.clientsOf( { server: auth.agent }).forEach( client => {
                                 client.send( "remoteServerOffline", auth.agent );
                                 this.notifySafe( "remoteServerOffline", auth.agent )
@@ -103,7 +106,6 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                                         if( value.error ) this.notifySafe( "error", value.error, "remoteServerOffline" );
                                     });
                             });
-
                             clearInterval( socket.props().checkInterval )
                             console.log( `Check connection alive with ${ auth.agent }... NO RESPONSE!` )
                             socket.eventListener().onceOff("isAlive", checkAliveListener as any );
@@ -112,24 +114,31 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
 
                         let _timeout = setTimeout(()=>{
                             timeout();
-                        }, 1000 * 5);
+                        }, CHECK_TIMEOUT_LIVE);
 
 
                         socket.eventListener().once( "isAlive", checkAliveListener = (code:string, referer:string) => {
                             if( code === checkAliveCode && referer === socket.props().referer ){
                                 console.log( `Check connection alive with ${ auth.agent }... OK!` )
-
+                                setTimeout( ()=>{
+                                    checkAliveTimeOut();
+                                }, )
                                 timeout = ()=>{ };
                                 clearTimeout( _timeout );
                             } else {
                                 timeout();
                                 timeout = ()=>{ };
+
                                 clearTimeout( _timeout );
                             }
                         });
 
                         socket.send( "isAlive", checkAliveCode )
-                    }, 1000 * 15 );
+                    }
+
+                    socket.props().checkInterval = setTimeout( ()=>{
+                        checkAliveTimeOut()
+                    }, CHECK_TIMEOUT_LIVE)
 
                     auth.id = socket.id();
                     auth.referer =  referer;
