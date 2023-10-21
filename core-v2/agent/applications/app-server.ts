@@ -68,7 +68,6 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
     }
 
     openApplication ( app:App, free:number, index:number){
-        console.trace( "CAPTURA" );
         console.log( `agent.openApplication application = "${ app.name } release = "${app.releases}" free = "${ free }" index = "${index}"`)
         let responseGetaway = createListenableAnchorConnect<
             ApplicationSocketProps, {
@@ -184,7 +183,6 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
         }
 
         if( this.apps[ app.name ].status === "stopped" ) return cansel( "Application controller stopped");
-        console.log( this.appsConnections );
         let pendentConnections = Object.values( this.appsConnections )
             .filter( connections => connections.props().appName === app.name
                 && ( connections.status() === "connected" || !connections.status() || connections.connecting )

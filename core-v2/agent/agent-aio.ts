@@ -28,8 +28,8 @@ interface AgentAioListener extends AuthSocketListener {
     agentStart():void,
     agentStarted():void,
     agentStop():void
-    connection( error?:Error ):void
-    ready():void
+    authReady():void
+    connectionLost( error?:Error ):void
 }
 
 export type AvailableApplication = {
@@ -152,6 +152,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
 
 
     private createAuthConnection(){
+        let _error:Error;
         let connection = createListenableAnchorConnect(  {
             port: this.opts.authPort,
             host: this.opts.serverHost,
@@ -166,7 +167,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
         connection.on( "error", err => {
             console.log( "server-auth-connection-error", err.message );
             this._lastTry = "error";
-            this.notify( "connection", err )
+            _error = err;
         });
 
         connection.on( "close", hadError => {
@@ -181,6 +182,8 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             if( (hadError && this.status !== "stopped" ) || ( this.result === "authenticated" && this.status === "started" )) setTimeout(()=>{
                 this.createAuthConnection();
             }, Defaults.restoreTimeout );
+
+            this.notify( "connectionLost", _error )
         });
 
 
@@ -204,7 +207,6 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
                 status: "online"
             }
             connection.send( "auth", auth );
-            this.notify("connection" );
         });
 
         this.serverAuthConnection = connection;
@@ -257,7 +259,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
                 this.appServer.releaseApplication( application );
             });
 
-            this.notify("ready" );
+            this.notify("authReady" );
         });
 
 
