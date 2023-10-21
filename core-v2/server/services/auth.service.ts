@@ -91,7 +91,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                     delete this.saio.waitConnections[ auth.agent ];
                     delete this.saio.serverSlots[ auth.agent ];
 
-                    let CHECK_TIMEOUT_LIVE = 1000 * 8;
+                    let CHECK_TIMEOUT_LIVE = 1000 * 12;
                     let CHECK_TIMEOUT_LIVE_WAIT = 1000 * 5;
 
                     let checkAliveTimeOut = () =>{
