@@ -91,6 +91,28 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                     delete this.saio.waitConnections[ auth.agent ];
                     delete this.saio.serverSlots[ auth.agent ];
 
+                    socket.props().checkInterval = setInterval(()=>{
+                        let checkAliveCode = nanoid(32 );
+                        let timeout = ()=>{ socket.end() }
+                        let _timeout = setTimeout(()=>{
+                            timeout();
+                        }, 1000 * 5);
+
+
+                        socket.eventListener().once( "isAlive", listenResponse = (code, referer) => {
+                            if( code === checkAliveCode && referer === socket.props().referer ){
+                                timeout = ()=>{ };
+                                clearTimeout( _timeout );
+                            } else {
+                                timeout();
+                                timeout = ()=>{ };
+                                clearTimeout( _timeout );
+                            }
+                        });
+
+                        socket.send( "isAlive", checkAliveCode )
+                    }, 1000 * 15 );
+
                     auth.id = socket.id();
                     auth.referer =  referer;
                     socket.props( auth );
@@ -129,7 +151,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                         id: socket.id(),
                         referer: referer,
                         availableServers: servers
-                    } );
+                    });
 
                     this.saio.clientsOf( { server: auth.agent }).forEach( client => {
                         client.send( "remoteServerOnline", auth.agent );
@@ -141,6 +163,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
 
                     socket.on( "close", hadError => {
                         if( !this.saio.isLast( socket ) ) return;
+
                         this.saio.clientsOf( { server: auth.agent }).forEach( client => {
                             client.send( "remoteServerOffline", auth.agent );
                             this.notifySafe( "remoteServerOffline", auth.agent )
@@ -183,7 +206,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
 
                 let timeoutCode = setTimeout(()=>{
                     timeoutCheck();
-                }, 10000 );
+                }, 1000 * 15 );
 
                 let listenResponse;
 
@@ -263,6 +286,10 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
             });
 
             socket.on( "close", ( err) => {
+                if( socket.props().checkInterval ){
+                    clearTimeout( socket.props().checkInterval );
+                    socket.props().checkInterval = null;
+                }
                 let auth = this.saio.agents[ socket.props().agent ];
                 let isLast = this.saio.isLast( socket );
 
