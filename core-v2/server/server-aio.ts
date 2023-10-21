@@ -34,7 +34,7 @@ export type WaitConnection = {
     resolved?: boolean,
     id?:string,
     agent:string,
-    timeout: NodeJS.Timeout
+    timeout?: NodeJS.Timeout
 }
 
 let createProxy = ()=>{
