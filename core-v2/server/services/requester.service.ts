@@ -49,7 +49,10 @@ export class RequesterService extends BaseEventEmitter<RequesterServiceEvent>{
                     })
                 if(!auth ) return end( "3001","Agent not authenticated" );
                 let resolveServer = this.saio.agents?.[ redirect.server ];
-                if( !resolveServer ) return end( "3002",  `Resolve server "${ redirect.server}" not found or offline` );
+                if( !resolveServer ){
+                    auth.send("remoteServerOffline", redirect.server );
+                    return end( "3002",  `Resolve server "${ redirect.server}" not found or offline` );
+                }
                 let resolverApp = resolveServer?.props?.()?.apps?.[ redirect.app ];
                 if( !resolverApp ) return end( "3003", "Resolved application not found");
                 let grants = [ "*", redirect.origin ].find( value => resolverApp.grants.includes( value ) )

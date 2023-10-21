@@ -96,6 +96,14 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                         let checkAliveListener:CallableFunction;
                         let checkAliveCode = nanoid(32 );
                         let timeout = ()=>{
+                            this.saio.clientsOf( { server: auth.agent }).forEach( client => {
+                                client.send( "remoteServerOffline", auth.agent );
+                                this.notifySafe( "remoteServerOffline", auth.agent )
+                                    .forEach( value => {
+                                        if( value.error ) this.notifySafe( "error", value.error, "remoteServerOffline" );
+                                    });
+                            });
+
                             clearInterval( socket.props().checkInterval )
                             console.log( `Check connection alive with ${ auth.agent }... NO RESPONSE!` )
                             socket.eventListener().onceOff("isAlive", checkAliveListener as any );
