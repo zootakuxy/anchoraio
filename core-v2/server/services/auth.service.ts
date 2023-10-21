@@ -134,6 +134,17 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                                     if( value.error ) this.notifySafe( "error", value.error, "remoteServerOffline" );
                                 });
                         });
+                        Object.values( this.saio.serverSlots[ auth.agent ] ).forEach( value => {
+                            Object.values( value ).forEach( value1 => {
+                                if( value1.referer === auth.referer ) value1.connect.end();
+                            });
+                        });
+
+                        Object.values( this.saio.waitConnections[ auth.agent ] ).forEach( value => {
+                            Object.values( value ).forEach( value1 => {
+                                if( value1.referer === auth.referer ) value1.connection.end();
+                            })
+                        })
                     });
 
                     this.notifySafe( "auth", auth )
@@ -238,7 +249,6 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
             });
 
             socket.on( "close", ( err) => {
-
                 let auth = this.saio.agents[ socket.props().agent ];
                 let isLast = this.saio.isLast( socket );
 

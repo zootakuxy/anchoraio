@@ -70,6 +70,7 @@ export class RequesterService extends BaseEventEmitter<RequesterServiceEvent>{
                 this.saio.resolver( redirect.server, redirect.app, {
                     id: socket.id(),
                     connection: socket,
+                    referer: redirect.authReferer,
                     agent: auth.props().agent,
                     resolve: ( slot )=>{
                         anchor( `${redirect.app}.${redirect.server}`, "CENTRAL", socket, slot.connect, datas, [] );

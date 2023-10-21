@@ -20,9 +20,10 @@ export type ServerSlot = {
     app:string|number,
     busy:boolean,
     slotId:string
+    referer:string
     connect:ListenableAnchorSocket<{ }, {
-        busy( origin:string ),
-        auth( authData:ApplicationGetawayAuth )
+        busy( origin:string ):void,
+        auth( authData:ApplicationGetawayAuth ):void
     }>
 };
 
@@ -31,6 +32,7 @@ export type WaitConnection = {
     connection:AnchorSocket<{
         client:string
     }>
+    referer:string
     resolved?: boolean,
     id?:string,
     agent:string,
