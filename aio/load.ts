@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as Path from "path";
 import ini from "ini";
-import {Defaults} from "../core-v2/defaults";
+import {Defaults} from "../core-v2";
 
 type Result = {
     [p:string]:any;

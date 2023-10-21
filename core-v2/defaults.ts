@@ -33,7 +33,7 @@ const _def =  {
     authPort:  36910 as const,
     requestPort:  36920 as const,
     responsePort:  36930 as const,
-    restoreTimeout: 6000 as const,
+    restoreTimeout: 3500 as const,
     serverHost: "127.0.0.1" as const,
     serverRelease: 2 as const,
     getawayRelease: 3 as const,
