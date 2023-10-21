@@ -48,10 +48,12 @@ export class RequesterService extends BaseEventEmitter<RequesterServiceEvent>{
                             && agentAuth.props().machine === redirect.machine
                     })
                 if(!auth ) return end( "3001","Agent not authenticated" );
-                let resolverApp = this.saio.agents?.[ redirect.server ]?.props().apps?.[ redirect.app ];
-                if( !resolverApp ) return end( "3002", "Resolved application not found");
+                let resolveServer = this.saio.agents?.[ redirect.server ];
+                if( !resolveServer ) return end( "3002",  `Resolve server "${ redirect.server}" not found or offline` );
+                let resolverApp = resolveServer?.props?.()?.apps?.[ redirect.app ];
+                if( !resolverApp ) return end( "3003", "Resolved application not found");
                 let grants = [ "*", redirect.origin ].find( value => resolverApp.grants.includes( value ) )
-                if( !grants ) return end(  "3003", "Permission dined for application");
+                if( !grants ) return end(  "3004", "Permission dined for application");
 
                 socket.props().client = auth.props().agent;
 
