@@ -132,8 +132,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
 
     isAioHostOnline(resolved:Resolved ){
         let status = this.remote( resolved.identifier, resolved.application );
-        console.log( `Agent> isAioHostOnline server = "${resolved.server}" application = "${resolved.application}"`, status );
-        return !!status
+        return  !!status
             && !!status.server
             && status.server.status === "online"
             && !!status.application
