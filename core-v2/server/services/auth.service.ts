@@ -92,14 +92,19 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                     delete this.saio.serverSlots[ auth.agent ];
 
                     socket.props().checkInterval = setInterval(()=>{
+                        let checkAliveListener:CallableFunction;
                         let checkAliveCode = nanoid(32 );
-                        let timeout = ()=>{ socket.end() }
+                        let timeout = ()=>{
+                            socket.eventListener().onceOff("isAlive", checkAliveListener as any );
+                            socket.end();
+
+                        }
                         let _timeout = setTimeout(()=>{
                             timeout();
                         }, 1000 * 5);
 
 
-                        socket.eventListener().once( "isAlive", listenResponse = (code, referer) => {
+                        socket.eventListener().once( "isAlive", checkAliveListener = (code:string, referer:string) => {
                             if( code === checkAliveCode && referer === socket.props().referer ){
                                 timeout = ()=>{ };
                                 clearTimeout( _timeout );
