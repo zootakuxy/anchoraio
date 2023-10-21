@@ -137,7 +137,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             && !!status.server
             && status.server.status === "online"
             && !!status.application
-            // && status.application.status === "online"
+            && status.application.status === "online"
     }
 
     hasPermission(resolved:Resolved ){
