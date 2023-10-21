@@ -76,6 +76,20 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
 
                     let referer = `${nanoid(16 )}`;
                     if( !auth.servers ) auth.servers = [];
+                    Object.values(this.saio.waitConnections[ auth.agent ]).forEach( value => {
+                        Object.values( value ).forEach( value1 => {
+                            value1.connection.end();
+                        });
+                    })
+
+                    Object.values(this.saio.serverSlots[ auth.agent ]).forEach( value => {
+                        Object.values( value ).forEach( value1 => {
+                            value1.connect.end();
+                        });
+                    });
+
+                    delete this.saio.waitConnections[ auth.agent ];
+                    delete this.saio.serverSlots[ auth.agent ];
 
                     auth.id = socket.id();
                     auth.referer =  referer;
