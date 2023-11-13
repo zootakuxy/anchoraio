@@ -227,16 +227,11 @@ export function asListenableAnchorConnect<
 }
 
 
-export type CreateAnchorConnect<P  extends object> = AsAnchorConnect<P> &  {
-    host:string,
-    port:number
-}
+export type CreateAnchorConnect<P  extends object> = AsAnchorConnect<P> &  net.NetConnectOpts
 export function createAnchorConnect<P extends {} >( opts:CreateAnchorConnect<P> ){
+    opts = opts || {} as any;
     let socket = net.connect( {
-        host: opts.host,
-        port: opts.port,
-        // writableHighWaterMark: 1024 * 1024,
-        // readableHighWaterMark : 1024 * 1024
+        ... opts
     }, () => {
 
     });

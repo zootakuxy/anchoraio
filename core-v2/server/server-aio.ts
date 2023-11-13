@@ -125,18 +125,22 @@ export class ServerAio extends BaseEventEmitter<ServerAioEvent> {
         });
     }
 
-    clientsOf(opts:{ server:string, application?:string }):ListenableAnchorSocket<AgentAuthenticate, AuthSocketListener >[]{
-        console.log( `Server> find client for application = "${ opts.application }"  server = "${ opts?.server } "`)
-        let server = this.agents[ opts.server ];
+    clientsOf(opts:{ server:string, instance:  AgentAuthenticate, application?:string }):ListenableAnchorSocket<AgentAuthenticate, AuthSocketListener >[]{
+        console.log( `Server> find client for application = "${ opts.application }"  server = "${ opts?.server } "`);
+        let _server = this.agents[ opts.server ];
+        let server:AgentAuthenticate;
+        if( !!_server ) server = _server.props();
+        else server = opts.instance;
         Object.entries( this.agents ).forEach( value => {
             console.log( `Agent = ${ value[0]} | Connection ${ !!value[1] }`)
         });
+
         return  Object.values(this.agents)
             .filter((client, index) => {
                 if (client.props().agent === opts.server) return false;
                 if (!client.props().servers.includes( opts.server )) return false;
                 if( opts.application ){
-                    let app = server.props().apps[ opts.application ];
+                    let app = server.apps[ opts.application ];
                     if( !app ) return false;
                     if( app.grants.includes( "*" ) ) return true;
                     return app.grants.includes( client.props().agent );
