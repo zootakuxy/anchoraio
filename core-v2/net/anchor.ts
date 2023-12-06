@@ -256,7 +256,7 @@ export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, request
 
     let hasRequestData = requestData.length? "WITH DATA": "NO DATA";
 
-    if( !requestData.length ) requestData.push( "" );
+    // if( !requestData.length ) requestData.push( "" );
 
 
     let endpoints:Endpoint[] = [ "server", "client" ];

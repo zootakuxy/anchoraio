@@ -157,13 +157,9 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                 });
             }
 
-            if( app.protocol === "mysql" ) {
+            responseGetaway.once("data", ( origin )=>{
                 next()
-            } else {
-                responseGetaway.once("data", ( origin )=>{
-                    next()
-                })
-            }
+            })
 
         });
 

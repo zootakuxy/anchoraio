@@ -1,1 +1,1 @@
-export type AppProtocol = "aio"|"http"|"https"|"pg";
+export type AppProtocol = "aio"|"http"|"https"|"pg"|"mysql";

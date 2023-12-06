@@ -152,6 +152,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
             //get server and app by address
             let requestData = [];
             let dataListen = data =>{
+                console.log( data.toString() );
                 requestData.push( data );
             }
             _so.on("data", dataListen );
