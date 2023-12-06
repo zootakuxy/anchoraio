@@ -63,6 +63,7 @@ export class ResponseService extends BaseEventEmitter<ResponseServiceEvent>{
 
                 this.saio.release( {
                     app: pack.app,
+                    protocol: pack.protocol,
                     referer: pack.authReferer,
                     server: pack.server,
                     grants: pack.grants,

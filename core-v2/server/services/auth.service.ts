@@ -285,7 +285,8 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                         client.send( "applicationOnline", {
                             application: opts.application,
                             grants: [ client.props().agent ],
-                            server: auth.agent
+                            server: auth.agent,
+                            protocol: opts.protocol
                         });
                         notify.push( client.props() );
                     });
@@ -314,7 +315,8 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                 let releaseOptions:ServerReleaseOptions = {
                     grants: [],
                     server: auth.agent,
-                    application: opts.application
+                    application: opts.application,
+                    protocol: opts.protocol
                 };
                 let clients = this.saio.clientsOf({ server: auth.agent, instance: auth, application: opts.application });
                 clients.forEach( client => {

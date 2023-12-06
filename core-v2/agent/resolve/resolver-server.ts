@@ -4,6 +4,7 @@ import {BaseEventEmitter} from "kitres/src/core/util";
 import {Defaults} from "../../defaults";
 import {createAnchorConnect, AnchorSocket, identifierOf, anchor, RequestGetawayAuth, asAnchorConnect} from "../../net";
 import {AIOServer} from "../../net/server";
+import {AppProtocol} from "../../protocol/index";
 
 export type AgentProxyOptions = {
     requestPort:number,
@@ -20,6 +21,7 @@ type ConnectionOptions =  {
     server:string,
     application:string,
     requestData:any[],
+    protocol: AppProtocol
     dataListen:( data )=>void
 }
 
@@ -152,7 +154,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
             //get server and app by address
             let requestData = [];
             let dataListen = data =>{
-                console.log( data.toString() );
+                console.log( "this._connectionListener = _so", data.toString() );
                 requestData.push( data );
             }
             _so.on("data", dataListen );
@@ -182,7 +184,8 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
                     server: this.aio.identifier,
                     application: resolved.application,
                     dataListen: dataListen,
-                    requestData: requestData
+                    requestData: requestData,
+                    protocol: resolved.protocol
                 })
             }
 
@@ -221,6 +224,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
                 application: resolved.application,
                 dataListen: dataListen,
                 requestData: requestData,
+                protocol: resolved.protocol
             }, resolved );
 
 
@@ -279,7 +283,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
             method: "RESP",
             endpoint: "server"
         });
-        anchor( `${opts.application}.${ opts.server }`, "AGENT-CLIENT-DIRECT", request, response, opts.requestData, [ ]);
+        anchor( `${opts.application}.${ opts.server }`, "AGENT-CLIENT-DIRECT", request, response, opts.requestData, [ ], opts.protocol );
     }
 
     private registerGetAway( opts:GetAwayOptions, connection:AnchorSocket<{
@@ -404,7 +408,8 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
                 authReferer: this.aio.authReferer,
                 authId: connection.id(),
                 origin: identifierOf( this.opts.identifier ),
-                machine: this.aio.machine()
+                machine: this.aio.machine(),
+                protocol: resolved.protocol
             }
 
             connection.write( JSON.stringify( redirect ) );
@@ -436,7 +441,7 @@ export class ResolverServer extends BaseEventEmitter<AgentProxyListener>{
             //     console.log( data.toString() );
             //     console.log( "=================== [                                    ] ===================")
             // });
-            anchor( `${opts.application}.${ opts.server }`, "AGENT-CLIENT", request, getAway.connection, opts.requestData, []);
+            anchor( `${opts.application}.${ opts.server }`, "AGENT-CLIENT", request, getAway.connection, opts.requestData, [], resolved.protocol );
 
             request.off( "data", opts.dataListen );
 

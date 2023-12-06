@@ -76,7 +76,8 @@ export class RequesterService extends BaseEventEmitter<RequesterServiceEvent>{
                     referer: redirect.authReferer,
                     agent: auth.props().agent,
                     resolve: ( slot )=>{
-                        anchor( `${redirect.app}.${redirect.server}`, "CENTRAL", socket, slot.connect, datas, [] );
+
+                        anchor( `${redirect.app}.${redirect.server}`, "CENTRAL", socket, slot.connect, datas, [], slot.protocol );
                         socket.off( "data", listen );
                         socket.write("ready" );
                         this.saio.agents[ slot.server ].send( "busy", {

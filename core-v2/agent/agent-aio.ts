@@ -307,7 +307,8 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             this.serverAuthConnection.send("applicationOnline", {
                 server: this.identifier,
                 application: app.name,
-                grants: [...grants]
+                grants: [...grants],
+                protocol: app.protocol
             });
         });
 
@@ -316,7 +317,8 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             this.serverAuthConnection.send( "applicationOffline", {
                 server: this.identifier,
                 application: app.name,
-                grants: app.grants
+                grants: app.grants,
+                protocol: app.protocol
             });
         });
 

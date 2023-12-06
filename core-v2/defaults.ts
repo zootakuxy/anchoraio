@@ -22,7 +22,11 @@ const protocols:{
     pg: {
         serverRelease: 1 as const,
         getawayRelease: 1 as const
-    } as const
+    } as const,
+    mysql: {
+        serverRelease: 5 as const,
+        getawayRelease: 5 as const
+    }
 } as const;
 
 const _def =  {

@@ -1,6 +1,7 @@
 import net from "net";
 import {nanoid} from "nanoid";
 import {Listener} from "kitres/src/core/util/listener";
+import {AppProtocol} from "../protocol/index";
 export type ConnectionSide = "server"|"client";
 export type ConnectionStatus = "connected" | "disconnected";
 export type ConnectionMethod = "REQ"|"RESP"|"GET"|"SET"|"AUTH";
@@ -250,14 +251,15 @@ export function createListenableAnchorConnect<
     return asListenableAnchorConnect( socket, opts );
 }
 
-export function anchor<T extends { }>(aioHost:string, point:AnchorPoint, requestSide:AnchorSocket<T>, responseSide:AnchorSocket<T>, requestData:any[], responseData){
+export function anchor<T extends { }>( aioHost:string, point:AnchorPoint, requestSide:AnchorSocket<T>, responseSide:AnchorSocket<T>, requestData:any[], responseData, protocol:AppProtocol ){
     if( !requestData ) requestData = [];
     if( !responseData ) responseData = [];
 
     let hasRequestData = requestData.length? "WITH DATA": "NO DATA";
 
-    // if( !requestData.length ) requestData.push( "" );
-
+    if( !hasRequestData && protocol === "mysql" ){
+        requestData.push( "@mysql" );
+    }
 
     let endpoints:Endpoint[] = [ "server", "client" ];
     let redirect = ( from:AnchorSocket<T>, to:AnchorSocket<T>, data:Buffer )=>{

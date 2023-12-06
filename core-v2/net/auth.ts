@@ -1,4 +1,5 @@
-import {AvailableServer} from "../agent";
+import {App, AvailableServer} from "../agent";
+import {AppProtocol} from "../protocol/index";
 
 export type AuthResult = {
     id:string,
@@ -15,7 +16,8 @@ export type RemoteServerNotifyOptions = {
 export type ServerReleaseOptions = {
     server:string,
     application:string,
-    grants:string[]
+    grants:string[],
+    protocol:AppProtocol
 }
 export type SlotBusy = {
     application:string,
@@ -49,6 +51,7 @@ export interface AuthSocketListener {
 export type AuthIO = {
     server:string
     app:string,
+    protocol: AppProtocol,
     authReferer:string,
     origin:string,
     authId:string,
@@ -61,6 +64,7 @@ export type ApplicationGetawayAuth = AuthIO& {
 }
 
 export type RequestGetawayAuth = AuthIO& {
+
 }
 
 export type AuthApplication = {

@@ -117,7 +117,8 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                 origin: identifierOf( this.aio.opts.identifier ),
                 machine: this.aio.machine(),
                 grants: grants,
-                slotId: responseGetaway.id()
+                slotId: responseGetaway.id(),
+                protocol: app.protocol
             });
             responseGetaway.stopListener();
 
@@ -128,6 +129,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             responseGetaway.on( "data", listenData );
 
             let next = ( )=>{
+                if( app.protocol === "mysql" ) datas.length = 0;
                 console.log( `agent.openApplication:busy application = "${ app.name }"`)
                 responseGetaway.props().busy = true;
                 delete this.appsConnections[ responseGetaway.id() ];
@@ -143,7 +145,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                 });
 
                 appConnection.on( "connect", () => {
-                    anchor( `${app.name}.${ this.aio.identifier }`, "AGENT-SERVER", responseGetaway, appConnection, datas, [] );
+                    anchor( `${app.name}.${ this.aio.identifier }`, "AGENT-SERVER", responseGetaway, appConnection, datas, [], app.protocol );
                     responseGetaway.offRaw( listenData );
                     responseGetaway.stopListener();
                     console.log( `new connection with ${ "any" } established for ${ app.name }` );
@@ -156,6 +158,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                     }
                 });
             }
+
 
             responseGetaway.once("data", ( origin )=>{
                 next()

@@ -22,7 +22,7 @@
     "express": "^4.18.1",
     "hosts-etc": "^1.3.1",
     "ini": "^2.0.0",
-    "kitres": "file:kitres-1.0.2.tgz",
+    "kitres": "file:kitres-1.0.10.tgz",
     "memfs": "^3.4.1",
     "moment": "^2.29.1",
     "nanoid": "^3.2.0",

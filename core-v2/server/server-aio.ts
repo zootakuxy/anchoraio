@@ -8,6 +8,7 @@ import {
 } from "../net";
 import {TokenService} from "../services";
 import {ServerOptions} from "./server-proxy";
+import {AppProtocol} from "../protocol/index";
 
 interface ServerAioEvent {
 }
@@ -18,6 +19,7 @@ export type ServerSlot = {
     server:string,
     grants:string[],
     app:string|number,
+    protocol:AppProtocol,
     busy:boolean,
     slotId:string
     referer:string
