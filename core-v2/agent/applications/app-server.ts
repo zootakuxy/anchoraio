@@ -176,6 +176,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
     }
 
     public restoreApplication( app:App ){
+        if( !app.releases ) throw new Error("sdsds");
         if( !app.releases ) app.releases = 1;
         console.log( `[aio:agent] Restore application ${ app.name } | release slots$ { ${ app.releases } }` );
         let cansel = ( message:string, hint? )=>{
