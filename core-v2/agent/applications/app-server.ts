@@ -134,22 +134,6 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             }
 
             let next = ( )=>{
-                if( app.protocol === "mysql" ){
-                    let connection = net.connect( {
-                        host: "127.0.0.1",
-                        port: app.port
-                    }, () => {
-
-                        connection.on( "data", data => {
-                            responseGetaway.write( data );
-                        });
-
-                        responseGetaway.on( "data", data => {
-                            connection.write( data );
-                        })
-                    });
-                    return;
-                }
                 console.log( `agent.openApplication:busy application = "${ app.name }"`)
                 responseGetaway.props().busy = true;
                 delete this.appsConnections[ responseGetaway.id() ];
