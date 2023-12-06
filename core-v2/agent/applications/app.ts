@@ -50,8 +50,9 @@ export class ApplicationAIO  extends BaseEventEmitter<ApplicationListener>{
         if( !app ) return null;
 
         if( !app.port || !Number.isSafeInteger(Number( app.port ))) return null;
-        if( !app.address) app.address = "127.0.0.1";
+        if( !app.address ) app.address = "127.0.0.1";
         app.name = application;
+        console.log( app );
         return app;
     }
 
