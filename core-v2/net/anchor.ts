@@ -291,7 +291,7 @@ export function anchor<T extends { }>( aioHost:string, point:AnchorPoint, reques
     __switchData( requestSide, responseSide, requestData );
     __switchData( responseSide, requestSide, responseData );
 
-    console.log( `REQUEST ${ requestSide.id()} TO ${ aioHost }  ANCHOR AT ${point} ${ hasRequestData }`)
+    console.log( `REQUEST ${ requestSide.id()} TO ${ aioHost }  ANCHOR AT ${point} ${ hasRequestData } USING PROTOCOL ${ protocol }`)
 }
 
 
