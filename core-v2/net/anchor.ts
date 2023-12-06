@@ -258,6 +258,7 @@ export function anchor<T extends { }>( aioHost:string, point:AnchorPoint, reques
     let hasRequestData = requestData.length? "WITH DATA": "NO DATA";
 
     if( !hasRequestData && protocol === "mysql" ){
+        console.log( `FORCING DATA TO MYSQL PROTOCOL`);
         requestData.push( "@mysql" );
     }
 
