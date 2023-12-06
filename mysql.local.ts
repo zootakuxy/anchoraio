@@ -16,4 +16,4 @@ let server = net.createServer( socket => {
     });
 });
 
-server.listen( 3322 );
+server.listen( 3306 );
