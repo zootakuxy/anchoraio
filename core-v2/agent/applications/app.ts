@@ -40,6 +40,7 @@ export class ApplicationAIO  extends BaseEventEmitter<ApplicationListener>{
             ))
         }
         this.appsConf = ini.parse( fs.readFileSync( path.join( agent.opts.etc, "apps.conf" )).toString("utf8") ) as any;
+        console.log( this.appsConf );
     }
     getApplication( application:string ){
         if( !application ) application = "default";
