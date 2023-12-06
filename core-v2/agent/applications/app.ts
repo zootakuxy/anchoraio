@@ -40,7 +40,6 @@ export class ApplicationAIO  extends BaseEventEmitter<ApplicationListener>{
             ))
         }
         this.appsConf = ini.parse( fs.readFileSync( path.join( agent.opts.etc, "apps.conf" )).toString("utf8") ) as any;
-        console.log( path.join( agent.opts.etc, "apps.conf" ), this.appsConf );
     }
     getApplication( application:string ){
         if( !application ) application = "default";
@@ -52,7 +51,6 @@ export class ApplicationAIO  extends BaseEventEmitter<ApplicationListener>{
         if( !app.port || !Number.isSafeInteger(Number( app.port ))) return null;
         if( !app.address ) app.address = "127.0.0.1";
         app.name = application;
-        console.log( app );
         return app;
     }
 
