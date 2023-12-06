@@ -3,7 +3,7 @@ import net from "net";
 let server = net.createServer( socket => {
     console.log("New connection received!" );
     let connection = net.connect({
-        host: "mysql.brainsoftstp.com",
+        host: "127.0.0.1",
         port: 3322
     }, () => {
         console.log( "Connection with server stabelished!" );
