@@ -126,7 +126,11 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             let listenData = data =>{
                 datas.push( data );
             }
-            responseGetaway.on( "data", listenData );
+
+            console.log( `RECEIVED REQUEST FROM APPLICATION ${ app.name } | PROTOCOL = ${ app.protocol }` );
+            if( app.protocol !== "mysql" ){
+                responseGetaway.on( "data", listenData );
+            }
 
             let next = ( )=>{
                 if( app.protocol === "mysql" ) datas.length = 0;
@@ -159,11 +163,9 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                 });
             }
 
-
             responseGetaway.once("data", ( origin )=>{
                 next()
-            })
-
+            });
         });
 
         responseGetaway.on( "error", err => {
