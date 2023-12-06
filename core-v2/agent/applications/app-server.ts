@@ -127,36 +127,44 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
             }
             responseGetaway.on( "data", listenData );
 
-            responseGetaway.once("data", ( origin )=>{
+            let next = ( )=>{
                 console.log( `agent.openApplication:busy application = "${ app.name }"`)
-                    responseGetaway.props().busy = true;
-                    delete this.appsConnections[ responseGetaway.id() ];
-                    this.restoreApplication( app );
+                responseGetaway.props().busy = true;
+                delete this.appsConnections[ responseGetaway.id() ];
+                this.restoreApplication( app );
 
-                    console.log( `agent.openApplication:work application = "${ app.name }"`)
-                    let appConnection = createAnchorConnect( {
-                        host: app.address,
-                        port: app.port,
-                        side: "client",
-                        method: "RESP",
-                        endpoint: "server"
-                    });
+                console.log( `agent.openApplication:work application = "${ app.name }"`)
+                let appConnection = createAnchorConnect( {
+                    host: app.address,
+                    port: app.port,
+                    side: "client",
+                    method: "RESP",
+                    endpoint: "server"
+                });
 
-                    appConnection.on( "connect", () => {
-                        anchor( `${app.name}.${ this.aio.identifier }`, "AGENT-SERVER", responseGetaway, appConnection, datas, [] );
-                        responseGetaway.offRaw( listenData );
-                        responseGetaway.stopListener();
-                        console.log( `new connection with ${ "any" } established for ${ app.name }` );
-                    });
+                appConnection.on( "connect", () => {
+                    anchor( `${app.name}.${ this.aio.identifier }`, "AGENT-SERVER", responseGetaway, appConnection, datas, [] );
+                    responseGetaway.offRaw( listenData );
+                    responseGetaway.stopListener();
+                    console.log( `new connection with ${ "any" } established for ${ app.name }` );
+                });
 
-                    appConnection.on( "error", err => {
-                        console.log("app-server-error", err.message );
-                        if( !responseGetaway.anchored() ){
-                            responseGetaway.end();
-                        }
-                    });
+                appConnection.on( "error", err => {
+                    console.log("app-server-error", err.message );
+                    if( !responseGetaway.anchored() ){
+                        responseGetaway.end();
+                    }
+                });
+            }
 
-            })
+            if( app.protocol === "mysql" ) {
+                next()
+            } else {
+                responseGetaway.once("data", ( origin )=>{
+                    next()
+                })
+            }
+
         });
 
         responseGetaway.on( "error", err => {
