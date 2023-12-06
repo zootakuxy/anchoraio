@@ -30,7 +30,7 @@ export const handler = function ( argv: yargs.Arguments<AgentLauncherOptions> ) 
 
     console.log( "[ANCHORIO] Agent>", "Init...");
     const { AgentAio } = require("../../core-v2/agent/agent-aio");
-    let aio = new AgentAio(argv);
+    let aio = new AgentAio( argv );
     aio.start();
 
     // const { AgentContext } = require( "../../core/agentProxy/agentProxy-context" );

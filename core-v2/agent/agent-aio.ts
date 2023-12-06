@@ -229,6 +229,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
 
     private init(){
         this.on("authResult", auth => {
+            console.log(`[aio:agent] Conexão estabelecida com o servidor, preparando para abrir as aplicações` ) ;
             console.log( "agent.authResult", auth );
             this.result = "authenticated";
             this._auth = auth;
@@ -257,6 +258,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
 
             this._status = "started";
             this.apps.applications().forEach( application => {
+                console.log(`[aio:agent] Conexão estabelecida com o servidor, Lançando o servidor de ${ application.name }` ) ;
                 this.appServer.releaseApplication( application );
             });
 
@@ -376,6 +378,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
         this.result = "pendent";
         this.createAuthConnection();
         this.once("authResult", auth => {
+            console.log( `[aio:agent] Connectio with server estabelecida!`)
             this.agentProxy.start();
             this.notify("agentStarted" )
         });
