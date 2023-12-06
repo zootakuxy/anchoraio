@@ -55,7 +55,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
 
         if( !this.apps[ app.name ] ) {
             this.apps[ app.name ] = {
-                releases: app.releases,
+                releases: releases,
                 name: app.name,
                 interval: null,
                 status: "started"
@@ -176,6 +176,8 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
     }
 
     public restoreApplication( app:App ){
+
+        console.log( `[aio:agent] Restore application ${ app.name}` );
         let cansel = ( message:string, hint? )=>{
             console.log( `agent.restoreApplication message = "${message}"` );
             if ( hint === undefined ) return;
@@ -194,6 +196,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
 
         if( pendentConnections.length < app.releases ){
             let free = app.releases - pendentConnections.length;
+            console.log( `[aio:agent] Open application  ${ app.name } free ${ free }` );
             for (let i = 0; i < free; i++) {
                 this.openApplication( app, free, i );
             }
