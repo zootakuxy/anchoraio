@@ -35,7 +35,7 @@ const _def =  {
     responsePort:  36930 as const,
     restoreTimeout: 1500 as const,
     serverHost: "127.0.0.1" as const,
-    serverRelease: 2 as const,
+    serverRelease: 3 as const,
     getawayRelease: 3 as const,
     getawayReleaseTimeout: 1000 * 60 * 1.5,
     requestTimeout: 1000 * 30,
