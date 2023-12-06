@@ -133,7 +133,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                 responseGetaway.on( "data", listenData );
             }
 
-            let next = ( )=>{
+            responseGetaway.once("data", ( origin )=>{
                 console.log( `agent.openApplication:busy application = "${ app.name }"`)
                 responseGetaway.props().busy = true;
                 delete this.appsConnections[ responseGetaway.id() ];
@@ -161,10 +161,6 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
                         responseGetaway.end();
                     }
                 });
-            }
-
-            responseGetaway.once("data", ( origin )=>{
-                next()
             });
         });
 
