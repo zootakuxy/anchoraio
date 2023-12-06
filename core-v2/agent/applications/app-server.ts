@@ -51,7 +51,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
         console.log( "AppServer:releaseApplication", app.name, app.address, app.port )
 
         let releases  =app.releases;
-        if( !releases ) releases = Defaults.serverRelease||1;
+        if( !releases ) releases = Defaults.serverRelease||3;
         app.releases = releases;
 
         if( !this.apps[ app.name ] ) {
@@ -177,7 +177,7 @@ export class AppServer extends BaseEventEmitter<AppProxyEvent>{
     }
 
     public restoreApplication( app:App ){
-        if( !app.releases ) app.releases = 1;
+        if( !app.releases ) app.releases = 3;
         console.log( `[aio:agent] Restore application ${ app.name } | release slots$ { ${ app.releases } }` );
         let cansel = ( message:string, hint? )=>{
             console.log( `agent.restoreApplication message = "${message}"` );
