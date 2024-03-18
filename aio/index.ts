@@ -1,3 +1,4 @@
+#! node
 require("source-map-support").install();
 import yargs from "yargs";
 import * as path from "path";
