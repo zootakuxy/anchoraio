@@ -46,14 +46,3 @@
 // }).catch( reason => {
 //     console.log( "Caio no catch", reason )
 // })
-
-
-import * as arp from "node-arp";
-
-console.log( arp.readMACWindows )
-
-arp.getMAC('192.168.100.1', function(err, mac) {
-    if (!err) {
-        console.log(mac);
-    }
-});
