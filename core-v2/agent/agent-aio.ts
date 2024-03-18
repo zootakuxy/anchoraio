@@ -198,6 +198,7 @@ export class AgentAio extends BaseEventEmitter< ListenableAnchorListener<AgentAi
             // }
             this._lastTry = "connect";
             let token = this.token.tokenOf( this.opts.identifier );
+            console.log( token )
             let auth:AgentAuthenticate = {
                 agent: this.opts.identifier,
                 token: token.token.token,
