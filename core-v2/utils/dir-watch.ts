@@ -58,7 +58,7 @@ export class DirWatch {
 
     private rescan(  base:string, dirname:string ):string[]{
         let _files = [];
-        if( !fs.existsSync( dirname ) ) fs.mkdirSync( dirname );
+        if( !fs.existsSync( dirname ) ) fs.mkdirSync( dirname, { recursive: true } );
         fs.readdirSync( dirname ).forEach( basename => {
             let filename = Path.join( dirname, basename );
             let relative = Path.relative( base, filename );

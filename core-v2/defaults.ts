@@ -30,9 +30,8 @@ const protocols:{
 } as const;
 
 const _def =  {
-    //language=file-reference
-    envFile: path.join(__dirname, "../etc/anchorio.conf" ),
-    etc: path.join(__dirname, "../../etc/entry" ),
+    envFile: path.join(__dirname, /*language=file-reference*/ "../etc/anchorio.conf" ),
+    etc: path.join(__dirname, /*language=file-reference*/ "../etc/entry" ),
     anchorPort:  36900 as const,
     authPort:  36910 as const,
     requestPort:  36920 as const,

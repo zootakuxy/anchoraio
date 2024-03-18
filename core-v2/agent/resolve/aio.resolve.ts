@@ -108,6 +108,7 @@ export class AioResolver extends BaseEventEmitter<AioResolverEvent>{
         ];
 
         bases.forEach( value => {
+            let etc
             this.dirWatch.acceptor( Path.join( this.opts.etc, value.base), RegExp( `((^)*.${value.extension})|((^)${value.extension})$` ));
         })
 

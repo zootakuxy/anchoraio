@@ -1,9 +1,17 @@
-[apps.web]
-    port = 80
+[apps.app1]
+    name =app1
     address = 127.0.0.1
-    releases = 7
+    port = 1234
+    protocol = pg
+    grants[] = *
+    releases = 5
+    = true
 
-[apps.pg]
-    port=5432
+[apps.app2]
+    name = app2
     address = 127.0.0.1
-    releases = 2
+    port = 1234
+    protocol = http
+    grants[] = *
+    releases = 5
+    = true

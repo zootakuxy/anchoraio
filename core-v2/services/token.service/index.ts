@@ -108,12 +108,17 @@ export class TokenService {
     public tokenOf( name:string ):{raw?:string, token?:Token, json?:string, filename?:string, confName?:string }{
         let { confName, filename} =  this.confNameOf( name );
         let raw = this.rawOf( confName );
-        if( !raw ) return {};
+        let rejected = ( message:string, ...opst:any[] )=>{
+            console.log( message, ...opst );
+            return {};
+        }
+
+        if( !raw ) return rejected( `!raw` );
         let token = ini.parse( raw ) as Token;
-        if( !token.token ) return {};
-        if( !token.date ) return {};
-        if( !token.identifier ) return {};
-        if( ![ "active", "disable" ].includes( token.status ) ) return {}
+        if( !token.token ) return rejected( `!token.token`, { confName, filename, raw } );
+        if( !token.date ) return rejected( `!token.date` );
+        if( !token.identifier ) return rejected( `!token.identifier` );
+        if( ![ "active", "disable" ].includes( token.status ) ) return rejected( `![ "active", "disable" ].includes( token.status )` )
         let json = JSON.stringify( token );
         return { raw, token, json, filename, confName  };
     }
