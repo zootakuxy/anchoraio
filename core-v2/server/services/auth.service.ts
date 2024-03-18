@@ -240,6 +240,8 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                 //Check if is alive
                 let checkAliveCode = nanoid(32 );
 
+                let listenResponse:AuthSocketListener["isAlive"];
+
                 let timeoutCheck = ()=>{
                     current.eventListener().onceOff( "isAlive", listenResponse );
                     try { current.destroy( new Error( "zombie socket" ) );
@@ -251,9 +253,7 @@ export class AuthService extends BaseEventEmitter<AuthServiceEvent>{
                     timeoutCheck();
                 }, 1000 * 15 );
 
-                let listenResponse;
-
-                current.eventListener().once( "isAlive", listenResponse = (code, referer) => {
+                current.eventListener().once( "isAlive", listenResponse = (code:string, referer?:string) => {
                     if( code === checkAliveCode && referer === current.props().referer ){
                         timeoutCheck = ()=>{};
                         clearTimeout( timeoutCode );
