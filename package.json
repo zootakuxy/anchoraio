@@ -1,7 +1,7 @@
 {
   "name": "anchoraio",
   "version": "1.0.0",
-  "description": "",
+  "description": "anchoraio agentProxy connection",
   "main": "core-v2/index.js",
   "bin": {
     "aio": "aio/index.js"
@@ -14,7 +14,7 @@
     "start": "node test/server.js",
     "tsc-w": "tsc -w"
   },
-  "author": "",
+  "author": "zootakuxy",
   "license": "ISC",
   "dependencies": {
     "@types/detect-port": "^1.3.2",
@@ -45,5 +45,21 @@
     "@types/nanoid": "^3.0.0",
     "@types/readable-stream": "^4.0.2",
     "@types/yargs": "^17.0.8"
-  }
+  },
+  "types": "./core-v2/index.d.ts",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zootakuxy/anchoraio.git"
+  },
+  "keywords": [
+    "proxy",
+    "p2p"
+  ],
+  "bugs": {
+    "url": "https://github.com/zootakuxy/anchoraio/issues"
+  },
+  "homepage": "https://github.com/zootakuxy/anchoraio#readme"
 }
