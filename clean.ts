@@ -9,8 +9,8 @@ export function cleanJs( dirname ){
     //language=file-reference
     if( !dirname ) dirname = process.cwd();
     [
-        { basename: /*language=file-reference*/ "/core", math: /.*.js$/, },
-        { basename: /*language=file-reference*/ "/start", math: /.*.js.map$/, }
+        { basename: /*language=file-reference*/ "/aio", math: /.*.js$/, },
+        { basename: /*language=file-reference*/ "/core-v2", math: /.*.js.map$/, }
 
     ].forEach( (value, index) => {
         FileUtil.scanFiles( path.join( dirname, value.basename ), value.math, path1 => {
