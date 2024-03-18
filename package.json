@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "core-v2/index.js",
+  "bin": {
+    "aio": "aio/index.js"
+  },
   "scripts": {
     "agent": "node aio agent",
     "agentWithServer": "node aio agent --selfServer",
